@@ -12,20 +12,22 @@ Please refer to the descriptions below for specific information about each file.
 
 ---
 
-## 🧠 IPC Simulation Codes
+## 🧠 SIR IPC Simulation Codes
 
 | File | Description | Related Figure |
 |------|-------------|----------------|
 | `siripc.m` | SIR-IPC model code (**no agent tracking**) — simulates the population-level dynamics without tracking individual agents. |Replicates result of Figure 1 of the paper|
 | `sir_combined_model.m` | SIR-IPC model with **agent tracking** - Includes logic to trace individual agent states over time. | Replicates result of Figure 1 of the paper|
+| `varpreF.m` | |Replicates result of Figure 2 of the paper|
+
 
 ---
 
-## 🔄 ODE-Based Simulations
+## 🔄 SIHR IPC Simulation Codes
 
 | File | Description | Related Figure |
 |------|-------------|----------------|
-| `varpreF.m` | |Replicates result of Figure 2 of the paper|
+| 
 
 ---
 
