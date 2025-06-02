@@ -1,3 +1,17 @@
+## Project Overview
+**CWang**
+This repository contains MATLAB codes related to the IPC model simulations and case studies presented in our summer 2025 REU project. For the IPC code, please specify whether the agents are tracked or not.
+
+I remember for example:
+- **Aakash's version (`siripc.m`)** models population-level infection dynamics without tracking individual agents.
+- **Caden's version** includes agent-tracking features, enabling analysis of individual-level behavior during simulations.
+
+It is good to have both of them here, but with some descriptions to differentiate these two. Now for the ode codes it is may be less writing for now. 
+
+Case study codes should be mentioned with specific geographic regions (e.g., city/county-level scenarios), and descriptions of each case should be included in their respective folders.
+
+As this project is in the early stages, we aim to provide detailed documentation for each file to ensure clarity and collaboration among team members.
+
 # 📁 IPC Modeling Codes
 
 This repository contains MATLAB codes related to the IPC model simulations and case studies presented in our summer 2025 REU project. Each script is accompanied by a brief description of its function and corresponding figures in the report.
@@ -43,8 +57,5 @@ The `Code Results` folder contains images generated from the simulations.
 
 
 ## 💡 Suggestions Welcome
-
-<p>CWang: great idea. I would suggest to write some more detailed descripton of each code. For example, for the IPC code, please specify whether the agents are tracked or not. I remember some version like Caden's can track agents while Aakash's do not. It is good to have both of them here, but with some descriptions to differentiate these two. Now for the ode codes it is may be less writing for now. For the case study codes, I imagine we should at least say things about which city/county this case is about etc. </p>
-
-<p>All in all, it is maybe better to give more details than less, especially at this early stage so that everyone knows what a particular code is about, even if he/she does not write the code. </p>
+**Feel free to put your suggestions.**
 
