@@ -60,7 +60,7 @@ function result = sir_agent_model(N)
     I_count = [i0];
     
     % Main simulation loop
-    while ~isempty(I) && t < 25
+    while ~(isempty(I) && isempty(H)) && t < 25
         nI = numel(I);
         nS = numel(S);
         nH = numel(H);
@@ -265,8 +265,8 @@ function plot_comparison(results, N_values, det_result)
     end
     plot(det_result.T, det_result.H_prop, [det_color '--'], 'LineWidth', 2);
     xlabel('Time', 'Color', 'k', 'FontSize', 14);
-    ylabel('Proportion Hospialized', 'Color', 'k', 'FontSize', 14);
-    title('Recovered Proportion Over Time', 'Color', 'k', 'FontSize', 16);
+    ylabel('Proportion Hospitalized', 'Color', 'k', 'FontSize', 14);
+    title('Hospitalized Proportion Over Time', 'Color', 'k', 'FontSize', 16);
     grid on;
     xlim([0, 25]);
     
