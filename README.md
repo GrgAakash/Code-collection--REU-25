@@ -6,24 +6,24 @@ This repository contains MATLAB codes related to the IPC model simulations and c
 ## 📌 Overview
 
 - **SIR Models** 
-- **ODE Simulations**
+- **SIHR Models** 
 
 Please refer to the descriptions below for specific information about each file.
 
 ---
 
-## 🧠 SIR IPC Simulation Codes
+## 🚀SIR IPC Simulation Codes
 
 | File | Description | Related Figure |
 |------|-------------|----------------|
-| `siripc.m` | SIR-IPC model code (**no agent tracking**) — simulates the population-level dynamics without tracking individual agents. |Replicates result of Figure 1 of the paper|
-| `sir_combined_model.m` | SIR-IPC model with **agent tracking** - Includes logic to trace individual agent states over time. | Replicates result of Figure 1 of the paper|
-| `varpreF.m` | |Replicates result of Figure 2 of the paper|
+| `siripc.m` | SIR-IPC model code (**no agent tracking**) — simulates the population-level dynamics without tracking individual agents.Includes comparison with deterministic ODE solution. |Replicates result of Figure 1 of the paper|
+| `sir_combined_model.m` | SIR-IPC model with **agent tracking** - Includes logic to trace individual agent states over time.Includes comparison with deterministic ODE solution. | Replicates result of Figure 1 of the paper|
+| `varpreF.m` | Stochastic SIR model simulation using the Gillespie algorithm with single run across varying population sizes(although the code includes functionality for multiple runs). Includes comparison with deterministic ODE solution and analysis of standard deviation evolution over time. |Replicates result of Figure 2 of the paper|
 
 
 ---
 
-## 🔄 SIHR IPC Simulation Codes
+## 🚀SIHR IPC Simulation Codes
 
 | File | Description | Related Figure |
 |------|-------------|----------------|
