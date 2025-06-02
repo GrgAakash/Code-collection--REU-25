@@ -8,6 +8,7 @@ This repository contains MATLAB codes related to the IPC model simulations and c
 - **SIR Models** 
 - **SIHR Models** 
 
+
 Please refer to the descriptions below for specific information about each file.
 
 ---
@@ -30,6 +31,15 @@ Please refer to the descriptions below for specific information about each file.
 | 
 
 ---
+
+### Code Results
+
+The `Code Results` folder contains images generated from the simulations.
+
+- To view the output from `siripc.m`, navigate to `Code Results/siripc_results`. For example, `R0.95.png` corresponds to a simulation where \( R_0 = 0.95 \).
+- For results from `varpreF.m`, filenames like `0.95n3.png` indicate a simulation with \( R_0 = 0.95 \) and 3 runs. For our research, a single run is typically sufficient.
+
+
 
 
 ## 💡 Suggestions Welcome
