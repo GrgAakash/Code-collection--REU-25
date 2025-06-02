@@ -109,7 +109,7 @@ function sir_agent_sd()
         R_var_all(idx, :) = R_interp;
 
         if N == 316
-            I_interp_count = interp1(T, I_count_list, t_grid, 'linear', 'extrap');
+            I_interp_count = interp1(T, I_count_list, t_grid, 'linear');
             I_count_all_316(:) = I_interp_count;
         end
     end
