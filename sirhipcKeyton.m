@@ -100,7 +100,7 @@ function result = sir_agent_model(N)
                 S(num) = [];
                 I(end+1) = infected_agent;
             end
-        else if chance < (infection_rate / event_rate + recovery_rate / event_rate)
+        elseif chance < (infection_rate / event_rate + recovery_rate / event_rate)
             % Recovery event
             if nI > 0 && rand < p2
                 if rand < ph
@@ -149,7 +149,7 @@ function result = sir_agent_model(N)
     result.peak_infected = max(I_count);
     result.peak_time = T(find(I_count == max(I_count), 1, 'first')); % Handle ties by taking first peak
     end
-end
+
 
 function det_result = solve_deterministic_sir()
     % Solve the deterministic SIR model using ODE45
@@ -209,7 +209,7 @@ function plot_comparison(results, N_values, det_result)
     figure('Position', [100, 100, 1920, 1440]);
     
     % Use tiledlayout for better spacing control
-    t = tiledlayout(1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+    t = tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
     
     % Colors for different population sizes and deterministic
     colors = ['b', 'g', 'r'];
