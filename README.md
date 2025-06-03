@@ -43,7 +43,7 @@ Please refer to the descriptions below for specific information about each file.
 
 | File | Description | Related Figure |
 |------|-------------|----------------|
-| 
+| 'sihripcv2.m' | SIHR-IPC model code (**no agent tracking**) — simulates the population-level dynamics without tracking individual agents.Includes comparison with deterministic ODE solution. |Replicates result of Figure 1 of the paper for SIHR|
 
 ---
 
