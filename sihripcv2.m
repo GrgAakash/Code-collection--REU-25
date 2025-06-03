@@ -401,4 +401,4 @@ function plot_comparison(results, N_values, det_result, params)
 end
 
 % Run the simulation
-sir_multiple_populations()
+sir_multiple_populations();
