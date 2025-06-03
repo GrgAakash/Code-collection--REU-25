@@ -16,7 +16,7 @@ function sir_multiple_populations()
     end
     
     % Solve deterministic model
-    deterministic_result = solve_deterministic_sir();
+    deterministic_result = solve_deterministic_sihr();
     
     % Plot comparison
     plot_comparison(results, N_values, deterministic_result);
@@ -32,11 +32,11 @@ function result = sir_agent_model(N)
     r0 = 0;               % recovered at time 0
     
     % Model parameters
-    beta = 0.95;    % infection constant
+    beta = 2.0;    % infection constant
     gamma = 1;      % infectious to hospitalized or recovered constant
     alpha = 1; %hospitalized to recovered constant
     p1 = 0.5;       % odds of infection
-    p2 = 0.5;       % odds of moving from infectious to hospitalied or recovered
+    p2 = 0.1;       % odds of moving from infectious to hospitalied or recovered
     p3 = 0.5; % odds of moving from hospitalized to recoverd
     ph = 0.5; % odds of moving from infectious to hospitalized
 
@@ -151,15 +151,15 @@ function result = sir_agent_model(N)
     end
 
 
-function det_result = solve_deterministic_sir()
+function det_result = solve_deterministic_sihr()
     % Solve the deterministic SIR model using ODE45
     
     % Model parameters (same as stochastic model)
-    beta = 0.95;    % infection constant
+    beta = 2;    % infection constant
     gamma = 1;
     alpha = 1;
     p1 = 0.5;
-    p2 = 0.5;
+    p2 = 0.1;
     p3 = 0.5;
     ph = 0.5;
     
