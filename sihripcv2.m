@@ -1,0 +1,351 @@
+clear all;
+close all;
+
+function sir_multiple_populations()
+    % Define model parameters structure
+    params = struct(...
+        'beta', 2.0, ...    % infection rate
+        'gamma1', 0.5, ...  % I to H rate
+        'gamma2', 0.5, ...  % I to R rate
+        'alpha', 1.0, ...   % H to R rate
+        'p1', 0.5, ...      % probability of infection
+        'ph', 0.5, ...      % probability of I to H
+        'tmax', 25 ...      % simulation end time
+    );
+
+    % Population sizes to test
+    N_values = [316, 3162, 10000];
+    
+    % Input validation
+    if any(N_values <= 0)
+        error('Population sizes must be positive integers');
+    end
+    
+    % Store results for comparison
+    results = cell(length(N_values), 1);
+    
+    % Run simulation for each population size
+    try
+        for idx = 1:length(N_values)
+            fprintf('Running simulation for N = %d...\n', N_values(idx));
+            results{idx} = sir_agent_model(N_values(idx), params);
+            fprintf('Completed N = %d\n', N_values(idx));
+        end
+        
+        % Solve deterministic model
+        deterministic_result = solve_deterministic_sir(params);
+        
+        % Plot comparison
+        plot_comparison(results, N_values, deterministic_result, params);
+        
+    catch ME
+        fprintf('Error occurred: %s\n', ME.message);
+        rethrow(ME);
+    end
+end
+
+function result = sir_agent_model(N, params)
+    % SIHR agent-based stochastic model
+    validateattributes(N, {'numeric'}, {'positive', 'integer', 'scalar'});
+    
+    % Initial conditions
+    s0 = round(0.96 * N); % susceptible
+    i0 = round(0.04 * N); % infected
+    h0 = 0; % hospitalized
+    r0 = 0; % recovered
+    
+    % Preallocate arrays for better performance
+    max_events = N * 10; % Estimate maximum number of events
+    T = zeros(1, max_events);
+    S_prop = zeros(1, max_events);
+    I_prop = zeros(1, max_events);
+    H_prop = zeros(1, max_events);
+    R_prop = zeros(1, max_events);
+    I_count = zeros(1, max_events);
+    
+    % Initialize agent arrays with preallocation
+    S = zeros(1, N);
+    S(1:s0) = 1:s0;
+    S = S(1:s0);
+    
+    I = zeros(1, N);
+    I(1:i0) = (s0+1):(s0+i0);
+    I = I(1:i0);
+    
+    H = zeros(1, 0);
+    R = zeros(1, 0);
+    
+    % Initialize time tracking
+    t = 0;
+    T(1) = 0;
+    event_count = 1;
+    
+    % Initialize proportion tracking
+    total_pop = s0 + i0 + h0 + r0;
+    S_prop(1) = s0 / total_pop;
+    I_prop(1) = i0 / total_pop;
+    H_prop(1) = h0 / total_pop;
+    R_prop(1) = r0 / total_pop;
+    I_count(1) = i0;
+    
+    % Main simulation loop
+    while ~(isempty(I) && isempty(H)) && t < params.tmax
+        nI = numel(I);
+        nS = numel(S);
+        nH = numel(H);
+        
+        % Calculate event rates
+        infection_rate = params.beta * nS * nI / N;
+        hospitalization_rate = params.gamma1 * nI;
+        recovery_i_rate = params.gamma2 * nI;
+        recovery_h_rate = params.alpha * nH;
+        event_rate = infection_rate + hospitalization_rate + recovery_i_rate + recovery_h_rate;
+        
+        if event_rate == 0
+            break;
+        end
+        
+        % Time of next event
+        dt = exprnd(1 / event_rate);
+        t = t + dt;
+        
+        if t > params.tmax
+            t = params.tmax;
+            event_count = event_count + 1;
+            T(event_count) = t;
+            current_total = numel(S) + numel(I) + numel(H) + numel(R);
+            S_prop(event_count) = numel(S) / current_total;
+            I_prop(event_count) = numel(I) / current_total;
+            H_prop(event_count) = numel(H) / current_total;
+            R_prop(event_count) = numel(R) / current_total;
+            I_count(event_count) = numel(I);
+            break;
+        end
+        
+        event_count = event_count + 1;
+        T(event_count) = t;
+        
+        % Determine which event occurs
+        chance = rand;
+        if chance < (infection_rate / event_rate)
+            % Infection event
+            if nS > 0 && rand < params.p1
+                num = randi([1, nS]);
+                infected_agent = S(num);
+                S(num) = [];
+                I(end+1) = infected_agent;
+            end
+        elseif chance < (infection_rate + hospitalization_rate) / event_rate
+            % I to H event
+            if nI > 0 && rand < params.ph
+                num = randi([1, nI]);
+                hospitalized_agent = I(num);
+                I(num) = [];
+                H(end+1) = hospitalized_agent;
+            end
+        elseif chance < (infection_rate + hospitalization_rate + recovery_i_rate) / event_rate
+            % I to R event
+            if nI > 0 && rand < (1 - params.ph)
+                num = randi([1, nI]);
+                recovered_agent = I(num);
+                I(num) = [];
+                R(end+1) = recovered_agent;
+            end
+        else
+            % H to R event
+            if nH > 0
+                num = randi([1, nH]);
+                recovered_agent = H(num);
+                H(num) = [];
+                R(end+1) = recovered_agent;
+            end
+        end
+        
+        % Update tracking arrays
+        current_total = numel(S) + numel(I) + numel(H) + numel(R);
+        S_prop(event_count) = numel(S) / current_total;
+        I_prop(event_count) = numel(I) / current_total;
+        H_prop(event_count) = numel(H) / current_total;
+        R_prop(event_count) = numel(R) / current_total;
+        I_count(event_count) = numel(I);
+    end
+    
+    % Trim unused preallocated space
+    T = T(1:event_count);
+    S_prop = S_prop(1:event_count);
+    I_prop = I_prop(1:event_count);
+    H_prop = H_prop(1:event_count);
+    R_prop = R_prop(1:event_count);
+    I_count = I_count(1:event_count);
+    
+    % Store results
+    result.N = N;
+    result.T = T;
+    result.S_prop = S_prop;
+    result.I_prop = I_prop;
+    result.H_prop = H_prop;
+    result.R_prop = R_prop;
+    result.I_count = I_count;
+    result.final_time = t;
+    result.peak_infected = max(I_count);
+    result.peak_time = T(find(I_count == max(I_count), 1, 'first'));
+end
+
+function det_result = solve_deterministic_sir(params)
+    % Solve the deterministic SIHR model using ODE45
+    
+    % Initial conditions
+    s0 = 0.96;
+    i0 = 0.04;
+    h0 = 0.0;
+    r0 = 0.0;
+    
+    % Time span
+    tspan = [0, params.tmax];
+    
+    % Initial conditions vector
+    y0 = [s0; i0; h0; r0];
+    
+    % Define the ODE system
+    ode_system = @(t, y) [
+        -params.p1*params.beta*y(1)*y(2);                    % ds/dt
+        params.p1*params.beta*y(1)*y(2) - params.ph*params.gamma1*y(2) - (1-params.ph)*params.gamma2*y(2); % di/dt
+        params.ph*params.gamma1*y(2) - params.alpha*y(3);           % dh/dt
+        (1-params.ph)*params.gamma2*y(2) + params.alpha*y(3)        % dr/dt
+    ];
+    
+    % Set ODE options for better accuracy
+    options = odeset('RelTol', 1e-8, 'AbsTol', 1e-10);
+    
+    % Solve the ODE system
+    [T, Y] = ode45(ode_system, tspan, y0, options);
+    
+    % Store results
+    det_result.T = T;
+    det_result.S_prop = Y(:, 1);
+    det_result.I_prop = Y(:, 2);
+    det_result.H_prop = Y(:, 3);
+    det_result.R_prop = Y(:, 4);
+    
+    % Find peak infected and peak time
+    [peak_infected_prop, peak_idx] = max(det_result.I_prop);
+    det_result.peak_infected_prop = peak_infected_prop;
+    det_result.peak_time = T(peak_idx);
+    det_result.final_time = T(end);
+end
+
+function plot_comparison(results, N_values, det_result, params)
+    % Create comparison plots including deterministic solution
+    
+    % Main figure - increased size
+    fig = figure('Position', [100, 100, 1920, 1440]);
+    
+    % Use tiledlayout for better spacing control
+    t = tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+    
+    % Colors for different population sizes and deterministic
+    colors = {'#0072BD', '#77AC30', '#A2142F'}; % More distinctive colors
+    det_color = '#7E2F8E';  % Purple for deterministic
+    
+    % Plot 1: Susceptible Proportion Over Time
+    nexttile;
+    hold on;
+    plot_handles = [];
+    for i = 1:length(results)
+        h = plot(results{i}.T, results{i}.S_prop, 'Color', colors{i}, 'LineWidth', 1.5);
+        plot_handles = [plot_handles, h];
+    end
+    h_det = plot(det_result.T, det_result.S_prop, '--', 'Color', det_color, 'LineWidth', 2);
+    plot_handles = [plot_handles, h_det];
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion Susceptible', 'FontSize', 14);
+    title('Susceptible Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    
+    % Plot 2: Infected Proportion Over Time
+    nexttile;
+    hold on;
+    for i = 1:length(results)
+        plot(results{i}.T, results{i}.I_prop, 'Color', colors{i}, 'LineWidth', 1.5);
+    end
+    plot(det_result.T, det_result.I_prop, '--', 'Color', det_color, 'LineWidth', 2);
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion Infected', 'FontSize', 14);
+    title('Infected Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    
+    % Plot 3: Hospitalized Proportion Over Time
+    nexttile;
+    hold on;
+    for i = 1:length(results)
+        plot(results{i}.T, results{i}.H_prop, 'Color', colors{i}, 'LineWidth', 1.5);
+    end
+    plot(det_result.T, det_result.H_prop, '--', 'Color', det_color, 'LineWidth', 2);
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion Hospitalized', 'FontSize', 14);
+    title('Hospitalized Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    
+    % Plot 4: Recovered Proportion Over Time
+    nexttile;
+    hold on;
+    for i = 1:length(results)
+        plot(results{i}.T, results{i}.R_prop, 'Color', colors{i}, 'LineWidth', 1.5);
+    end
+    plot(det_result.T, det_result.R_prop, '--', 'Color', det_color, 'LineWidth', 2);
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion Recovered', 'FontSize', 14);
+    title('Recovered Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    
+    % Add a single legend below all plots
+    lgd = legend(plot_handles, [arrayfun(@(x) sprintf('N=%d', x), N_values, 'UniformOutput', false), {'Deterministic'}], ...
+        'Orientation', 'horizontal', 'Location', 'southoutside', 'FontSize', 12);
+    lgd.Layout.Tile = 'south';
+    
+    % Add parameter display
+    param_text = sprintf('β=%.2f, γ₁=%.2f, γ₂=%.2f, α=%.2f, p₁=%.2f, p_h=%.2f', ...
+        params.beta, params.gamma1, params.gamma2, params.alpha, params.p1, params.ph);
+    annotation('textbox', [0.05, 0.02, 0.9, 0.05], ...
+        'String', param_text, ...
+        'FontSize', 14, ...
+        'EdgeColor', 'none', ...
+        'HorizontalAlignment', 'left', ...
+        'VerticalAlignment', 'middle');
+    
+    % Save the figure
+    saveas(fig, 'SIHR_simulation_results.png');
+    
+    % Print summary statistics
+    fprintf('\n=== SIMULATION SUMMARY ===\n');
+    fprintf('Population Size | Peak Infected | Peak Time | Final Time\n');
+    fprintf('----------------|---------------|-----------|------------\n');
+    for i = 1:length(results)
+        fprintf('%15d | %13d | %9.2f | %10.2f\n', ...
+            results{i}.N, results{i}.peak_infected, ...
+            results{i}.peak_time, results{i}.final_time);
+    end
+    fprintf('%15s | %13.4f | %9.2f | %10.2f\n', ...
+        'Deterministic', det_result.peak_infected_prop, ...
+        det_result.peak_time, det_result.final_time);
+    
+    % Convergence analysis
+    fprintf('\n=== CONVERGENCE ANALYSIS ===\n');
+    fprintf('Population Size | Peak Infected (Normalized) | Difference from Deterministic\n');
+    fprintf('----------------|----------------------------|------------------------------\n');
+    for i = 1:length(results)
+        normalized_peak = results{i}.peak_infected / results{i}.N;
+        diff_from_det = abs(normalized_peak - det_result.peak_infected_prop);
+        fprintf('%15d | %26.4f | %28.4f\n', ...
+            results{i}.N, normalized_peak, diff_from_det);
+    end
+    fprintf('%15s | %25.4f | %28s\n', ...
+        'Deterministic', det_result.peak_infected_prop, 'Reference');
+end
+
+% Run the simulation
+sir_multiple_populations();
