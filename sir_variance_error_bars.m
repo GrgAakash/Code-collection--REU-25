@@ -14,18 +14,20 @@ function sir_variance_error_bars()
     i_prop = 0.04;
     r_prop = 1 - s_prop - i_prop;
     Ns = [316, 1000, 3162, 10000];
+    num_trials = 20;
     
     %% Agent-Based Simulations
     t_grid = linspace(0, max_T, 1000);
-    S_var_all = zeros(length(Ns), length(t_grid));
-    I_var_all = zeros(length(Ns), length(t_grid));
-    R_var_all = zeros(length(Ns), length(t_grid));
+    S_var_all = zeros(length(Ns), length(t_grid), num_trials);
+    I_var_all = zeros(length(Ns), length(t_grid), num_trials);
+    R_var_all = zeros(length(Ns), length(t_grid), num_trials);
     v_s_dot = cell(length(Ns), 1);
     v_i_dot = cell(length(Ns), 1);
     v_r_dot = cell(length(Ns), 1);
     
     %% Repeat simulation for each N
     for idx = 1:length(Ns)
+        for trial = 1:num_trials
         % initializations for simulation
         N = Ns(idx);
         s0_abs = round(s_prop * N);
@@ -107,12 +109,13 @@ function sir_variance_error_bars()
         end
 
         % Interpolate points into lines, and store them in large arrays
-        S_interp_var = interp1(T, S_var, t_grid, 'linear');
-        I_interp_var = interp1(T, I_var, t_grid, 'linear');
-        R_interp_var = interp1(T, R_var, t_grid, 'linear');
-        S_var_all(idx, :) = S_interp_var;
-        I_var_all(idx, :) = I_interp_var;
-        R_var_all(idx, :) = R_interp_var;
+        S_interp_var = interp1(T, S_var, t_grid, 'linear', 0);
+        I_interp_var = interp1(T, I_var, t_grid, 'linear', 0);
+        R_interp_var = interp1(T, R_var, t_grid, 'linear', 0);
+        S_var_all(idx, :, trial) = S_interp_var;
+        I_var_all(idx, :, trial) = I_interp_var;
+        R_var_all(idx, :, trial) = R_interp_var;
+        end
 
         %% Deterministic ODE Model    
         % Solve ODE system
@@ -158,40 +161,63 @@ function plot_graphs(Ns, t_grid, S_var_all, I_var_all, R_var_all, v_s_dot, v_i_d
             % Retrieve correct data points for this graph
             switch comp
                 case 1
-                    sim_data = S_var_all(idx, :);
+                    all_trials = squeeze(S_var_all(idx, :, :))';
                     theory_data = v_s_dot{idx};
                 case 2
-                    sim_data = I_var_all(idx, :);
+                    all_trials = squeeze(I_var_all(idx, :, :))';
                     theory_data = v_i_dot{idx};
                 case 3
-                    sim_data = R_var_all(idx, :);
+                    all_trials = squeeze(R_var_all(idx, :, :))';
                     theory_data = v_r_dot{idx};
             end
 
             % For each midpoint, calculate min/max over the interval
-            for k = 1:length(midpoints)
+            for t = 1:length(midpoints)
                 % Window
-                t_mid = midpoints(k);
+                t_mid = midpoints(t);
                 t_min = t_mid - dt;
                 t_max = t_mid + dt; 
 
                 % Find the data points in [window)
                 in_window = t_grid >= t_min & t_grid < t_max;
-                window_vals = sim_data(in_window);
-                if isempty(window_vals)
-                    continue; % No bars for empty interval
+                if ~any(in_window)
+                    continue;
+                end
+             
+                vals = all_trials(:, in_window);  % [num_trials x num_timepoints_in_window]
+                window_vals = vals(:);            % Flatten to a single vector
+
+                % For each trial, get min and max of this window
+                trial_mins = zeros(size(vals, 1), 1);
+                trial_maxs = zeros(size(vals, 1), 1);
+
+                for t_idx = 1:size(vals,1)
+                    v = vals(t_idx, :);
+                    if isempty(v)
+                        trial_mins(t_idx) = Nan;
+                        trial_maxs(t_idx) = NaN;
+                    else
+                        trial_mins(t_idx) = min(v);
+                        trial_maxs(t_idx) = max(v);
+                    end
                 end
 
-                % Draw error bar between min and max centered at midpoint
-                x = t_mid;
-                y_min = min(window_vals);
-                y_max = max(window_vals);
-                %disp([x, y_min*10e4, y_max*10e4]);
-                plot([x, x], [y_min, y_max], 'Color', colors(idx,:), 'LineWidth', 1.5);
+                % Remove NaNs in case any trials failed
+                trial_mins = trial_mins(~isnan(trial_mins));
+                trial_maxs = trial_maxs(~isnan(trial_maxs));
 
-                % Draw dash at theoretical line intercept
+                if isempty(trial_mins)
+                    fprintf("No valid points at midpoint %.2f\n", t_mid);
+                end
+
+                y_min_avg = mean(trial_mins);
+                y_max_avg = mean(trial_maxs);
+
+                % Plot error bar
+                x = t_mid;
+                plot([x,x], [y_min_avg, y_max_avg], 'Color', colors(idx,:), 'LineWidth', 1.5);
                 y_theory = theory_data(t_grid == min(t_grid(t_grid >= t_mid)));
-                plot(x, y_theory, '_', 'Color', colors(idx,:), 'MarkerSize', 12, 'LineWidth', 2);
+                plot(x, y_theory, '_', 'Color', colors(idx, :), 'MarkerSize', 12, 'LineWidth', 2);
             end
         
             % configure graphs
