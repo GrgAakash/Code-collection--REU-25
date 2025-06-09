@@ -21,7 +21,14 @@ function advanced_ipc_model()
     i0 = 0.04;
     m0 = 1 - s0 - i0; % assume that at time 0, no one is immune
     Ns = [316,1000,3162,10000];
+    all_data.ns = {};
+    all_data.ni = {};
+    all_data.nh = {};
+    all_data.nm = {};
+    all_data.nd = {};
+    all_data.T = {};
 
+    constants.max_t = 30;
     constants.susceptible_event_rate = 1.3; 
     constants.s_i_prob = 1; % susceptible agents can only become infected
 
@@ -37,25 +44,9 @@ function advanced_ipc_model()
     constants.h_d_prob = 0.15; % on average, 15% of hospitalized patients die
     constants.h_s_prob = 1 - constants.h_m_prob - ...
         constants.h_d_prob; % the rest become healthy, but not forever
-    
-    constants.max_t = 30;
-    
-    % Deterministic Model
-    beta = constants.s_i_prob;
-    gamma = constants.infected_event_rate;
-    alpha = constants.hospitalized_event_rate;
+   
 
-    y0 = [s0; i0; 0; m0; 0]; 
-    tspan = [0 constants.max_t];
-
-    % Solve ODE
-    [t_det, y_det] = ode45(@(t, y) sihmd_system_struct(t, y, constants, beta, gamma, alpha), tspan, y0);
-
-    % Plot deterministic model
-    plot_deterministic(t_det, y_det);
-
-
-
+    %% Loop for each N
     for i = 1:numel(Ns)
         constants.N = Ns(i);
         I0 = round(i0 * constants.N);
@@ -78,12 +69,31 @@ function advanced_ipc_model()
 
         %% Perform Simulations
         data = simulate_ipc(S, I, H, M, D, constants, data);
+        all_data.ns{end+1} = data.ns;
+        all_data.ni{end+1} = data.ni;
+        all_data.nh{end+1} = data.nh;
+        all_data.nm{end+1} = data.nm;
+        all_data.nd{end+1} = data.nd;
+        all_data.T{end+1} = data.T;
 
-        %% Feed the function 'data' to plot all compartments, or just name a single one
-        %plot_compartment_vs_time(data.T, data, constants.N, "All");
-        plot_compartment_vs_time(data.T, data.ns, constants.N, "Susceptible")
+        %% Graphing
+        plot_all_vs_time(data, constants.N);
     end
 
+
+    %% Deterministic Model
+    beta = constants.susceptible_event_rate;
+    gamma = constants.infected_event_rate;
+    alpha = constants.hospitalized_event_rate;
+    y0 = [s0; i0; 0; m0; 0]; 
+    tspan = [0 constants.max_t];
+    [t_det, y_det] = ode45(@(t, y) sihmd_system(t, y, constants, beta, gamma, alpha), tspan, y0);
+    
+    plot_compartment_vs_time(all_data.T, all_data.ns, t_det, y_det(:,1), Ns, "Susceptible", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.ni, t_det, y_det(:,2), Ns, "Infected", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.nh, t_det, y_det(:,3), Ns, "Hospitalized", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.nm, t_det, y_det(:,4), Ns, "Immune", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.nd, t_det, y_det(:,5), Ns, "Dead", constants.max_t);
 end
 
 function data = simulate_ipc(S, I, H, M, D, constants, data) 
@@ -148,36 +158,7 @@ function data = simulate_ipc(S, I, H, M, D, constants, data)
     data = simulate_ipc(S, I, H, M, D, constants, data);
 end
 
-function plot_compartment_vs_time(time, data, N, compartment)
-    figure;
-    hold on;
-
-    if isstruct(data)
-        % Full data struct provided
-        plot(time, data.ns / N, 'b', 'DisplayName', 'Susceptible');
-        plot(time, data.ni / N, 'r', 'DisplayName', 'Infected');
-        plot(time, data.nh / N, 'k', 'DisplayName', 'Hospitalized');
-        plot(time, data.nm / N, 'g', 'DisplayName', 'Immune');
-        plot(time, data.nd / N, 'm', 'DisplayName', 'Dead');
-        ylabel('Proportion');
-        legend('Location', 'eastoutside');
-        title(['Compartment Proportions vs Time (N = ', num2str(N), ')']);
-    elseif isnumeric(data)
-        % Single compartment provided
-        plot(time, data / N, 'b', 'DisplayName', 'Single Compartment');
-        ylabel('Proportion');
-        legend(compartment);
-        title([compartment, ' Proportions vs Time (N = ', num2str(N), ')']);
-    else
-        error('Input must be either a struct or a numeric array.');
-    end
-
-    xlabel('Time');
-    grid on;
-    hold off;
-end
-
-function dydt = sihmd_system_struct(~, y, constants, beta, gamma, alpha)
+function dydt = sihmd_system(~, y, constants, beta, gamma, alpha)
     s = y(1);
     i = y(2);
     h = y(3);
@@ -194,23 +175,40 @@ function dydt = sihmd_system_struct(~, y, constants, beta, gamma, alpha)
     dydt = [ds; di; dh; dm; dd];
 end
 
-function plot_deterministic(t, y)
-    s = y(:,1);
-    i = y(:,2);
-    h = y(:,3);
-    m = y(:,4);
-    d = y(:,5);
-
+function plot_all_vs_time(data, N) 
     figure;
-    plot(t, s, '-k'); hold on;
-    plot(t, i, 'Color', [0.6 0 0.8]);
-    plot(t, h, 'Color', [0.2 0.8 0]);
-    plot(t, m, 'Color', [0 0 1]);
-    plot(t, d, 'Color', [0.4 0.8 1]);
-
-    title('Deterministic SIHMD Model');
-    xlabel('Time (days)');
-    ylabel('Proportion of Population');
-    legend({'Susceptible', 'Infected', 'Hospitalized', 'Immune', 'Dead'});
+    hold on;
+    plot(data.T, data.ns / N, 'b', 'DisplayName', 'Susceptible', 'LineWidth', 1.5);
+    plot(data.T, data.ni / N, 'r', 'DisplayName', 'Infected', 'LineWidth', 1.5);
+    plot(data.T, data.nh / N, 'm', 'DisplayName', 'Hospitalized', 'LineWidth', 1.5);
+    plot(data.T, data.nm / N, 'g', 'DisplayName', 'Immune', 'LineWidth', 1.5);
+    plot(data.T, data.nd / N, 'k', 'DisplayName', 'Dead', 'LineWidth', 1.5);
+    ylabel('Proportion');
+    legend('Location', 'eastoutside');
+    title(['All Proportions vs Time (N = ', num2str(N), ')']);
+    xlabel('Time');
     grid on;
+    hold off;
+end
+
+function plot_compartment_vs_time(sim_t, sim_data, theo_t, theo_data, Ns, compartment, max_t)
+    figure;
+    hold on;
+    colors = lines(length(Ns));
+    legend_labels = cell(1, length(Ns)+1);
+
+    for i = 1:length(Ns)
+        plot(sim_t{i}, sim_data{i} / Ns(i), 'Color', colors(i,:), 'LineWidth', 1.5);
+        legend_labels{i} = ['N = ', num2str(Ns(i))];
+    end
+    plot(theo_t, theo_data, 'Color', 'k', 'LineWidth', 1.5);
+    legend_labels{length(Ns)+1} = ['ODE'];
+
+    ylabel(compartment);
+    title([compartment, ' Proportion vs Time']);
+    xlabel('Time');
+    legend(legend_labels);
+    xlim([0 max_t]);
+    grid on;
+    hold off;
 end
