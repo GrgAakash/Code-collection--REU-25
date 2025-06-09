@@ -22,8 +22,8 @@ function advanced_ipc_model()
     m0 = 1 - s0 - i0; % assume that at time 0, no one is immune
     Ns = [316,1000,3162,10000];
 
-    constants.susceptible_event_rate = 1; 
-    constants.s_i_prob = 1.3; % susceptible agents can only become infected
+    constants.susceptible_event_rate = 1.3; 
+    constants.s_i_prob = 1; % susceptible agents can only become infected
 
     constants.infected_event_rate = 1;
     constants.i_m_prob = 0.2; % 20% of people who catch covid have long-term immunity
@@ -39,6 +39,23 @@ function advanced_ipc_model()
         constants.h_d_prob; % the rest become healthy, but not forever
     
     constants.max_t = 30;
+    
+    % Deterministic setup
+    beta = constants.susceptible_event_rate;
+    gamma = constants.infected_event_rate;   % infected event rate
+    alpha = constants.hospitalized_event_rate;   % hospitalized event rate
+
+    y0 = [s0; i0; 0; m0; 0]; % Initial conditions: s, i, h, m, d
+    tspan = [0 constants.max_t];
+
+    % Solve ODE
+    [t_det, y_det] = ode45(@(t, y) sihmd_system(t, y, beta, gamma, alpha, ...
+        constants.i_s_prob, constants.i_h_prob, constants.i_m_prob, constants.i_d_prob, ...
+        constants.h_s_prob, constants.h_m_prob, constants.h_d_prob), tspan, y0);
+
+% Plot
+plot_deterministic(t_det, y_det);
+
 
     for i = 1:numel(Ns)
         constants.N = Ns(i);
@@ -159,4 +176,41 @@ function plot_compartment_vs_time(time, data, N, compartment)
     xlabel('Time');
     grid on;
     hold off;
+end
+
+function dydt = sihmd_system(t, y, beta, gamma, alpha, p_IS, p_IH, p_IM, p_ID, p_HS, p_HM, p_HD)
+    s = y(1);
+    i = y(2);
+    h = y(3);
+    m = y(4);
+    d = y(5);
+
+    ds = -beta*s*i + gamma*p_IS*i + alpha*p_HS*h;
+    di = beta*i*s - gamma*i;
+    dh = gamma*p_IH*i - p_HM*alpha*h;
+    dm = gamma*p_IM*i + alpha*p_HM*h;
+    dd = gamma*p_ID*i + alpha*p_HD*h;
+
+    dydt = [ds; di; dh; dm; dd];
+end
+
+function plot_deterministic(t, y)
+    s = y(:,1);
+    i = y(:,2);
+    h = y(:,3);
+    m = y(:,4);
+    d = y(:,5);
+
+    figure;
+    plot(t, s, '-k'); hold on;
+    plot(t, i, 'Color', [0.6 0 0.8]);
+    plot(t, h, 'Color', [0.2 0.8 0]);
+    plot(t, m, 'Color', [0 0 1]);
+    plot(t, d, 'Color', [0.4 0.8 1]);
+
+    title('Deterministic SIHMD Model');
+    xlabel('Time (days)');
+    ylabel('Proportion of Population');
+    legend({'Susceptible', 'Infected', 'Hospitalized', 'Immune', 'Dead'});
+    grid on;
 end
