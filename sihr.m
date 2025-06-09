@@ -1,23 +1,34 @@
 clear all;
 close all;
-
 function sir_multiple_populations()
     % Define model parameters structure
     params = struct(...
-        'beta', 2.0, ...    % infection rate
-        'gamma1', 0.5, ...  % I to H rate
-        'gamma2', 0.5, ...  % I to R rate
-        'alpha', 1.0, ...   % H to R rate
-        'p1', 0.5, ...      % probability of leaving state S
-        'p2', 0.5, ...      % probability of leaving state I
-        'p3', 0.5, ...      % probability of leaving state H
-        'ph', 0.5, ...      % probability of I to H
-        'tmax', 25 ...      % simulation end time
+        'beta', 1.95, ...    % infection rate (β > 0)
+        'gamma1', 0.2, ...  % I to H rate (γ₁ > 0)
+        'gamma2', 1.5, ...  % I to R rate (γ₂ > 0)
+        'alpha', 2.00, ...   % H to R rate (α > 0)
+        'p1', 0.5, ...      % probability of infection (p₁ in (0,1])
+        'p2', 0.5, ...      % probability of leaving I (p₂ in (0,1])
+        'p3', 0.2, ...      % probability of leaving H (p₃ in (0,1])
+        'ph', 0.80, ...      % probability of I to H vs R (p_h in (0,1])
+        'tmax', 30, ...     % simulation end time
+        's0', 0.7, ...     % initial susceptible proportion
+        'i0', 0.1, ...     % initial infected proportion
+        'h0', 0.2, ...     % initial hospitalized proportion
+        'r0', 0.00 ...      % initial recovered proportion
     );
+
+    % Validate parameters
+    validateParameters(params);
+    
+    % Validate initial conditions sum to 1
+    if abs((params.s0 + params.i0 + params.h0 + params.r0) - 1) > 1e-10
+        error('Initial conditions must sum to 1');
+    end
 
     % Population sizes to test
     N_values = [316, 3162, 10000];
-    
+  
     % Input validation
     if any(N_values <= 0)
         error('Population sizes must be positive integers');
@@ -46,15 +57,50 @@ function sir_multiple_populations()
     end
 end
 
+function validateParameters(params)
+    % Validate rates are positive
+    if any([params.beta, params.gamma1, params.gamma2, params.alpha] <= 0)
+        error('All rates (beta, gamma1, gamma2, alpha) must be positive');
+    end
+    
+    % Validate probabilities are in (0,1]
+    probs = [params.p1, params.p2, params.p3, params.ph];
+    if any(probs <= 0 | probs > 1)
+        error('All probabilities must be in (0,1]');
+    end
+end
+
 function result = sir_agent_model(N, params)
     % SIHR agent-based stochastic model
     validateattributes(N, {'numeric'}, {'positive', 'integer', 'scalar'});
     
-    % Initial conditions
-    s0 = round(0.96 * N); % susceptible
-    i0 = round(0.04 * N); % infected
-    h0 = 0; % hospitalized
-    r0 = 0; % recovered
+    % Initial conditions - using params values and ensuring they sum to N
+    s0 = round(params.s0 * N); % susceptible
+    i0 = round(params.i0 * N); % infected
+    h0 = round(params.h0 * N); % hospitalized
+    r0 = round(params.r0 * N); % recovered
+    
+    % Adjust for rounding errors to ensure sum is exactly N
+    total = s0 + i0 + h0 + r0;
+    if total ~= N
+        % Add or subtract the difference from the largest compartment
+        [~, largest_idx] = max([s0, i0, h0, r0]);
+        switch largest_idx
+            case 1
+                s0 = s0 + (N - total);
+            case 2
+                i0 = i0 + (N - total);
+            case 3
+                h0 = h0 + (N - total);
+            case 4
+                r0 = r0 + (N - total);
+        end
+    end
+    
+    % Validate initial conditions sum to N
+    if (s0 + i0 + h0 + r0) ~= N
+        error('Initial conditions must sum to N');
+    end
     
     % Preallocate arrays for better performance
     max_events = N * 10; % Estimate maximum number of events
@@ -74,8 +120,17 @@ function result = sir_agent_model(N, params)
     I(1:i0) = (s0+1):(s0+i0);
     I = I(1:i0);
     
-    H = zeros(1, 0);
-    R = zeros(1, 0);
+    H = zeros(1, N);
+    H(1:h0) = (s0+i0+1):(s0+i0+h0);
+    H = H(1:h0);
+    
+    R = zeros(1, N);
+    if r0 > 0
+        R(1:r0) = (s0+i0+h0+1):(s0+i0+h0+r0);
+        R = R(1:r0);
+    else
+        R = zeros(1, 0);
+    end
     
     % Initialize time tracking
     t = 0;
@@ -91,24 +146,25 @@ function result = sir_agent_model(N, params)
     I_count(1) = i0;
     
     % Main simulation loop
-    while ~(isempty(I) && isempty(H)) && t < params.tmax
+    while ~isempty(I) && t < params.tmax
         nI = numel(I);
         nS = numel(S);
         nH = numel(H);
         
-        % Calculate event rates
-        infection_rate = params.beta * nS * nI / N;
-        hospitalization_rate = params.gamma1 * nI;
-        recovery_i_rate = params.gamma2 * nI;
-        recovery_h_rate = params.alpha * nH;
-        event_rate = infection_rate + hospitalization_rate + recovery_i_rate + recovery_h_rate;
+        % Calculate event rates according to the mathematical model
+        infection_rate = params.p1 * params.beta * nS * nI / N;  % S to I rate
+        to_hospital_rate = params.p2 * params.ph * params.gamma1 * nI;  % I to H rate
+        to_recovered_from_I_rate = params.p2 * (1-params.ph) * params.gamma2 * nI;  % I to R rate
+        to_recovered_from_H_rate = params.p3 * params.alpha * nH;  % H to R rate
         
-        if event_rate == 0
+        total_rate = infection_rate + to_hospital_rate + to_recovered_from_I_rate + to_recovered_from_H_rate;
+        
+        if total_rate == 0
             break;
         end
         
         % Time of next event
-        dt = exprnd(1 / event_rate);
+        dt = exprnd(1 / total_rate);
         t = t + dt;
         
         if t > params.tmax
@@ -128,33 +184,33 @@ function result = sir_agent_model(N, params)
         T(event_count) = t;
         
         % Determine which event occurs
-        chance = rand;
-        if chance < (infection_rate / event_rate)
-            % Infection event
-            if nS > 0 && rand < params.p1
+        chance = rand * total_rate;
+        if chance < infection_rate
+            % S to I transition
+            if nS > 0
                 num = randi([1, nS]);
                 infected_agent = S(num);
                 S(num) = [];
                 I(end+1) = infected_agent;
             end
-        elseif chance < (infection_rate + hospitalization_rate) / event_rate
-            % I to H event
-            if nI > 0 && rand < params.ph
+        elseif chance < (infection_rate + to_hospital_rate)
+            % I to H transition
+            if nI > 0
                 num = randi([1, nI]);
                 hospitalized_agent = I(num);
                 I(num) = [];
                 H(end+1) = hospitalized_agent;
             end
-        elseif chance < (infection_rate + hospitalization_rate + recovery_i_rate) / event_rate
-            % I to R event
-            if nI > 0 && rand < (1 - params.ph)
+        elseif chance < (infection_rate + to_hospital_rate + to_recovered_from_I_rate)
+            % I to R transition
+            if nI > 0
                 num = randi([1, nI]);
                 recovered_agent = I(num);
                 I(num) = [];
                 R(end+1) = recovered_agent;
             end
         else
-            % H to R event
+            % H to R transition
             if nH > 0
                 num = randi([1, nH]);
                 recovered_agent = H(num);
@@ -191,29 +247,29 @@ function result = sir_agent_model(N, params)
     result.final_time = t;
     result.peak_infected = max(I_count);
     result.peak_time = T(find(I_count == max(I_count), 1, 'first'));
+    
+    % Calculate and store asymptotic values
+    result.s_inf = S_prop(end);
+    result.i_inf = I_prop(end);
+    result.h_inf = H_prop(end);
+    result.r_inf = R_prop(end);
 end
 
 function det_result = solve_deterministic_sir(params)
     % Solve the deterministic SIHR model using ODE45
     
-    % Initial conditions
-    s0 = 0.96;
-    i0 = 0.04;
-    h0 = 0.0;
-    r0 = 0.0;
-    
     % Time span
     tspan = [0, params.tmax];
     
     % Initial conditions vector
-    y0 = [s0; i0; h0; r0];
+    y0 = [params.s0; params.i0; params.h0; params.r0];
     
-    % Define the ODE system
+    % Define the ODE system exactly as in the mathematical model
     ode_system = @(t, y) [
-        -params.p1*params.beta*y(1)*y(2);                    % ds/dt
-        params.p1*params.beta*y(1)*y(2) - params.p2*params.ph*params.gamma1*y(2) - params.p2*(1-params.ph)*params.gamma2*y(2); % di/dt
-        params.p2*params.ph*params.gamma1*y(2) - params.p3*params.alpha*y(3);           % dh/dt
-        params.p2*(1-params.ph)*params.gamma2*y(2) + params.p3*params.alpha*y(3)        % dr/dt
+        -params.p1 * params.beta * y(1) * y(2);                                                          % ds/dt
+        params.p1 * params.beta * y(1) * y(2) - params.p2 * (params.ph * params.gamma1 + (1-params.ph) * params.gamma2) * y(2);  % di/dt
+        params.p2 * params.ph * params.gamma1 * y(2) - params.p3 * params.alpha * y(3);                  % dh/dt
+        params.p2 * (1-params.ph) * params.gamma2 * y(2) + params.p3 * params.alpha * y(3)              % dr/dt
     ];
     
     % Set ODE options for better accuracy
@@ -234,6 +290,29 @@ function det_result = solve_deterministic_sir(params)
     det_result.peak_infected_prop = peak_infected_prop;
     det_result.peak_time = T(peak_idx);
     det_result.final_time = T(end);
+    
+    % Calculate R0
+    det_result.R0 = params.p1 * params.beta / (params.p2 * (params.ph * params.gamma1 + (1-params.ph) * params.gamma2));
+    
+    % Store asymptotic values
+    det_result.s_inf = det_result.S_prop(end);
+    det_result.i_inf = det_result.I_prop(end);
+    det_result.h_inf = det_result.H_prop(end);
+    det_result.r_inf = det_result.R_prop(end);
+    
+    % Verify asymptotic behavior
+    if det_result.i_inf > 1e-6
+        warning('i(∞) may not be approaching 0 as expected');
+    end
+    if det_result.h_inf > 1e-6
+        warning('h(∞) may not be approaching 0 as expected');
+    end
+    
+    % Verify the asymptotic relation from the theorem
+    s_inf_theoretical = params.s0 * exp(-det_result.R0 * (params.s0 + params.i0 - det_result.s_inf));
+    if abs(det_result.s_inf - s_inf_theoretical) > 1e-6
+        warning('Asymptotic s(∞) relation may not be satisfied');
+    end
 end
 
 function plot_comparison(results, N_values, det_result, params)
@@ -309,9 +388,10 @@ function plot_comparison(results, N_values, det_result, params)
         'Orientation', 'horizontal', 'Location', 'southoutside', 'FontSize', 12);
     lgd.Layout.Tile = 'south';
     
-    % Add parameter display
-    param_text = sprintf('β=%.2f, γ₁=%.2f, γ₂=%.2f, α=%.2f, p₁=%.2f, p_h=%.2f', ...
-        params.beta, params.gamma1, params.gamma2, params.alpha, params.p1, params.ph);
+    % Add parameter display including R0
+    param_text = sprintf('R₀=%.2f, β=%.2f, γ₁=%.2f, γ₂=%.2f, α=%.2f\np₁=%.2f, p₂=%.2f, p₃=%.2f, p_h=%.2f', ...
+        det_result.R0, params.beta, params.gamma1, params.gamma2, params.alpha, ...
+        params.p1, params.p2, params.p3, params.ph);
     annotation('textbox', [0.05, 0.02, 0.9, 0.05], ...
         'String', param_text, ...
         'FontSize', 14, ...
@@ -324,29 +404,25 @@ function plot_comparison(results, N_values, det_result, params)
     
     % Print summary statistics
     fprintf('\n=== SIMULATION SUMMARY ===\n');
-    fprintf('Population Size | Peak Infected | Peak Time | Final Time\n');
-    fprintf('----------------|---------------|-----------|------------\n');
+    fprintf('Population Size | Peak Infected | Peak Time | s(∞) | i(∞) | h(∞) | r(∞)\n');
+    fprintf('----------------|---------------|-----------|-------|-------|-------|-------\n');
     for i = 1:length(results)
-        fprintf('%15d | %13d | %9.2f | %10.2f\n', ...
-            results{i}.N, results{i}.peak_infected, ...
-            results{i}.peak_time, results{i}.final_time);
+        fprintf('%15d | %13d | %9.2f | %5.3f | %5.3f | %5.3f | %5.3f\n', ...
+            results{i}.N, results{i}.peak_infected, results{i}.peak_time, ...
+            results{i}.s_inf, results{i}.i_inf, results{i}.h_inf, results{i}.r_inf);
     end
-    fprintf('%15s | %13.4f | %9.2f | %10.2f\n', ...
-        'Deterministic', det_result.peak_infected_prop, ...
-        det_result.peak_time, det_result.final_time);
+    fprintf('%15s | %13.4f | %9.2f | %5.3f | %5.3f | %5.3f | %5.3f\n', ...
+        'Deterministic', det_result.peak_infected_prop, det_result.peak_time, ...
+        det_result.s_inf, det_result.i_inf, det_result.h_inf, det_result.r_inf);
     
-    % Convergence analysis
-    fprintf('\n=== CONVERGENCE ANALYSIS ===\n');
-    fprintf('Population Size | Peak Infected (Normalized) | Difference from Deterministic\n');
-    fprintf('----------------|----------------------------|------------------------------\n');
-    for i = 1:length(results)
-        normalized_peak = results{i}.peak_infected / results{i}.N;
-        diff_from_det = abs(normalized_peak - det_result.peak_infected_prop);
-        fprintf('%15d | %26.4f | %28.4f\n', ...
-            results{i}.N, normalized_peak, diff_from_det);
-    end
-    fprintf('%15s | %25.4f | %28s\n', ...
-        'Deterministic', det_result.peak_infected_prop, 'Reference');
+    % Print asymptotic analysis
+    fprintf('\n=== ASYMPTOTIC ANALYSIS ===\n');
+    fprintf('R₀ = %.4f\n', det_result.R0);
+    fprintf('Theoretical s(∞) = %.6f\n', params.s0 * exp(-det_result.R0 * (params.s0 + params.i0 - det_result.s_inf)));
+    fprintf('Numerical s(∞) = %.6f\n', det_result.s_inf);
+    fprintf('i(∞) = %.6f (should be ≈ 0)\n', det_result.i_inf);
+    fprintf('h(∞) = %.6f (should be = 0)\n', det_result.h_inf);
+    fprintf('r(∞) = %.6f\n', det_result.r_inf);
 end
 
 % Run the simulation
