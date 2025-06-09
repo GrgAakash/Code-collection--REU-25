@@ -40,21 +40,20 @@ function advanced_ipc_model()
     
     constants.max_t = 30;
     
-    % Deterministic setup
-    beta = constants.susceptible_event_rate;
-    gamma = constants.infected_event_rate;   % infected event rate
-    alpha = constants.hospitalized_event_rate;   % hospitalized event rate
+    % Deterministic Model
+    beta = constants.s_i_prob;
+    gamma = constants.infected_event_rate;
+    alpha = constants.hospitalized_event_rate;
 
-    y0 = [s0; i0; 0; m0; 0]; % Initial conditions: s, i, h, m, d
+    y0 = [s0; i0; 0; m0; 0]; 
     tspan = [0 constants.max_t];
 
     % Solve ODE
-    [t_det, y_det] = ode45(@(t, y) sihmd_system(t, y, beta, gamma, alpha, ...
-        constants.i_s_prob, constants.i_h_prob, constants.i_m_prob, constants.i_d_prob, ...
-        constants.h_s_prob, constants.h_m_prob, constants.h_d_prob), tspan, y0);
+    [t_det, y_det] = ode45(@(t, y) sihmd_system_struct(t, y, constants, beta, gamma, alpha), tspan, y0);
 
-% Plot
-plot_deterministic(t_det, y_det);
+    % Plot deterministic model
+    plot_deterministic(t_det, y_det);
+
 
 
     for i = 1:numel(Ns)
@@ -178,18 +177,19 @@ function plot_compartment_vs_time(time, data, N, compartment)
     hold off;
 end
 
-function dydt = sihmd_system(t, y, beta, gamma, alpha, p_IS, p_IH, p_IM, p_ID, p_HS, p_HM, p_HD)
+function dydt = sihmd_system_struct(~, y, constants, beta, gamma, alpha)
     s = y(1);
     i = y(2);
     h = y(3);
     m = y(4);
     d = y(5);
 
-    ds = -beta*s*i + gamma*p_IS*i + alpha*p_HS*h;
-    di = beta*i*s - gamma*i;
-    dh = gamma*p_IH*i - p_HM*alpha*h;
-    dm = gamma*p_IM*i + alpha*p_HM*h;
-    dd = gamma*p_ID*i + alpha*p_HD*h;
+    % Using constants from struct
+    ds = -beta * s * i + gamma * constants.i_s_prob * i + alpha * constants.h_s_prob * h;
+    di = beta * s * i - gamma * i;
+    dh = gamma * constants.i_h_prob * i - alpha * h;
+    dm = gamma * constants.i_m_prob * i + alpha * constants.h_m_prob * h;
+    dd = gamma * constants.i_d_prob * i + alpha * constants.h_d_prob * h;
 
     dydt = [ds; di; dh; dm; dd];
 end
