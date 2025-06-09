@@ -32,7 +32,7 @@ Please refer to the descriptions below for specific information about each file.
 
 | File | Description | Related Figure |
 |------|-------------|----------------|
-| `siripc.m` | SIR-IPC model code (**no agent tracking**) — simulates the population-level dynamics without tracking individual agents.Includes comparison with deterministic ODE solution. |Replicates result of Figure 1 of the paper|
+| `siripc.m` | SIR-IPC model code (**agent tracking as of June 4**) — simulates the population-level dynamics with tracking individual agents.Includes comparison with deterministic ODE solution. |Replicates result of Figure 1 of the paper|
 | `sir_combined_model.m` | SIR-IPC model with **agent tracking** - Includes logic to trace individual agent states over time.Includes comparison with deterministic ODE solution. | Replicates result of Figure 1 of the paper|
 | `varpreF.m` | Stochastic SIR model simulation using the Gillespie algorithm with single run across varying population sizes(although the code includes functionality for multiple runs). Includes comparison with deterministic ODE solution and analysis of standard deviation evolution over time. |Replicates result of Figure 2 of the paper|
 
@@ -43,7 +43,7 @@ Please refer to the descriptions below for specific information about each file.
 
 | File | Description | Related Figure |
 |------|-------------|----------------|
-| `sihripcv2.m` | SIHR-IPC model code (**no agent tracking**) — simulates the population-level dynamics without tracking individual agents.Includes comparison with deterministic ODE solution. |Replicates result of Figure 1 of the paper for SIHR|
+| `sihripcv2.m` | SIHR-IPC model code (**agent tracking as of June 4**) — simulates the population-level dynamics with tracking individual agents.Includes comparison with deterministic ODE solution. |Replicates result of Figure 1 of the paper for SIHR|
 | `sirhipcKeyton.m` | Includes comparison with deterministic ODE solution. |Replicates result of Figure 1 of the paper for SIHR|
 
 ---
