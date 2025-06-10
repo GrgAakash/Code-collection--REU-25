@@ -21,11 +21,8 @@ function advanced_ipc_model()
     i0 = 0.04;
     m0 = 1 - s0 - i0; % assume that at time 0, no one is immune
     Ns = [316,1000,3162,10000];
-    all_data.ns = {};
-    all_data.ni = {};
-    all_data.nh = {};
-    all_data.nm = {};
-    all_data.nd = {};
+    all_data.ns = {}; all_data.ni = {}; all_data.nh = {}; all_data.nm = {}; all_data.nd = {};
+    all_data.vs = {}; all_data.vi = {}; all_data.vh = {}; all_data.vm = {}; all_data.vd = {};
     all_data.T = {};
 
     constants.max_t = 30;
@@ -65,19 +62,22 @@ function advanced_ipc_model()
         data.nh = 0;
         data.nm = M0;
         data.nd = 0;
+        data.vs = 0;
+        data.vi = 0;
+        data.vh = 0;
+        data.vm = 0;
+        data.vd = 0;
         data.T = 0;
 
         %% Perform Simulations
         data = simulate_ipc(S, I, H, M, D, constants, data);
-        all_data.ns{end+1} = data.ns;
-        all_data.ni{end+1} = data.ni;
-        all_data.nh{end+1} = data.nh;
-        all_data.nm{end+1} = data.nm;
-        all_data.nd{end+1} = data.nd;
+        all_data.ns{end+1}=data.ns;all_data.ni{end+1}=data.ni;all_data.nh{end+1}=data.nh;all_data.nm{end+1}=data.nm;all_data.nd{end+1}=data.nd;
+        data.vs(1) = data.vs(2); data.vi(1) = data.vi(2); data.vh(1) = data.vh(2); data.vm(1) = data.vm(2); data.vd(1) = data.vd(2);
+        all_data.vs{end+1}=data.vs;all_data.vi{end+1}=data.vi;all_data.vh{end+1}=data.vh;all_data.vm{end+1}=data.vm;all_data.vd{end+1}=data.vd;
         all_data.T{end+1} = data.T;
 
         %% Graphing
-        plot_all_vs_time(data, constants.N);
+        plot_proportions_vs_time(data, constants.N);
     end
 
 
@@ -89,11 +89,16 @@ function advanced_ipc_model()
     tspan = [0 constants.max_t];
     [t_det, y_det] = ode45(@(t, y) sihmd_system(t, y, constants, beta, gamma, alpha), tspan, y0);
     
-    plot_compartment_vs_time(all_data.T, all_data.ns, t_det, y_det(:,1), Ns, "Susceptible", constants.max_t);
-    plot_compartment_vs_time(all_data.T, all_data.ni, t_det, y_det(:,2), Ns, "Infected", constants.max_t);
-    plot_compartment_vs_time(all_data.T, all_data.nh, t_det, y_det(:,3), Ns, "Hospitalized", constants.max_t);
-    plot_compartment_vs_time(all_data.T, all_data.nm, t_det, y_det(:,4), Ns, "Immune", constants.max_t);
-    plot_compartment_vs_time(all_data.T, all_data.nd, t_det, y_det(:,5), Ns, "Dead", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.ns, t_det, y_det(:,1), Ns, "Susceptible Proportion", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.ni, t_det, y_det(:,2), Ns, "Infected Proportion", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.nh, t_det, y_det(:,3), Ns, "Hospitalized Proportion", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.nm, t_det, y_det(:,4), Ns, "Immune Proportion", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.nd, t_det, y_det(:,5), Ns, "Dead Proportion", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.vs, [], [], Ns, "Susceptible Variance", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.vi, [], [], Ns, "Infected Variance", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.vh, [], [], Ns, "Hospitalized Variance", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.vm, [], [], Ns, "Immune Variance", constants.max_t);
+    plot_compartment_vs_time(all_data.T, all_data.vd, [], [], Ns, "Dead Variance", constants.max_t);
 end
 
 function data = simulate_ipc(S, I, H, M, D, constants, data) 
@@ -109,23 +114,36 @@ function data = simulate_ipc(S, I, H, M, D, constants, data)
     master_clock = s_clock + i_clock + h_clock;
 
     if data.T(end) >= constants.max_t || master_clock == 0
+        if data.T(end) < constants.max_t
+            data.ns(end+1)=data.ns(end);data.ni(end+1)=data.ni(end);data.nh(end+1)=data.nh(end);data.nm(end+1)=data.nm(end);data.nd(end+1)=data.nd(end);
+            data.vs(end+1)=data.vs(end);data.vi(end+1)=data.vi(end);data.vh(end+1)=data.vh(end);data.vm(end+1)=data.vm(end);data.vd(end+1)=data.vd(end);
+            data.T(end+1) = constants.max_t;
+        end
         disp("Done!");
         return;
     end
 
-    data.ns(end+1) = ns;
-    data.ni(end+1) = ni;
-    data.nh(end+1) = nh;
-    data.nm(end+1) = nm;
+    data.ns(end+1) = ns; 
+    data.ni(end+1) = ni; 
+    data.nh(end+1) = nh; 
+    data.nm(end+1) = nm; 
     data.nd(end+1) = nd;
+    data.vs(end+1) = (constants.susceptible_event_rate*ns/constants.N*ni/constants.N*constants.s_i_prob + constants.infected_event_rate*ni/constants.N*constants.i_s_prob + constants.hospitalized_event_rate*nh/constants.N*constants.h_s_prob) / constants.N;
+    data.vi(end+1) = (constants.susceptible_event_rate*ns/constants.N*ni/constants.N*constants.s_i_prob + constants.infected_event_rate) / constants.N;
+    data.vh(end+1) = (constants.infected_event_rate*ni/constants.N*constants.i_h_prob + constants.hospitalized_event_rate*nh/constants.N) / constants.N;
+    data.vm(end+1) = (constants.infected_event_rate*ni/constants.N*constants.i_m_prob + constants.hospitalized_event_rate*nh/constants.N*constants.h_m_prob) / constants.N;
+    data.vd(end+1) = (constants.infected_event_rate*ni/constants.N*constants.i_d_prob + constants.hospitalized_event_rate*nh/constants.N*constants.h_d_prob) / constants.N;
 
     dt = exprnd(1 / master_clock);
     data.T(end+1) = data.T(end) + dt;
 
     r = rand;
     if (r < s_clock / master_clock)                 % transition from s to i
-        I(end+1) = S(end);
-        S(end) = [];
+        r2 = rand;
+        if r2 < constants.s_i_prob                              % always s to i
+            I(end+1) = S(end);
+            S(end) = [];
+        end
     elseif (r < (s_clock + i_clock) / master_clock) % transition from i to [s h m d]
         r2 = rand;
         if r2 < constants.i_h_prob                              % i to h
@@ -162,8 +180,6 @@ function dydt = sihmd_system(~, y, constants, beta, gamma, alpha)
     s = y(1);
     i = y(2);
     h = y(3);
-    m = y(4);
-    d = y(5);
 
     % Using constants from struct
     ds = -beta * s * i + gamma * constants.i_s_prob * i + alpha * constants.h_s_prob * h;
@@ -175,7 +191,7 @@ function dydt = sihmd_system(~, y, constants, beta, gamma, alpha)
     dydt = [ds; di; dh; dm; dd];
 end
 
-function plot_all_vs_time(data, N) 
+function plot_proportions_vs_time(data, N) 
     figure;
     hold on;
     plot(data.T, data.ns / N, 'b', 'DisplayName', 'Susceptible', 'LineWidth', 1.5);
@@ -205,7 +221,7 @@ function plot_compartment_vs_time(sim_t, sim_data, theo_t, theo_data, Ns, compar
     legend_labels{length(Ns)+1} = ['ODE'];
 
     ylabel(compartment);
-    title([compartment, ' Proportion vs Time']);
+    title([compartment, ' vs Time']);
     xlabel('Time');
     legend(legend_labels);
     xlim([0 max_t]);
