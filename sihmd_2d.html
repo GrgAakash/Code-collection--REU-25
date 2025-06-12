@@ -20,7 +20,7 @@
             top: 10px;
             left: 10px;
             width: 300px;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0,0,0,0.75);
             border-radius: 8px;
             max-height: calc(100vh - 20px);
             display: flex;
@@ -29,6 +29,7 @@
         }
         #panel-header {
             padding: 15px 15px 0 15px;
+            flex-shrink: 0;
         }
         #panel-body {
             flex-grow: 1;
@@ -69,7 +70,15 @@
         .tab-content.active { display: block; }
         
         .control-group {
-            margin-bottom: 12px;
+            margin-bottom: 15px;
+        }
+        .control-group h3 {
+            font-size: 1em;
+            color: #0af;
+            border-bottom: 1px solid #057;
+            padding-bottom: 5px;
+            margin-top: 15px;
+            margin-bottom: 10px;
         }
         .control-group label {
             display: block;
@@ -79,12 +88,16 @@
         .control-group input[type="range"] {
             width: 100%;
         }
+        input[type="range"]:disabled {
+            opacity: 0.5;
+        }
         .button-group {
             padding: 15px;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0,0,0,0.75);
             border-top: 1px solid #444;
             display: flex;
             gap: 10px;
+            flex-shrink: 0;
         }
         button {
             flex-grow: 1;
@@ -105,6 +118,31 @@
             background-color: #555;
             cursor: not-allowed;
         }
+        #state-counts {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.65);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        #state-counts div {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+         .color-susceptible { background-color: hsl(216, 80%, 50%); } 
+         .color-infectious { background-color: hsl(0, 100%, 50%); }   
+         .color-hospitalized { background-color: hsl(36, 80%, 60%); } 
+         .color-immune { background-color: hsl(0, 0%, 80%); }        
+         .color-dead { background-color: hsl(280, 50%, 40%); }
     </style>
 </head>
 <body>
@@ -113,14 +151,14 @@
             <h1>SIHMD-2D IPC Simulation</h1>
             <div class="tab-container">
                 <div class="tab-button active" data-tab="movement">Movement</div>
-                <div class="tab-button" data-tab="infection">Infection Transfer</div>
-                <div class="tab-button" data-tab="behavior">Human Behavior</div>
+                <div class="tab-button" data-tab="infection">Infection</div>
+                <div class="tab-button" data-tab="behavior">Behavior</div>
             </div>
         </div>
 
         <div id="panel-body">
             <div id="movement" class="tab-content active">
-                <div class="control-group">
+                 <div class="control-group">
                     <label for="latticeSize">Lattice Size: <span id="latticeSize-value">10</span></label>
                     <input type="range" id="latticeSize" min="5" max="32" value="10" step="1">
                 </div>
@@ -137,12 +175,8 @@
                     <input type="range" id="moveRadius" min="1" max="10" value="3" step="0.5">
                 </div>
                 <div class="control-group">
-                    <label for="stationaryMult">Stationary Multiplier: <span id="stationaryMult-value">0.2</span></label>
-                    <input type="range" id="stationaryMult" min="0" max="2" value="0.2" step="0.05">
-                </div>
-                <div class="control-group">
                     <label for="animDuration">Animation (ms): <span id="animDuration-value">3000</span></label>
-                    <input type="range" id="animDuration" min="1" max="5000" value="3000" step="100">
+                    <input type="range" id="animDuration" min="500" max="5000" value="3000" step="100">
                 </div>
                 <div class="control-group">
                     <label for="simInterval">Pause (ms): <span id="simInterval-value">1000</span></label>
@@ -159,11 +193,65 @@
             </div>
 
             <div id="infection" class="tab-content">
-                <p>Coming Soon...</p>
+                <h3>From Start</h3>
+                <div class="control-group">
+                    <label for="initialInfectious">Initial Infectious (%): <span id="initialInfectious-value">5</span></label>
+                    <input type="range" id="initialInfectious" min="1" max="100" value="5" step="1">
+                </div>
+
+                <h3>From Susceptible</h3>
+                <div class="control-group">
+                    <label for="infectionProb">Event Rate / Interaction: <span id="infectionProb-value">0.5</span></label>
+                    <input type="range" id="infectionProb" min="0" max="1" value="0.5" step="0.01">
+                </div>
+                 <div class="control-group">
+                    <label>To Infected: <span id="pS_I-value">1.00</span></label>
+                    <input type="range" id="pS_I" min="1" max="1" value="1" step="0.01" disabled>
+                </div>
+
+                <h3>From Infected</h3>
+                 <div class="control-group">
+                    <label for="infEventRate">Event Rate / Step: <span id="infEventRate-value">0.5</span></label>
+                    <input type="range" id="infEventRate" min="0.01" max="1" value="0.5" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="pI_S">To Susceptible (pI->S): <span id="pI_S-value">0.20</span></label>
+                    <input type="range" id="pI_S" min="0" max="1" value="0.20" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="pI_H">To Hospitalized (pI->H): <span id="pI_H-value">0.05</span></label>
+                    <input type="range" id="pI_H" min="0" max="1" value="0.05" step="0.01">
+                </div>
+                 <div class="control-group">
+                    <label for="pI_D">To Dead (pI->D): <span id="pI_D-value">0.01</span></label>
+                    <input type="range" id="pI_D" min="0" max="1" value="0.01" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="pI_M">To Immune (pI->M): <span id="pI_M-value">0.74</span></label>
+                    <input type="range" id="pI_M" min="0" max="1" value="0.74" step="0.01" disabled>
+                </div>
+
+                <h3>From Hospitalized</h3>
+                <div class="control-group">
+                    <label for="hospEventRate">Event Rate / Step: <span id="hospEventRate-value">0.2</span></label>
+                    <input type="range" id="hospEventRate" min="0.01" max="1" value="0.2" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="pH_S">To Susceptible (pH->S): <span id="pH_S-value">0.25</span></label>
+                    <input type="range" id="pH_S" min="0" max="1" value="0.25" step="0.01">
+                </div>
+                 <div class="control-group">
+                    <label for="pH_D">To Dead (pH->D): <span id="pH_D-value">0.15</span></label>
+                    <input type="range" id="pH_D" min="0" max="1" value="0.15" step="0.01">
+                </div>
+                 <div class="control-group">
+                    <label for="pH_M">To Immune (pH->M): <span id="pH_M-value">0.60</span></label>
+                     <input type="range" id="pH_M" min="0" max="1" value="0.60" step="0.01" disabled>
+                </div>
             </div>
             
             <div id="behavior" class="tab-content">
-                <p>Coming Soon...</p>
+                <p>Controls for this section will be added later.</p>
             </div>
         </div>
         
@@ -172,71 +260,158 @@
             <button id="togglePlayBtn" disabled>Pause</button>
         </div>
     </div>
+    <div id="state-counts">
+        <div><span class="color-indicator color-susceptible"></span>Susceptible: <span id="count-susceptible">0</span></div>
+        <div><span class="color-indicator color-infectious"></span>Infectious: <span id="count-infectious">0</span></div>
+        <div><span class="color-indicator color-hospitalized"></span>Hospitalized: <span id="count-hospitalized">0</span></div>
+        <div><span class="color-indicator color-immune"></span>Immune: <span id="count-immune">0</span></div>
+        <div><span class="color-indicator color-dead"></span>Dead: <span id="count-dead">0</span></div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script type="module">
-        // Setup 
+        // --- Core Setup ---
         let scene, camera, renderer;
         let points = [];
         let agents = [];
         let neighborMap = [];
         let simulationIntervalId;
-        let isPaused = true; // Start paused by default
+        let isPaused = true;
         let isRunning = false;
         let config = {};
+        let initialAgentCount = 0;
 
-        // DOM Elements
+        // --- DOM Elements ---
         const controls = {
             latticeSize: document.getElementById('latticeSize'),
             latticeSpacing: document.getElementById('latticeSpacing'),
             numAgents: document.getElementById('numAgents'),
             moveRadius: document.getElementById('moveRadius'),
-            stationaryMult: document.getElementById('stationaryMult'),
             animDuration: document.getElementById('animDuration'),
             simInterval: document.getElementById('simInterval'),
             noiseFreq: document.getElementById('noiseFreq'),
             noiseExp: document.getElementById('noiseExp'),
+            initialInfectious: document.getElementById('initialInfectious'),
+            infectionProb: document.getElementById('infectionProb'),
+            infEventRate: document.getElementById('infEventRate'),
+            pI_S: document.getElementById('pI_S'),
+            pI_H: document.getElementById('pI_H'),
+            pI_D: document.getElementById('pI_D'),
+            hospEventRate: document.getElementById('hospEventRate'),
+            pH_S: document.getElementById('pH_S'),
+            pH_D: document.getElementById('pH_D'),
             startBtn: document.getElementById('startBtn'),
             togglePlayBtn: document.getElementById('togglePlayBtn')
         };
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
+        const stateCounts = {
+            susceptible: document.getElementById('count-susceptible'),
+            infectious: document.getElementById('count-infectious'),
+            hospitalized: document.getElementById('count-hospitalized'),
+            immune: document.getElementById('count-immune'),
+            dead: document.getElementById('count-dead')
+        };
 
-        // Event Listeners
-        Object.keys(controls).forEach(key => {
-            if (controls[key].type === 'range') {
-                controls[key].addEventListener('input', () => {
-                    document.getElementById(`${key}-value`).textContent = controls[key].value;
-                });
-            }
-        });
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                
-                button.classList.add('active');
-                document.getElementById(button.dataset.tab).classList.add('active');
+        /**
+         * Binds all the event listeners for the UI controls.
+         */
+        function setupEventListeners() {
+            Object.keys(controls).forEach(key => {
+                if (controls[key] && controls[key].type === 'range') {
+                    controls[key].addEventListener('input', () => {
+                        const valueEl = document.getElementById(`${key}-value`);
+                        if (valueEl) valueEl.textContent = controls[key].value;
+                    });
+                }
             });
-        });
-        controls.startBtn.addEventListener('click', startSimulation);
-        controls.togglePlayBtn.addEventListener('click', togglePlay);
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    button.classList.add('active');
+                    document.getElementById(button.dataset.tab).classList.add('active');
+                });
+            });
 
-        // Update Settings
+            controls.startBtn.addEventListener('click', startSimulation);
+            controls.togglePlayBtn.addEventListener('click', togglePlay);
+
+            const pI_sliders = [controls.pI_S, controls.pI_H, controls.pI_D];
+            pI_sliders.forEach(slider => slider.addEventListener('input', () => balanceProbabilities(pI_sliders, document.getElementById('pI_M-value'), 'pI_M')));
+            
+            const pH_sliders = [controls.pH_S, controls.pH_D];
+            pH_sliders.forEach(slider => slider.addEventListener('input', () => balanceProbabilities(pH_sliders, document.getElementById('pH_M-value'), 'pH_M')));
+            
+            balanceProbabilities(pI_sliders, document.getElementById('pI_M-value'), 'pI_M');
+            balanceProbabilities(pH_sliders, document.getElementById('pH_M-value'), 'pH_M');
+        }
+
+        /**
+         * Ensures a set of probability sliders sums to 1.
+         * @param {HTMLInputElement[]} sliders - The array of sliders to balance.
+         * @param {HTMLElement} remainderEl - The element to display the remaining probability.
+         * @param {string} remainderSliderId - The ID of the disabled slider to update.
+         */
+        function balanceProbabilities(sliders, remainderEl, remainderSliderId) {
+            let total = sliders.reduce((sum, s) => sum + parseFloat(s.value), 0);
+            if (total > 1) {
+                const changedSlider = event.target;
+                const excess = total - 1;
+                let otherTotal = 0;
+                sliders.forEach(s => { if (s !== changedSlider) otherTotal += parseFloat(s.value); });
+                
+                if (otherTotal > 0) {
+                    sliders.forEach(s => {
+                        if (s !== changedSlider) {
+                            const proportion = parseFloat(s.value) / otherTotal;
+                            s.value = parseFloat(s.value) - excess * proportion;
+                            document.getElementById(`${s.id}-value`).textContent = parseFloat(s.value).toFixed(2);
+                        }
+                    });
+                }
+            }
+            const remainder = 1 - sliders.reduce((sum, s) => sum + parseFloat(s.value), 0);
+            const finalRemainder = Math.max(0, remainder);
+            remainderEl.textContent = finalRemainder.toFixed(2);
+            
+            const remainderSlider = document.getElementById(remainderSliderId);
+            if (remainderSlider) {
+                remainderSlider.value = finalRemainder;
+            }
+        }
+
+        /** Reads all values from the UI controls and stores them in the global config object. */
         function readConfig() {
+            // Movement
             config.LATTICE_SIZE = parseInt(controls.latticeSize.value);
             config.LATTICE_SPACING = parseFloat(controls.latticeSpacing.value);
             config.NUM_AGENTS = parseInt(controls.numAgents.value);
             config.MOVE_RADIUS = parseFloat(controls.moveRadius.value);
-            config.STATIONARY_MULT = parseFloat(controls.stationaryMult.value);
             config.ANIMATION_DURATION = parseInt(controls.animDuration.value);
             config.SIMULATION_INTERVAL = parseInt(controls.simInterval.value);
             config.NOISE_FREQUENCY = parseFloat(controls.noiseFreq.value);
             config.NOISE_EXPONENT = parseFloat(controls.noiseExp.value);
             config.AGENT_SPREAD_RADIUS = 0.3;
             config.MAX_ATTRACTIVENESS = 10;
+            
+            // Infection
+            config.INITIAL_INFECTIOUS_PERCENT = parseFloat(controls.initialInfectious.value) / 100;
+            config.INFECTION_PROB = parseFloat(controls.infectionProb.value);
+            config.INF_EVENT_RATE = parseFloat(controls.infEventRate.value);
+            config.PI_S = parseFloat(controls.pI_S.value);
+            config.PI_H = parseFloat(controls.pI_H.value);
+            config.PI_D = parseFloat(controls.pI_D.value);
+            config.PI_M = 1 - (config.PI_S + config.PI_H + config.PI_D);
+            config.HOSP_EVENT_RATE = parseFloat(controls.hospEventRate.value);
+            config.PH_S = parseFloat(controls.pH_S.value);
+            config.PH_D = parseFloat(controls.pH_D.value);
+            config.PH_M = 1 - (config.PH_S + config.PH_D);
         }
+
+        /** Removes all agents and points from the scene to prepare for a restart. */
         function cleanup() {
             if (simulationIntervalId) clearInterval(simulationIntervalId);
             agents.forEach(agent => scene.remove(agent.mesh));
@@ -246,7 +421,7 @@
             neighborMap = [];
         }
 
-        // Launch
+        /** Starts or restarts the simulation with the current UI settings. */
         function startSimulation() {
             cleanup();
             readConfig();
@@ -262,17 +437,18 @@
             createLattice();
             precomputeNeighbors();
             createAgents();
+            updateStateCounts();
 
             isPaused = false;
             isRunning = true;
-            simulationIntervalId = setInterval(simulationStep, config.SIMULATION_INTERVAL);
+            simulationIntervalId = setInterval(runSimulationTurn, config.SIMULATION_INTERVAL);
             
             controls.startBtn.textContent = 'Restart';
             controls.togglePlayBtn.disabled = false;
             controls.togglePlayBtn.textContent = 'Pause';
         }
 
-        // Initialize Animation and Rendering
+        /** Initializes the THREE.js scene, camera, and renderer on page load. */
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000);
@@ -284,28 +460,20 @@
             window.addEventListener('resize', onWindowResize, false);
         }
 
-        // Construct a NxN lattice of points with "random" attractiveness
+        /** Creates the lattice of points with attractiveness based on Perlin noise. */
         function createLattice() {
             const noise = getNoiseHelper();
             noise.seed(Math.random());
             const pointGeometry = new THREE.RingGeometry(0.4, 0.5, 32);
 
-            // Loops to create each point
             for (let i = 0; i < config.LATTICE_SIZE; i++) {
                 for (let j = 0; j < config.LATTICE_SIZE; j++) {
-                    
-                    // Using perlin noise generation, create pseudorandom value
                     const noiseValue = noise.perlin2(i / config.NOISE_FREQUENCY, j / config.NOISE_FREQUENCY);
                     const normalizedNoise = (noiseValue + 1) / 2;
-                    
-                    // Map this number to a modified exponential distribution for attractiveness
                     const skewedNoise = Math.pow(normalizedNoise, config.NOISE_EXPONENT);
                     const attractiveness = Math.max(1, 0.1 * Math.round(10 * skewedNoise * (config.MAX_ATTRACTIVENESS - 1)) + 1);
-
                     const x = (i - (config.LATTICE_SIZE - 1) / 2) * config.LATTICE_SPACING;
                     const y = (j - (config.LATTICE_SIZE - 1) / 2) * config.LATTICE_SPACING;
-
-                    // Create the point and animate it, with size and color corresponding to attractiveness
                     const lightness = 0.5 + 0.5 * (attractiveness / config.MAX_ATTRACTIVENESS);
                     const color = new THREE.Color().setHSL(0, 0, lightness);
                     const pointMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8 });
@@ -313,13 +481,12 @@
                     mesh.position.set(x, y, 0);
                     mesh.scale.set(attractiveness * 0.5, attractiveness * 0.5, 1);
                     scene.add(mesh);
-
                     points.push({ x, y, attractiveness, mesh, index: points.length });
                 }
             }
         }
 
-        // To speed up computation for large simulations, create a lookup table of each point's neighbors based on the move radius
+        /** Pre-calculates which points are within the move radius for every other point. */
         function precomputeNeighbors() {
             const maxDistance = config.MOVE_RADIUS * config.LATTICE_SPACING;
             for (let i = 0; i < points.length; i++) {
@@ -336,73 +503,143 @@
             }
         }
 
-        // Create all the agents and add them to the animation scene
+        /** Creates the agents, sets their initial state, and infects a percentage of them. */
         function createAgents() {
+            initialAgentCount = config.NUM_AGENTS;
             const agentGeometry = new THREE.CircleGeometry(0.15, 16);
             for (let i = 0; i < config.NUM_AGENTS; i++) {
-                // For now, use a random color, but this will correspond to the compartment the agent is in (SIHMD)
-                const agentMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(i / config.NUM_AGENTS, 0.9, 0.6) });
+                const agentMaterial = new THREE.MeshBasicMaterial({ color: getAgentColor('susceptible')});
                 const startPointIndex = Math.floor(Math.random() * points.length);
                 const startPoint = points[startPointIndex];
                 const mesh = new THREE.Mesh(agentGeometry, agentMaterial);
                 mesh.position.copy(startPoint.mesh.position);
                 scene.add(mesh);
-                agents.push({ id: i, currentPointIndex: startPointIndex, mesh, isMoving: false, moveStartTime: 0, startPosition: new THREE.Vector3(), endPosition: new THREE.Vector3() });
+                agents.push({ id: i, state: 'susceptible', currentPointIndex: startPointIndex, mesh, isMoving: false, moveStartTime: 0, startPosition: new THREE.Vector3(), endPosition: new THREE.Vector3() });
+            }
+
+            const numToInfect = Math.floor(config.NUM_AGENTS * config.INITIAL_INFECTIOUS_PERCENT);
+            for (let i = 0; i < numToInfect; i++) {
+                agents[i].state = 'infectious';
             }
         }
 
-        // The most important part, performing one simulation step
-        function simulationStep() {
-            
-            // Repeat for every agent
+        /** The main simulation turn logic, running disease and movement logic sequentially. */
+        function runSimulationTurn() {
+            if (agents.some(a => a.isMoving)) return;
+
+            // Phase A: Disease and State Changes at rest
+            const agentsByPoint = {};
             agents.forEach(agent => {
-                if (agent.isMoving) return;
-                
-                // Get the predetermined lookup table of nearby points to consider
-                const potentialDestinations = neighborMap[agent.currentPointIndex];
-                if (!potentialDestinations || potentialDestinations.length === 0) return;
-                const currentPoint = points[agent.currentPointIndex];
-                const weightedDestinations = [];
-                let totalRelativeAttractiveness = 0;
-                
-                // Find the relative attractiveness of each potential point to the current agent
-                potentialDestinations.forEach(point => {
-                    const distance = currentPoint.mesh.position.distanceTo(point.mesh.position);
-                    const isStationary = distance < 0.5;
-                    
-                    // The agent considers staying still based on the provided multiplier in settings
-                    // All the other points have the RA calculated with inverse square law and their absolute attractiveness
-                    const relativeAttractiveness = isStationary ? point.attractiveness * config.STATIONARY_MULT : point.attractiveness / Math.pow(distance, 2);
-                    weightedDestinations.push({ point, relativeAttractiveness });
-                    totalRelativeAttractiveness += relativeAttractiveness;
-                });
-                
-                // Choose a random point weighted by RA
-                let randomValue = Math.random() * totalRelativeAttractiveness;
-                let chosenDestination = weightedDestinations[weightedDestinations.length - 1].point;
-                for (let i = 0; i < weightedDestinations.length; i++) {
-                    randomValue -= weightedDestinations[i].relativeAttractiveness;
-                    if (randomValue <= 0) {
-                        chosenDestination = weightedDestinations[i].point;
-                        break;
-                    }
+                if (!agentsByPoint[agent.currentPointIndex]) {
+                    agentsByPoint[agent.currentPointIndex] = [];
                 }
-                
-                // Move the agent to the next point
-                const targetPosition = chosenDestination.mesh.position.clone();
-                const angle = Math.random() * 2 * Math.PI;
-                const radius = Math.random() * config.AGENT_SPREAD_RADIUS;
-                targetPosition.x += Math.cos(angle) * radius;
-                targetPosition.y += Math.sin(angle) * radius;
-                agent.isMoving = true;
-                agent.moveStartTime = performance.now();
-                agent.startPosition.copy(agent.mesh.position);
-                agent.endPosition.copy(targetPosition);
-                agent.currentPointIndex = chosenDestination.index;
+                agentsByPoint[agent.currentPointIndex].push(agent);
             });
+            
+            Object.values(agentsByPoint).forEach(group => {
+                const infectiousCount = group.filter(a => a.state === 'infectious').length;
+                if (infectiousCount > 0) {
+                    group.forEach(agent => {
+                        if (agent.state === 'susceptible' && Math.random() < config.INFECTION_PROB) {
+                            agent.state = 'infectious';
+                        }
+                    });
+                }
+            });
+
+            const agentsToRemove = new Set();
+            agents.forEach(agent => {
+                if (agent.state === 'infectious' && Math.random() < config.INF_EVENT_RATE) {
+                    agent.state = determineNextState('infectious');
+                } else if (agent.state === 'hospitalized' && Math.random() < config.HOSP_EVENT_RATE) {
+                    agent.state = determineNextState('hospitalized');
+                }
+
+                if (agent.state === 'dead') agentsToRemove.add(agent);
+            });
+
+            // Phase B: Plan and Initiate Movement
+            agents.forEach(agent => {
+                if (agent.state === 'dead') return;
+                agent.mesh.material.color.set(getAgentColor(agent.state));
+                if (agent.state !== 'hospitalized') moveAgent(agent);
+            });
+
+            if (agentsToRemove.size > 0) {
+                agentsToRemove.forEach(agent => scene.remove(agent.mesh));
+                agents = agents.filter(a => !agentsToRemove.has(a));
+            }
+            
+            updateStateCounts();
         }
 
-        // Using three.js, smoothly animate all actions in the scene
+        /** Determines the next state for an agent based on configured probabilities. */
+        function determineNextState(currentState) {
+            const r = Math.random();
+            if (currentState === 'infectious') {
+                if (r < config.PI_S) return 'susceptible';
+                if (r < config.PI_S + config.PI_H) return 'hospitalized';
+                if (r < config.PI_S + config.PI_H + config.PI_D) return 'dead';
+                return 'immune';
+            }
+            if (currentState === 'hospitalized') {
+                if (r < config.PH_S) return 'susceptible';
+                if (r < config.PH_S + config.PH_D) return 'dead';
+                return 'immune';
+            }
+            return currentState;
+        }
+
+        /** Calculates the next destination for an agent and initiates its movement. */
+        function moveAgent(agent) {
+             const potentialDestinations = neighborMap[agent.currentPointIndex];
+            if (!potentialDestinations || potentialDestinations.length === 0) return;
+            
+            const weightedDestinations = [];
+            let totalRelativeAttractiveness = 0;
+            potentialDestinations.forEach(point => {
+                const distance = points[agent.currentPointIndex].mesh.position.distanceTo(point.mesh.position);
+                const isStationary = distance < 0.01;
+                const relativeAttractiveness = isStationary ? 0 : point.attractiveness / Math.max(0.001, Math.pow(distance, 2));
+                weightedDestinations.push({ point, relativeAttractiveness });
+                totalRelativeAttractiveness += relativeAttractiveness;
+            });
+
+            let randomValue = Math.random() * totalRelativeAttractiveness;
+            let chosenDestination = potentialDestinations[0]; 
+            for (const dest of weightedDestinations) {
+                randomValue -= dest.relativeAttractiveness;
+                if (randomValue <= 0) {
+                    chosenDestination = dest.point;
+                    break;
+                }
+            }
+
+            const targetPosition = chosenDestination.mesh.position.clone();
+            const angle = Math.random() * 2 * Math.PI;
+            const radius = Math.random() * config.AGENT_SPREAD_RADIUS;
+            targetPosition.x += Math.cos(angle) * radius;
+            targetPosition.y += Math.sin(angle) * radius;
+
+            agent.isMoving = true;
+            agent.moveStartTime = performance.now();
+            agent.startPosition.copy(agent.mesh.position);
+            agent.endPosition.copy(targetPosition);
+            agent.currentPointIndex = chosenDestination.index;
+        }
+
+        /** Returns the appropriate THREE.Color for an agent's state. */
+        function getAgentColor(state) {
+            switch(state) {
+                case 'susceptible': return new THREE.Color('hsl(216, 80%, 50%)');
+                case 'infectious': return new THREE.Color('hsl(0, 100%, 50%)');
+                case 'hospitalized': return new THREE.Color('hsl(36, 80%, 60%)');
+                case 'immune': return new THREE.Color('hsl(0, 0%, 80%)');
+                default: return new THREE.Color('black');
+            }
+        }
+        
+        /** The main animation loop, which runs every frame to render the scene. */
         function animate() {
             requestAnimationFrame(animate);
             const now = performance.now();
@@ -421,7 +658,22 @@
             renderer.render(scene, camera);
         }
 
-        // Ensure the simulation still works if the window size is changed
+        /** Updates the state counters in the UI legend. */
+        function updateStateCounts() {
+            const counts = { susceptible: 0, infectious: 0, hospitalized: 0, immune: 0 };
+            agents.forEach(agent => {
+                if (counts[agent.state] !== undefined) {
+                    counts[agent.state]++;
+                }
+            });
+            stateCounts.susceptible.textContent = counts.susceptible;
+            stateCounts.infectious.textContent = counts.infectious;
+            stateCounts.hospitalized.textContent = counts.hospitalized;
+            stateCounts.immune.textContent = counts.immune;
+            stateCounts.dead.textContent = initialAgentCount - agents.length;
+        }
+
+        /** Handles window resizing to keep the camera and renderer updated. */
         function onWindowResize() {
             const aspect = window.innerWidth / window.innerHeight;
             camera.aspect = aspect;
@@ -434,7 +686,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
-        // Clicking pause/play lets the animation finish but toggles next steps
+        /** Toggles the paused state of the simulation. */
         function togglePlay() {
             if (!isRunning) return;
             isPaused = !isPaused;
@@ -442,13 +694,12 @@
                 clearInterval(simulationIntervalId);
                 controls.togglePlayBtn.textContent = "Resume";
             } else {
-                simulationIntervalId = setInterval(simulationStep, config.SIMULATION_INTERVAL);
+                simulationIntervalId = setInterval(runSimulationTurn, config.SIMULATION_INTERVAL);
                 controls.togglePlayBtn.textContent = "Pause";
             }
         }
 
-        // Perlin Noise generating function
-        // I cannot comprehend how this works, it is very advanced. I got it from https://github.com/josephg/noisejs
+        /** Generates Perlin noise values for creating the attractiveness landscape. */
         function getNoiseHelper() {
             class Grad { constructor(x, y, z) { this.x = x; this.y = y; this.z = z; } dot2(x, y) { return this.x * x + this.y * y; } }
             const grad3 = [ new Grad(1, 1, 0), new Grad(-1, 1, 0), new Grad(1, -1, 0), new Grad(-1, -1, 0), new Grad(1, 0, 1), new Grad(-1, 0, 1), new Grad(1, 0, -1), new Grad(-1, 0, -1), new Grad(0, 1, 1), new Grad(0, -1, 1), new Grad(0, 1, -1), new Grad(0, -1, -1) ];
@@ -461,9 +712,11 @@
             return { seed, perlin2 };
         }
 
-        // Start Animation
+        // --- Start Application ---
         init();
+        setupEventListeners();
         animate();
+
     </script>
 </body>
 </html>
