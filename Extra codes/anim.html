@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIHMD-2D IPC Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #111;
+            color: #eee;
+        }
+        canvas {
+            display: block;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 300px;
+            background: rgba(0,0,0,0.65);
+            border-radius: 8px;
+            max-height: calc(100vh - 20px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #panel-header {
+            padding: 15px 15px 0 15px;
+        }
+        #panel-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        h1 {
+            font-size: 1.5em;
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            border: 1px solid #555;
+            background-color: #333;
+            text-align: center;
+            border-bottom: 1px solid #555;
+            transition: background-color 0.2s;
+        }
+        .tab-button.active {
+            background-color: #444;
+            border-bottom: 1px solid #444;
+            color: #fff;
+        }
+        .tab-button:first-child { border-radius: 5px 0 0 5px; }
+        .tab-button:last-child { border-radius: 0 5px 5px 0; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .control-group {
+            margin-bottom: 12px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .control-group .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-group input[type="range"] {
+            flex-grow: 1;
+        }
+        .control-group input[type="number"] {
+            width: 70px;
+            padding: 4px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+        }
+        .button-group {
+            padding: 15px;
+            background: rgba(0,0,0,0.65);
+            border-top: 1px solid #444;
+            display: flex;
+            gap: 10px;
+        }
+        .speed-control {
+            padding: 15px;
+            background: rgba(0,0,0,0.65);
+            border-top: 1px solid #444;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .speed-control label {
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        .speed-control .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+        }
+        button {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        #state-counts {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.65);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        #state-counts div {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .color-susceptible { background-color: hsl(216, 80%, 50%); }  /* Blue */
+        .color-infectious { background-color: hsl(0, 100%, 50%); }    /* Red */
+        .color-hospitalized { background-color: hsl(36, 80%, 60%); }  /* Yellow */
+        .color-immune { background-color: hsl(0, 0%, 80%); }          /* White */
+        .color-dead { background-color: hsl(280, 50%, 40%); }         /* Purple */
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div id="panel-header">
+            <h1>SIHMD-2D IPC Simulation</h1>
+            <div class="tab-container">
+                <div class="tab-button active" data-tab="movement">Movement</div>
+                <div class="tab-button" data-tab="infection">Infection Transfer</div>
+                <div class="tab-button" data-tab="behavior">Human Behavior</div>
+            </div>
+        </div>
+
+        <div id="panel-body">
+            <div id="movement" class="tab-content active">
+                <div class="control-group">
+                    <label for="latticeSize">Lattice Size:</label>
+                    <div class="slider-container">
+                        <input type="range" id="latticeSize" min="5" max="32" value="10" step="1">
+                        <input type="number" id="latticeSize-number" min="5" max="32" value="10">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="latticeSpacing">Lattice Spacing:</label>
+                    <div class="slider-container">
+                        <input type="range" id="latticeSpacing" min="1" max="4" value="2" step="0.1">
+                        <input type="number" id="latticeSpacing-number" min="1" max="4" value="2" step="0.1">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="numAgents">Number of Agents:</label>
+                    <div class="slider-container">
+                        <input type="range" id="numAgents" min="5" max="1000" value="25" step="5">
+                        <input type="number" id="numAgents-number" min="5" max="1000" value="25">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="moveRadius">Move Radius:</label>
+                    <div class="slider-container">
+                        <input type="range" id="moveRadius" min="1" max="10" value="3" step="0.5">
+                        <input type="number" id="moveRadius-number" min="1" max="10" value="3" step="0.5">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="animDuration">Animation (ms):</label>
+                    <div class="slider-container">
+                        <input type="range" id="animDuration" min="1" max="5000" value="3000" step="100">
+                        <input type="number" id="animDuration-number" min="1" max="5000" value="3000">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="simInterval">Pause (ms):</label>
+                    <div class="slider-container">
+                        <input type="range" id="simInterval" min="0" max="5000" value="1000" step="100">
+                        <input type="number" id="simInterval-number" min="0" max="5000" value="1000">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="noiseFreq">Connectedness:</label>
+                    <div class="slider-container">
+                        <input type="range" id="noiseFreq" min="1.1" max="15" value="5" step="0.1">
+                        <input type="number" id="noiseFreq-number" min="1.1" max="15" value="5" step="0.1">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="noiseExp">Disparity:</label>
+                    <div class="slider-container">
+                        <input type="range" id="noiseExp" min="1" max="8" value="4" step="0.1">
+                        <input type="number" id="noiseExp-number" min="1" max="8" value="4" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <div id="infection" class="tab-content">
+                <div class="control-group">
+                    <label for="initialInfectious">Initial Infectious:</label>
+                    <div class="slider-container">
+                        <input type="range" id="initialInfectious" min="0" max="1000" value="1" step="1">
+                        <input type="number" id="initialInfectious-number" min="0" max="1000" value="1">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="infectionProbability">Infection Probability:</label>
+                    <div class="slider-container">
+                        <input type="range" id="infectionProbability" min="0" max="1" value="0.1" step="0.01">
+                        <input type="number" id="infectionProbability-number" min="0" max="1" value="0.1" step="0.01">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="infectiousDuration">Infectious Duration (steps):</label>
+                    <div class="slider-container">
+                        <input type="range" id="infectiousDuration" min="1" max="100" value="10" step="1">
+                        <input type="number" id="infectiousDuration-number" min="1" max="100" value="10">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="hospitalizationProbability">Hospitalization Probability:</label>
+                    <div class="slider-container">
+                        <input type="range" id="hospitalizationProbability" min="0" max="1" value="0.05" step="0.01">
+                        <input type="number" id="hospitalizationProbability-number" min="0" max="1" value="0.05" step="0.01">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="hospitalizationDuration">Hospitalization Duration (steps):</label>
+                    <div class="slider-container">
+                        <input type="range" id="hospitalizationDuration" min="1" max="100" value="20" step="1">
+                        <input type="number" id="hospitalizationDuration-number" min="1" max="100" value="20">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="recoveryProbability">Recovery Probability:</label>
+                    <div class="slider-container">
+                        <input type="range" id="recoveryProbability" min="0" max="1" value="0.8" step="0.01">
+                        <input type="number" id="recoveryProbability-number" min="0" max="1" value="0.8" step="0.01">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="deathProbability">Death Probability:</label>
+                    <div class="slider-container">
+                        <input type="range" id="deathProbability" min="0" max="1" value="0.1" step="0.01">
+                        <input type="number" id="deathProbability-number" min="0" max="1" value="0.1" step="0.01">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="interactionRadiusFactor">Interaction Radius Factor:</label>
+                    <div class="slider-container">
+                        <input type="range" id="interactionRadiusFactor" min="0.1" max="2.0" value="1.0" step="0.1">
+                        <input type="number" id="interactionRadiusFactor-number" min="0.1" max="2.0" value="1.0" step="0.1">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="behavior" class="tab-content">
+                <p>Coming Soon...</p>
+            </div>
+        </div>
+        
+        <div class="speed-control">
+            <label for="simulationSpeed">Speed:</label>
+            <div class="slider-container">
+                <input type="range" id="simulationSpeed" min="0.1" max="5" value="1" step="0.1">
+                <input type="number" id="simulationSpeed-number" min="0.1" max="5" value="1" step="0.1">
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="startBtn">Start</button>
+            <button id="togglePlayBtn" disabled>Pause</button>
+        </div>
+    </div>
+
+    <div id="state-counts">
+        <div><span class="color-indicator color-susceptible"></span>Susceptible: <span id="count-susceptible">0</span></div>
+        <div><span class="color-indicator color-infectious"></span>Infectious: <span id="count-infectious">0</span></div>
+        <div><span class="color-indicator color-hospitalized"></span>Hospitalized: <span id="count-hospitalized">0</span></div>
+        <div><span class="color-indicator color-immune"></span>Immune: <span id="count-immune">0</span></div>
+        <div><span class="color-indicator color-dead"></span>Dead: <span id="count-dead">0</span></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script type="module">
+        // Setup 
+        let scene, camera, renderer;
+        let points = [];
+        let agents = [];
+        let neighborMap = [];
+        let simulationIntervalId;
+        let isPaused = true; // Start paused by default
+        let isRunning = false;
+        let config = {};
+        let stepCount = 0;
+        let baseAnimDuration = 3000;  // Store base animation duration
+        let baseSimInterval = 1000;   // Store base simulation interval
+        let lastFrameTime = 0;        // Track the last frame time
+        let accumulatedTime = 0;      // Track accumulated animation time
+
+        // DOM Elements
+        const controls = {
+            latticeSize: document.getElementById('latticeSize'),
+            latticeSpacing: document.getElementById('latticeSpacing'),
+            numAgents: document.getElementById('numAgents'),
+            moveRadius: document.getElementById('moveRadius'),
+            animDuration: document.getElementById('animDuration'),
+            simInterval: document.getElementById('simInterval'),
+            noiseFreq: document.getElementById('noiseFreq'),
+            noiseExp: document.getElementById('noiseExp'),
+            initialInfectious: document.getElementById('initialInfectious'),
+            infectionProbability: document.getElementById('infectionProbability'),
+            infectiousDuration: document.getElementById('infectiousDuration'),
+            hospitalizationProbability: document.getElementById('hospitalizationProbability'),
+            hospitalizationDuration: document.getElementById('hospitalizationDuration'),
+            recoveryProbability: document.getElementById('recoveryProbability'),
+            deathProbability: document.getElementById('deathProbability'),
+            interactionRadiusFactor: document.getElementById('interactionRadiusFactor'),
+            simulationSpeed: document.getElementById('simulationSpeed'),
+            startBtn: document.getElementById('startBtn'),
+            togglePlayBtn: document.getElementById('togglePlayBtn')
+        };
+
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const stateCounts = {
+            susceptible: document.getElementById('count-susceptible'),
+            infectious: document.getElementById('count-infectious'),
+            hospitalized: document.getElementById('count-hospitalized'),
+            immune: document.getElementById('count-immune'),
+            dead: document.getElementById('count-dead')
+        };
+
+        // Add event listeners for number inputs
+        Object.keys(controls).forEach(key => {
+            if (controls[key] && controls[key].type === 'range') {
+                const numberInput = document.getElementById(`${key}-number`);
+                if (numberInput) {
+                    // Update number input when slider changes
+                    controls[key].addEventListener('input', () => {
+                        numberInput.value = controls[key].value;
+                    });
+                    
+                    // Update slider when number input changes
+                    numberInput.addEventListener('input', () => {
+                        let value = parseFloat(numberInput.value);
+                        const min = parseFloat(numberInput.min);
+                        const max = parseFloat(numberInput.max);
+                        
+                        // Enforce min/max bounds
+                        if (!isNaN(value)) {
+                            if (value < min) value = min;
+                            if (value > max) value = max;
+                            
+                            // Update both the number input and slider with the valid value
+                            numberInput.value = value;
+                            controls[key].value = value;
+                        }
+                    });
+
+                    // Additional validation when focus is lost
+                    numberInput.addEventListener('blur', () => {
+                        let value = parseFloat(numberInput.value);
+                        const min = parseFloat(numberInput.min);
+                        const max = parseFloat(numberInput.max);
+                        const step = parseFloat(numberInput.step) || 1;
+                        
+                        // If empty or invalid, reset to min value
+                        if (isNaN(value)) {
+                            value = min;
+                        }
+                        
+                        // Enforce min/max bounds
+                        if (value < min) value = min;
+                        if (value > max) value = max;
+                        
+                        // Round to nearest step if needed
+                        if (step !== 1) {
+                            value = Math.round(value / step) * step;
+                            // For floating point precision
+                            value = parseFloat(value.toFixed(Math.max(step.toString().split('.')[1]?.length || 0, 2)));
+                        }
+                        
+                        // Update both the number input and slider with the valid value
+                        numberInput.value = value;
+                        controls[key].value = value;
+                    });
+                }
+            }
+        });
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                button.classList.add('active');
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+
+        controls.startBtn.addEventListener('click', startSimulation);
+        controls.togglePlayBtn.addEventListener('click', togglePlay);
+
+        // Classes
+        class Point {
+            constructor(x, y, attractiveness, mesh, index) {
+                this.x = x;
+                this.y = y;
+                this.attractiveness = attractiveness;
+                this.mesh = mesh;
+                this.index = index;
+            }
+        }
+
+        class Agent {
+            constructor(id, currentPointIndex, mesh) {
+                this.id = id;
+                this.currentPointIndex = currentPointIndex;
+                this.mesh = mesh;
+                this.isMoving = false;
+                this.moveStartTime = 0;
+                this.startPosition = new THREE.Vector3();
+                this.endPosition = new THREE.Vector3();
+                this.state = 'susceptible';
+                this.stateChangeStep = 0;
+                this.accumulatedTime = 0;
+            }
+
+            updateState(newState) {
+                if (this.state !== newState) {
+                    this.state = newState;
+                    this.stateChangeStep = stepCount;
+                    this.updateVisuals();
+                }
+            }
+
+            updateVisuals() {
+                let color;
+                switch (this.state) {
+                    case 'susceptible': 
+                        color = new THREE.Color().setHSL(0.6, 0.8, 0.5); 
+                        break;
+                    case 'infectious': 
+                        color = new THREE.Color().setHSL(0.0, 1.0, 0.5); 
+                        break;
+                    case 'hospitalized': 
+                        color = new THREE.Color().setHSL(0.1, 0.8, 0.6); 
+                        break;
+                    case 'immune': 
+                        color = new THREE.Color().setHSL(0.0, 0.0, 0.8); 
+                        break;
+                    case 'dead': 
+                        color = new THREE.Color().setHSL(0.8, 0.5, 0.4); 
+                        break;
+                }
+                this.mesh.material.color.copy(color);
+            }
+        }
+
+        // Add speed control functionality
+        function updateSimulationSpeed() {
+            const speedFactor = parseFloat(controls.simulationSpeed.value);
+            
+            // Update animation duration (inverse relationship with speed)
+            const newAnimDuration = Math.round(baseAnimDuration / speedFactor);
+            controls.animDuration.value = newAnimDuration;
+            document.getElementById('animDuration-number').value = newAnimDuration;
+            
+            // Update simulation interval (inverse relationship with speed)
+            const newSimInterval = Math.round(baseSimInterval / speedFactor);
+            controls.simInterval.value = newSimInterval;
+            document.getElementById('simInterval-number').value = newSimInterval;
+            
+            // If simulation is running, update the interval
+            if (isRunning && !isPaused) {
+                if (simulationIntervalId) {
+                    clearInterval(simulationIntervalId);
+                }
+                if (newSimInterval > 0) {
+                    simulationIntervalId = setInterval(simulationStep, newSimInterval);
+                } else {
+                    // If interval is 0, run continuously
+                    function runContinuous() {
+                        if (!isPaused && isRunning) {
+                            simulationStep();
+                            requestAnimationFrame(runContinuous);
+                        }
+                    }
+                    runContinuous();
+                }
+            }
+        }
+
+        // Add event listener for speed control
+        controls.simulationSpeed.addEventListener('input', updateSimulationSpeed);
+        document.getElementById('simulationSpeed-number').addEventListener('input', () => {
+            controls.simulationSpeed.value = document.getElementById('simulationSpeed-number').value;
+            updateSimulationSpeed();
+        });
+
+        // Modify readConfig to use speed factor
+        function readConfig() {
+            const speedFactor = parseFloat(controls.simulationSpeed.value);
+            config.LATTICE_SIZE = parseInt(controls.latticeSize.value);
+            config.LATTICE_SPACING = parseFloat(controls.latticeSpacing.value);
+            config.NUM_AGENTS = parseInt(controls.numAgents.value);
+            config.MOVE_RADIUS = parseFloat(controls.moveRadius.value);
+            config.ANIMATION_DURATION = Math.round(baseAnimDuration / speedFactor);
+            config.SIMULATION_INTERVAL = Math.round(baseSimInterval / speedFactor);
+            config.NOISE_FREQUENCY = parseFloat(controls.noiseFreq.value);
+            config.NOISE_EXPONENT = parseFloat(controls.noiseExp.value);
+            config.INITIAL_INFECTIOUS = Math.min(parseInt(controls.initialInfectious.value), parseInt(controls.numAgents.value));
+            config.INFECTION_PROBABILITY = parseFloat(controls.infectionProbability.value);
+            config.INFECTIOUS_DURATION = parseInt(controls.infectiousDuration.value);
+            config.HOSPITALIZATION_PROBABILITY = parseFloat(controls.hospitalizationProbability.value);
+            config.HOSPITALIZATION_DURATION = parseInt(controls.hospitalizationDuration.value);
+            config.RECOVERY_PROBABILITY = parseFloat(controls.recoveryProbability.value);
+            config.DEATH_PROBABILITY = parseFloat(controls.deathProbability.value);
+            config.INTERACTION_RADIUS_FACTOR = parseFloat(controls.interactionRadiusFactor.value);
+            config.AGENT_SPREAD_RADIUS = 0.3;
+            config.MAX_ATTRACTIVENESS = 10;
+        }
+
+        function cleanup() {
+            if (simulationIntervalId) {
+                clearInterval(simulationIntervalId);
+                simulationIntervalId = null;
+            }
+            
+            agents.forEach(agent => {
+                if (agent.mesh && scene) {
+                    scene.remove(agent.mesh);
+                }
+            });
+            
+            points.forEach(point => {
+                if (point.mesh && scene) {
+                    scene.remove(point.mesh);
+                }
+            });
+            
+            agents = [];
+            points = [];
+            neighborMap = [];
+            stepCount = 0;
+        }
+
+        // Launch
+        function startSimulation() {
+            cleanup();
+            readConfig();
+            
+            // Reset animation timing
+            lastFrameTime = 0;
+            agents.forEach(agent => {
+                agent.accumulatedTime = 0;
+            });
+            
+            // Update camera
+            if (camera) {
+                const aspect = window.innerWidth / window.innerHeight;
+                const frustumSize = config.LATTICE_SIZE * config.LATTICE_SPACING;
+                camera.left = frustumSize * aspect / -2;
+                camera.right = frustumSize * aspect / 2;
+                camera.top = frustumSize / 2;
+                camera.bottom = frustumSize / -2;
+                camera.updateProjectionMatrix();
+            }
+
+            createLattice();
+            precomputeNeighbors();
+            createAgents();
+
+            isPaused = false;
+            isRunning = true;
+            
+            if (config.SIMULATION_INTERVAL > 0) {
+                simulationIntervalId = setInterval(simulationStep, config.SIMULATION_INTERVAL);
+            } else {
+                // If interval is 0, run continuously
+                function runContinuous() {
+                    if (!isPaused && isRunning) {
+                        simulationStep();
+                        requestAnimationFrame(runContinuous);
+                    }
+                }
+                runContinuous();
+            }
+            
+            controls.startBtn.textContent = 'Restart';
+            controls.togglePlayBtn.disabled = false;
+            controls.togglePlayBtn.textContent = 'Pause';
+
+            updateStateCounts();
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000);
+            camera.position.z = 10;
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+            
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function createLattice() {
+            points = [];
+            const noise = getNoiseHelper();
+            noise.seed(Math.random());
+            const pointGeometry = new THREE.RingGeometry(0.4, 0.5, 32);
+
+            for (let i = 0; i < config.LATTICE_SIZE; i++) {
+                for (let j = 0; j < config.LATTICE_SIZE; j++) {
+                    const noiseValue = noise.perlin2(i / config.NOISE_FREQUENCY, j / config.NOISE_FREQUENCY);
+                    const normalizedNoise = (noiseValue + 1) / 2;
+                    const skewedNoise = Math.pow(normalizedNoise, config.NOISE_EXPONENT);
+                    const attractiveness = Math.max(1, 0.1 * Math.round(10 * skewedNoise * (config.MAX_ATTRACTIVENESS - 1)) + 1);
+
+                    const x = (i - (config.LATTICE_SIZE - 1) / 2) * config.LATTICE_SPACING;
+                    const y = (j - (config.LATTICE_SIZE - 1) / 2) * config.LATTICE_SPACING;
+
+                    const lightness = 0.3 + 0.5 * (attractiveness / config.MAX_ATTRACTIVENESS);
+                    const color = new THREE.Color().setHSL(0, 0, lightness);
+                    const pointMaterial = new THREE.MeshBasicMaterial({ 
+                        color, 
+                        transparent: true, 
+                        opacity: 0.6 
+                    });
+                    const mesh = new THREE.Mesh(pointGeometry, pointMaterial);
+                    mesh.position.set(x, y, 0);
+                    mesh.scale.set(attractiveness * 0.3, attractiveness * 0.3, 1);
+                    scene.add(mesh);
+
+                    points.push(new Point(x, y, attractiveness, mesh, points.length));
+                }
+            }
+        }
+
+        function precomputeNeighbors() {
+            neighborMap = [];
+            const maxDistance = config.MOVE_RADIUS * config.LATTICE_SPACING;
+            
+            for (let i = 0; i < points.length; i++) {
+                const currentPoint = points[i];
+                const nearbyPoints = [];
+                
+                for (let j = 0; j < points.length; j++) {
+                    if (i === j) continue;
+                    
+                    const otherPoint = points[j];
+                    const distance = currentPoint.mesh.position.distanceTo(otherPoint.mesh.position);
+                    if (distance <= maxDistance) {
+                        nearbyPoints.push(otherPoint);
+                    }
+                }
+                neighborMap[i] = nearbyPoints;
+            }
+        }
+
+        function createAgents() {
+            agents = [];
+            const agentGeometry = new THREE.CircleGeometry(0.15, 16);
+            
+            // Create agents first
+            for (let i = 0; i < config.NUM_AGENTS; i++) {
+                const startPointIndex = Math.floor(Math.random() * points.length);
+                const startPoint = points[startPointIndex];
+                
+                const initialColor = new THREE.Color().setHSL(0.6, 0.8, 0.5); // Blue for susceptible
+                const agentMaterial = new THREE.MeshBasicMaterial({ color: initialColor });
+                const mesh = new THREE.Mesh(agentGeometry, agentMaterial);
+                
+                // Add small random offset to position
+                const angle = Math.random() * 2 * Math.PI;
+                const radius = Math.random() * config.AGENT_SPREAD_RADIUS;
+                mesh.position.set(
+                    startPoint.mesh.position.x + Math.cos(angle) * radius,
+                    startPoint.mesh.position.y + Math.sin(angle) * radius,
+                    0.1
+                );
+                scene.add(mesh);
+                
+                const agent = new Agent(i, startPointIndex, mesh);
+                agents.push(agent);
+            }
+
+            // Now randomly select which agents should be initially infectious
+            const shuffledIndices = Array.from({length: config.NUM_AGENTS}, (_, i) => i);
+            for (let i = shuffledIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+            }
+            
+            for (let i = 0; i < config.INITIAL_INFECTIOUS; i++) {
+                agents[shuffledIndices[i]].updateState('infectious');
+            }
+        }
+
+        function simulationStep() {
+            stepCount++;
+            const interactionRadius = config.MOVE_RADIUS * config.LATTICE_SPACING * config.INTERACTION_RADIUS_FACTOR;
+            const stateChanges = [];
+
+            agents.forEach(agent => {
+                if (agent.state === 'dead') return;
+
+                // State transition logic
+                if (agent.state === 'susceptible') {
+                    // Check for nearby infectious agents
+                    const agentPosition = agent.mesh.position;
+                    
+                    for (const otherAgent of agents) {
+                        if (otherAgent.state === 'infectious' && otherAgent.id !== agent.id) {
+                            const distance = agentPosition.distanceTo(otherAgent.mesh.position);
+                            if (distance <= interactionRadius) {
+                                if (Math.random() < config.INFECTION_PROBABILITY) {
+                                    stateChanges.push({ agent, newState: 'infectious' });
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else if (agent.state === 'infectious') {
+                    const stepsSinceInfection = stepCount - agent.stateChangeStep;
+                    if (stepsSinceInfection >= config.INFECTIOUS_DURATION) {
+                        // Add probability to return to susceptible state (p_IS = 0.749825)
+                        if (Math.random() < 0.749825) {
+                            stateChanges.push({ agent, newState: 'susceptible' });
+                        } else if (Math.random() < 0.04) {  // p_IH = 0.04
+                            stateChanges.push({ agent, newState: 'hospitalized' });
+                        } else if (Math.random() < 0.010175) {  // p_ID = 0.010175
+                            stateChanges.push({ agent, newState: 'dead' });
+                        } else {  // Remaining probability is for immune (p_IM = 0.2)
+                            stateChanges.push({ agent, newState: 'immune' });
+                        }
+                    }
+                } else if (agent.state === 'hospitalized') {
+                    const stepsSinceHospitalization = stepCount - agent.stateChangeStep;
+                    if (stepsSinceHospitalization >= config.HOSPITALIZATION_DURATION) {
+                        // Add probability to return to susceptible state (p_HS = 0.25)
+                        if (Math.random() < 0.25) {
+                            stateChanges.push({ agent, newState: 'susceptible' });
+                        } else if (Math.random() < 0.15) {  // p_HD = 0.15
+                            stateChanges.push({ agent, newState: 'dead' });
+                        } else {  // Remaining probability is for immune (p_HM = 0.6)
+                            stateChanges.push({ agent, newState: 'immune' });
+                        }
+                    }
+                }
+
+                // Movement logic (if not dead or hospitalized)
+                if (agent.state !== 'dead' && agent.state !== 'hospitalized' && !agent.isMoving) {
+                    // Choose new target using weighted random selection based on attractiveness
+                    let totalWeight = 0;
+                    const validTargets = neighborMap[agent.currentPointIndex] || [];
+                    
+                    if (validTargets.length > 0) {
+                        validTargets.forEach(point => {
+                            totalWeight += point.attractiveness;
+                        });
+                        
+                        let randomWeight = Math.random() * totalWeight;
+                        let selectedPoint = validTargets[0]; // fallback
+                        
+                        for (const point of validTargets) {
+                            randomWeight -= point.attractiveness;
+                            if (randomWeight <= 0) {
+                                selectedPoint = point;
+                                break;
+                            }
+                        }
+                        
+                        const targetPosition = selectedPoint.mesh.position.clone();
+                        
+                        // Add random spread
+                        const angle = Math.random() * 2 * Math.PI;
+                        const radius = Math.random() * config.AGENT_SPREAD_RADIUS;
+                        targetPosition.x += Math.cos(angle) * radius;
+                        targetPosition.y += Math.sin(angle) * radius;
+                        targetPosition.z = 0.1;
+
+                        agent.isMoving = true;
+                        agent.accumulatedTime = 0;  // Reset accumulated time for new movement
+                        agent.startPosition.copy(agent.mesh.position);
+                        agent.endPosition.copy(targetPosition);
+                        agent.currentPointIndex = selectedPoint.index;
+                    }
+                }
+            });
+
+            // Apply state changes
+            stateChanges.forEach(change => {
+                change.agent.updateState(change.newState);
+            });
+
+            updateStateCounts();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const now = performance.now();
+            
+            if (!isPaused) {
+                // Calculate delta time since last frame
+                if (lastFrameTime === 0) {
+                    lastFrameTime = now;
+                }
+                const deltaTime = now - lastFrameTime;
+                lastFrameTime = now;
+                
+                agents.forEach(agent => {
+                    if (agent.isMoving) {
+                        // Add to accumulated time only when not paused
+                        agent.accumulatedTime = (agent.accumulatedTime || 0) + deltaTime;
+                        
+                        const progress = Math.min(agent.accumulatedTime / config.ANIMATION_DURATION, 1.0);
+                        const easedProgress = progress * progress * (3 - 2 * progress);
+                        
+                        agent.mesh.position.lerpVectors(agent.startPosition, agent.endPosition, easedProgress);
+                        
+                        if (progress >= 1.0) {
+                            agent.isMoving = false;
+                            agent.mesh.position.copy(agent.endPosition);
+                            agent.accumulatedTime = 0;
+                        }
+                    }
+                });
+            } else {
+                // When paused, just update the last frame time without accumulating
+                lastFrameTime = now;
+            }
+            
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            
+            const aspect = window.innerWidth / window.innerHeight;
+            const frustumSize = (config && config.LATTICE_SIZE) ? 
+                config.LATTICE_SIZE * config.LATTICE_SPACING : 20;
+            
+            camera.left = frustumSize * aspect / -2;
+            camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = frustumSize / -2;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function togglePlay() {
+            if (!isRunning) return;
+            
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                if (simulationIntervalId) {
+                    clearInterval(simulationIntervalId);
+                    simulationIntervalId = null;
+                }
+                controls.togglePlayBtn.textContent = "Resume";
+            } else {
+                if (config.SIMULATION_INTERVAL > 0) {
+                    simulationIntervalId = setInterval(simulationStep, config.SIMULATION_INTERVAL);
+                } else {
+                    function runContinuous() {
+                        if (!isPaused && isRunning) {
+                            simulationStep();
+                            requestAnimationFrame(runContinuous);
+                        }
+                    }
+                    runContinuous();
+                }
+                controls.togglePlayBtn.textContent = "Pause";
+            }
+        }
+
+        function updateStateCounts() {
+            const counts = {
+                susceptible: 0,
+                infectious: 0,
+                hospitalized: 0,
+                immune: 0,
+                dead: 0
+            };
+            
+            agents.forEach(agent => {
+                counts[agent.state]++;
+            });
+            
+            stateCounts.susceptible.textContent = counts.susceptible;
+            stateCounts.infectious.textContent = counts.infectious;
+            stateCounts.hospitalized.textContent = counts.hospitalized;
+            stateCounts.immune.textContent = counts.immune;
+            stateCounts.dead.textContent = counts.dead;
+        }
+
+        // Perlin Noise generating function
+        // I cannot comprehend how this works, it is very advanced. I got it from https://github.com/josephg/noisejs
+        function getNoiseHelper() {
+            class Grad { constructor(x, y, z) { this.x = x; this.y = y; this.z = z; } dot2(x, y) { return this.x * x + this.y * y; } }
+            const grad3 = [ new Grad(1, 1, 0), new Grad(-1, 1, 0), new Grad(1, -1, 0), new Grad(-1, -1, 0), new Grad(1, 0, 1), new Grad(-1, 0, 1), new Grad(1, 0, -1), new Grad(-1, 0, -1), new Grad(0, 1, 1), new Grad(0, -1, 1), new Grad(0, 1, -1), new Grad(0, -1, -1) ];
+            const p = [ 151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180 ];
+            let perm = new Array(512), gradP = new Array(512);
+            function seed(s) { if(s>0&&s<1)s*=65536; s=Math.floor(s); if(s<256)s|=s<<8; for(let i=0;i<256;i++){let v=(i&1)?p[i]^(s&255):p[i]^((s>>8)&255);perm[i]=perm[i+256]=v;gradP[i]=gradP[i+256]=grad3[v%12]}}
+            seed(0);
+            function fade(t){return t*t*t*(t*(t*6-15)+10)} function lerp(a,b,t){return(1-t)*a+t*b}
+            function perlin2(x, y) { let X=Math.floor(x),Y=Math.floor(y);x=x-X;y=y-Y;X=X&255;Y=Y&255;let n00=gradP[X+perm[Y]].dot2(x,y);let n01=gradP[X+perm[Y+1]].dot2(x,y-1);let n10=gradP[X+1+perm[Y]].dot2(x-1,y);let n11=gradP[X+1+perm[Y+1]].dot2(x-1,y-1);let u=fade(x);return lerp(lerp(n00,n10,u),lerp(n01,n11,u),fade(y))}
+            return { seed, perlin2 };
+        }
+
+        // Start Animation
+        init();
+        animate();
+    </script>
+</body>
+</html>
