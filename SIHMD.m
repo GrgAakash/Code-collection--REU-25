@@ -1,12 +1,9 @@
-clear all;
-close all;
-
 function sihmd_multiple_populations()
     % Define model parameters structure
     params = struct(...
         'beta', 2.0, ...    % infection rate (β > 0)
         'gamma', 0.5, ...   % I transition rate (γ > 0)
-        'alpha', 2.0, ...   % H transition rate (α > 0)
+        'alpha', 1.0, ...   % H transition rate (α > 0)
         'pI', 1.0, ...      % probability of S to I (p_I in (0,1])
         'pIS', 0.749825, ... % probability of I to S
         'pIH', 0.04, ...    % probability of I to H

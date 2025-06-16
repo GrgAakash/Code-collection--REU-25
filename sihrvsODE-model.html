@@ -577,7 +577,8 @@
             i0: 0.1,       // initial infected proportion
             h0: 0.1,       // initial hospitalized proportion
             r0: 0.0,       // initial recovered proportion
-            N: 300
+            N: 300,
+            r0_value: 0    // Add R₀ value to params
         };
 
         // Population size
@@ -616,6 +617,9 @@
         // Stochastic SIHR model
         function sirAgentModel(N, params, runNumber) {
             console.log(`🎲 Running stochastic simulation ${runNumber}/${totalRuns}`);
+            
+            // Calculate R₀ for this run
+            const r0 = params.p1 * params.beta / (params.p2 * (params.ph * params.gamma1 + (1 - params.ph) * params.gamma2));
             
             // Initial conditions
             let s = Math.round(params.s0 * N);
@@ -671,7 +675,12 @@
                 H_prop.push(h / (s + i + h + r));
             }
 
-            return { T, H_prop, maxH: Math.max(...H_prop) };
+            return { 
+                T, 
+                H_prop, 
+                maxH: Math.max(...H_prop),
+                r0: r0  // Add R₀ to the results
+            };
         }
 
         // Deterministic SIHR model (RK4 integration)
@@ -774,7 +783,7 @@
         function updateStatistics() {
             document.getElementById('currentRun').textContent = `${currentRun + 1}/${totalRuns}`;
             document.getElementById('populationSize').textContent = N;
-            document.getElementById('r0Value').textContent = R0.toFixed(2);
+            document.getElementById('r0Value').textContent = params.r0_value.toFixed(2);
             
             if (results[currentRun]) {
                 const maxH = Math.max(...results[currentRun].H_prop);
@@ -813,7 +822,8 @@
             document.getElementById(`${paramName}-value`).textContent = value;
             document.getElementById(`${paramName}`).value = value;
             document.getElementById(`${paramName}-number`).value = value;
-            document.getElementById('r0-value').textContent = calculateR0().toFixed(2);
+            params.r0_value = calculateR0(params);
+            document.getElementById('r0Value').textContent = params.r0_value.toFixed(2);
         }
 
         // Set up event listeners for all parameters
@@ -911,15 +921,8 @@
         });
 
         // Function to calculate R₀ based on current parameter values
-        function calculateR0() {
-            const beta = parseFloat(document.getElementById('beta').value);
-            const gamma1 = parseFloat(document.getElementById('gamma1').value);
-            const gamma2 = parseFloat(document.getElementById('gamma2').value);
-            const p1 = parseFloat(document.getElementById('p1').value);
-            const p2 = parseFloat(document.getElementById('p2').value);
-            const ph = parseFloat(document.getElementById('ph').value);
-            
-            return p1 * beta / (p2 * (ph * gamma1 + (1 - ph) * gamma2));
+        function calculateR0(params) {
+            return params.p1 * params.beta / (params.p2 * (params.ph * params.gamma1 + (1 - params.ph) * params.gamma2));
         }
 
         // Setup apply button
@@ -944,6 +947,9 @@
             // Validate parameters
             try {
                 validateParameters(params);
+                
+                // Calculate R₀ once when parameters are applied
+                params.r0_value = calculateR0(params);
                 
                 // Clear existing results
                 results.length = 0;
@@ -971,13 +977,9 @@
                     y: results[currentRun].H_prop[i] 
                 }));
                 
-                // Update chart
+                // Update chart and statistics
                 chart.update('none');
                 updateStatistics();
-
-                // Update R₀ display
-                const newR0 = params.p1 * params.beta / (params.p2 * (params.ph * params.gamma1 + (1 - params.ph) * params.gamma2));
-                document.getElementById('r0Value').textContent = newR0.toFixed(2);
 
                 updateStatus('Parameters applied successfully', 'running');
             } catch (error) {
