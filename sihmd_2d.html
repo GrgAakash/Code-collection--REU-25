@@ -240,6 +240,40 @@
             color: white;
             transition: width 0.3s ease;
         }
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 150px;
+            margin: 0 auto;
+        }
+        .toggle-label {
+            display: flex;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .toggle-input {
+            display: none;
+        }
+        .toggle-text {
+            flex: 1;
+            text-align: center;
+            padding: 4px;
+            border-radius: 20px;
+            color: #aaa;
+            transition: all 0.2s ease-in-out;
+        }
+        .toggle-input:checked + .toggle-label .right {
+            background: #007bff;
+            color: white;
+        }
+        .toggle-input:not(:checked) + .toggle-label .left {
+            background: #007bff;
+            color: white;
+        }
 
     </style>
 </head>
@@ -265,8 +299,8 @@
                     <input type="range" id="latticeSpacing" min="1" max="4" value="2" step="0.1">
                 </div>
                 <div class="control-group">
-                    <label for="numAgents" title="The total number of agents (people) in the simulation.">Number of Agents: <span id="numAgents-value">320</span></label>
-                    <input type="range" id="numAgents" min="5" max="1000" value="320" step="5">
+                    <label for="numAgents" title="The total number of agents (people) in the simulation.">Number of Agents: <span id="numAgents-value">160</span></label>
+                    <input type="range" id="numAgents" min="5" max="1000" value="160" step="5">
                 </div>
                 <div class="control-group">
                     <label for="moveRadius" title="How many lattice spaces away an agent can consider moving to.">Move Radius: <span id="moveRadius-value">3</span></label>
@@ -277,8 +311,8 @@
                     <input type="range" id="stayMultiplier" min="0" max="4" value="0.5" step="0.1">
                 </div>
                 <div class="control-group">
-                    <label for="animDuration" title="How long the movement animation takes in milliseconds.">Animation (ms): <span id="animDuration-value">3000</span></label>
-                    <input type="range" id="animDuration" min="500" max="5000" value="3000" step="100">
+                    <label for="animDuration" title="How long the movement animation takes in milliseconds.">Animation (ms): <span id="animDuration-value">2000</span></label>
+                    <input type="range" id="animDuration" min="500" max="5000" value="2000" step="100">
                 </div>
                 <div class="control-group">
                     <label for="simInterval" title="The delay in milliseconds between simulation turns. This is the 'rest' time after all animations finish.">Pause (ms): <span id="simInterval-value">1000</span></label>
@@ -297,14 +331,14 @@
             <div id="infection" class="tab-content">
                 <h3>From Start</h3>
                 <div class="control-group">
-                    <label for="initialInfectious" title="The percentage of the total population that will start in the 'Infectious' state.">Initial Infectious (%): <span id="initialInfectious-value">5</span></label>
-                    <input type="range" id="initialInfectious" min="1" max="100" value="5" step="1">
+                    <label for="initialInfectious" title="The percentage of the total population that will start in the 'Infectious' state.">Initial Infectious (%): <span id="initialInfectious-value">2</span></label>
+                    <input type="range" id="initialInfectious" min="0.1" max="10" value="2" step="0.1">
                 </div>
 
                 <h3>From Susceptible</h3>
                 <div class="control-group">
-                    <label for="infectionProb" title="The base probability that a susceptible agent will become infected if they are at the same location as an infectious agent.">Event Rate / Interaction: <span id="infectionProb-value">0.5</span></label>
-                    <input type="range" id="infectionProb" min="0" max="1" value="0.5" step="0.01">
+                    <label for="infectionProb" title="The base probability that a susceptible agent will become infected if they are at the same location as an infectious agent.">Event Rate / Interaction: <span id="infectionProb-value">0.15</span></label>
+                    <input type="range" id="infectionProb" min="0" max="1" value="0.15" step="0.01">
                 </div>
                  <div class="control-group">
                     <label title="Susceptible agents can only become infected.">To Infected: <span id="pS_I-value">1.00</span></label>
@@ -326,17 +360,17 @@
                 </div>
                  <div class="control-group">
                     <label for="pI_D" title="Given a state change event, the probability of transitioning from Infectious to Dead.">To Dead: <span id="pI_D-value">0.01</span></label>
-                    <input type="range" id="pI_D" min="0" max="1" value="0.01" step="0.01" class="slider-dead">
+                    <input type="range" id="pI_D" min="0" max="0.1" value="0.003" step="0.001" class="slider-dead">
                 </div>
                 <div class="control-group">
                     <label for="pI_M" title="This value is automatically calculated to ensure all probabilities sum to 1.">To Immune: <span id="pI_M-value">0.20</span></label>
-                    <input type="range" id="pI_M" min="0" max="1" value="0.20" step="0.01" disabled class="slider-immune">
+                    <input type="range" id="pI_M" min="0" max="1" value="0.20" step="0.001" disabled class="slider-immune">
                 </div>
 
                 <h3>From Hospitalized</h3>
                 <div class="control-group">
-                    <label for="hospEventRate" title="The probability that a hospitalized agent will change state during a simulation step.">Event Rate / Step: <span id="hospEventRate-value">0.1</span></label>
-                    <input type="range" id="hospEventRate" min="0.01" max="1" value="0.1" step="0.01">
+                    <label for="hospEventRate" title="The probability that a hospitalized agent will change state during a simulation step.">Event Rate / Step: <span id="hospEventRate-value">0.14</span></label>
+                    <input type="range" id="hospEventRate" min="0.01" max="1" value="0.14" step="0.01">
                 </div>
                 <div class="control-group">
                     <label for="pH_S" title="Given a state change event, the probability of transitioning from Hospitalized to Susceptible.">To Susceptible: <span id="pH_S-value">0.25</span></label>
@@ -353,13 +387,20 @@
                 
                 <h3>From Immune</h3>
                 <div class="control-group">
-                    <label for="immunityDuration" title="The average number of days (steps) an agent remains immune before becoming susceptible again. Uses a Poisson distribution for variability.">Avg. Immunity Duration (days): <span id="immunityDuration-value">100</span></label>
-                    <input type="range" id="immunityDuration" min="10" max="365" value="100" step="1">
+                    <label for="immunityDuration" title="The average number of days (steps) an agent remains immune before becoming susceptible again. Uses a Poisson distribution for variability.">Avg. Immunity Duration (days): <span id="immunityDuration-value">270</span></label>
+                    <input type="range" id="immunityDuration" min="10" max="365" value="270" step="1">
                 </div>
             </div>
             
             <div id="behavior" class="tab-content">
-                <p>Controls for this section will be added later.</p>
+                <div class="control-group">
+                    <label for="attractivenessChangeFreq" title="How many simulation steps pass before attractiveness values are updated.">Change Frequency (steps): <span id="attractivenessChangeFreq-value">100</span></label>
+                    <input type="range" id="attractivenessChangeFreq" min="1" max="100" value="100" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="attractivenessChangePercent" title="The maximum percentage (plus or minus) that a point's attractiveness can change by during an update.">Change Range (%): <span id="attractivenessChangePercent-value">0</span></label>
+                    <input type="range" id="attractivenessChangePercent" min="0" max="100" value="0" step="1">
+                </div>
             </div>
         </div>
         
@@ -387,6 +428,16 @@
                 <label for="numTrials">Number of Trials:</label>
                 <input type="number" id="numTrials" value="100" min="1" max="10000">
             </div>
+            <div class="control-group">
+                <label>Export Format:</label>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="exportTypeToggle" class="toggle-input">
+                    <label for="exportTypeToggle" class="toggle-label">
+                        <span class="toggle-text left">Average</span>
+                        <span class="toggle-text right">Separated</span>
+                    </label>
+                </div>
+            </div>
             <div id="progressBarContainer">
                 <div id="progressBar">0%</div>
             </div>
@@ -413,6 +464,7 @@
         let initialAgentCount = 0;
         let simulationData = [];
         let stepCount = 0;
+        const MAX_DAYS = 1000;
 
         // --- DOM Elements ---
         const controls = {
@@ -435,6 +487,8 @@
             pH_S: document.getElementById('pH_S'),
             pH_D: document.getElementById('pH_D'),
             immunityDuration: document.getElementById('immunityDuration'),
+            attractivenessChangeFreq: document.getElementById('attractivenessChangeFreq'),
+            attractivenessChangePercent: document.getElementById('attractivenessChangePercent'),
             startBtn: document.getElementById('startBtn'),
             togglePlayBtn: document.getElementById('togglePlayBtn'),
             exportBtn: document.getElementById('exportBtn'),
@@ -445,6 +499,7 @@
             cancelBatchBtn: document.getElementById('cancelBatchBtn'),
             progressBar: document.getElementById('progressBar'),
             eta: document.getElementById('eta'),
+            exportTypeToggle: document.getElementById('exportTypeToggle'),
         };
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -560,6 +615,11 @@
             config.PH_S = parseFloat(controls.pH_S.value);
             config.PH_D = parseFloat(controls.pH_D.value);
             config.PH_M = 1 - (config.PH_S + config.PH_D);
+
+            // Behavior
+            config.ATTRACTIVENESS_CHANGE_FREQ = parseInt(controls.attractivenessChangeFreq.value);
+            config.ATTRACTIVENESS_CHANGE_PERCENT = parseFloat(controls.attractivenessChangePercent.value) / 100;
+
         }
 
         /** @description Removes all agents and points from the scene to prepare for a restart. */
@@ -628,14 +688,17 @@
                     const attractiveness = Math.max(1, 0.1 * Math.round(10 * skewedNoise * (config.MAX_ATTRACTIVENESS - 1)) + 1);
                     const x = (i - (config.LATTICE_SIZE - 1) / 2) * config.LATTICE_SPACING;
                     const y = (j - (config.LATTICE_SIZE - 1) / 2) * config.LATTICE_SPACING;
-                    const lightness = 0.5 + 0.5 * (attractiveness / config.MAX_ATTRACTIVENESS);
-                    const color = new THREE.Color().setHSL(0, 0, lightness);
-                    const pointMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8 });
-                    const mesh = new THREE.Mesh(pointGeometry, pointMaterial);
+                    
+                    const mesh = new THREE.Mesh(pointGeometry.clone());
                     mesh.position.set(x, y, 0);
-                    mesh.scale.set(attractiveness * 0.5, attractiveness * 0.5, 1);
+
+                    points.push({ 
+                        x, y, attractiveness, mesh, index: points.length, 
+                        isChanging: false, oldAttractiveness: attractiveness, changeStartTime: 0 
+                    });
+                    
+                    updatePointVisuals(points[points.length-1]);
                     scene.add(mesh);
-                    points.push({ x, y, attractiveness, mesh, index: points.length });
                 }
             }
         }
@@ -681,8 +744,9 @@
 
         /** * @description The main simulation turn logic, running disease and movement logic sequentially. */
         function runSimulationTurn() {
-            if (agents.some(a => a.isMoving)) return;
+            if (agents.some(a => a.isMoving) || points.some(p => p.isChanging)) return;
 
+            // Phase A: Disease and State Changes at rest
             const agentsByPoint = {};
             agents.forEach(agent => {
                 if (!agentsByPoint[agent.currentPointIndex]) {
@@ -706,13 +770,13 @@
             agents.forEach(agent => {
                 let newState = agent.state;
                 if (agent.state === 'infectious' && Math.random() < config.INF_EVENT_RATE) {
-                    newState = determineNextState('infectious');
+                    newState = determineNextState(agent, 'infectious');
                 } else if (agent.state === 'hospitalized' && Math.random() < config.HOSP_EVENT_RATE) {
-                    newState = determineNextState('hospitalized');
+                    newState = determineNextState(agent, 'hospitalized');
                 } else if (agent.state === 'immune' && stepCount >= agent.immunityEndStep) {
                     newState = 'susceptible';
                 }
-
+                
                 if(newState === 'immune' && agent.state !== 'immune') {
                     agent.immunityEndStep = stepCount + getPoissonRandom(config.IMMUNITY_DURATION);
                 }
@@ -721,6 +785,7 @@
                 if (agent.state === 'dead') agentsToRemove.add(agent);
             });
 
+            // Phase B: Plan and Initiate Movement
             agents.forEach(agent => {
                 if (agent.state === 'dead') return;
                 agent.mesh.material.color.set(getAgentColor(agent.state));
@@ -733,12 +798,46 @@
                 agentsToRemove.forEach(agent => scene.remove(agent.mesh));
                 agents = agents.filter(a => !agentsToRemove.has(a));
             }
+
+            // Phase C: Update Attractiveness
+            if (stepCount % config.ATTRACTIVENESS_CHANGE_FREQ === 0) {
+                updateAttractiveness();
+            }
             
             updateStateCounts();
         }
+        
+        /**
+         * @description Updates the attractiveness of all points on the grid based on the configured settings.
+         */
+        function updateAttractiveness() {
+            points.forEach(point => {
+                point.isChanging = true;
+                point.oldAttractiveness = point.attractiveness;
+                point.changeStartTime = performance.now();
+                
+                const changePercent = (Math.random() * 2 - 1) * config.ATTRACTIVENESS_CHANGE_PERCENT;
+                const newAttractiveness = point.attractiveness * (1 + changePercent);
+                point.attractiveness = Math.max(1, Math.min(newAttractiveness, config.MAX_ATTRACTIVENESS)); // Clamp between 1 and max
+            });
+        }
+        
+        /**
+         * @description Updates the visual properties (color and scale) of a point.
+         * @param {object} point - The point object to update.
+         * @param {number} [attractivenessOverride] - Optional value to override the point's current attractiveness for interpolation.
+         */
+        function updatePointVisuals(point, attractivenessOverride) {
+            const attractiveness = attractivenessOverride !== undefined ? attractivenessOverride : point.attractiveness;
+            const lightness = 0.5 + 0.5 * (attractiveness / config.MAX_ATTRACTIVENESS);
+            const color = new THREE.Color().setHSL(0, 0, lightness);
+            
+            point.mesh.material.color.copy(color);
+            point.mesh.scale.set(attractiveness * 0.5, attractiveness * 0.5, 1);
+        }
 
         /** * @description For a given agent state, determines the next state based on configured probabilities. */
-        function determineNextState(currentState) {
+        function determineNextState(agent, currentState) {
             const r = Math.random();
             if (currentState === 'infectious') {
                 if (r < config.PI_S) return 'susceptible';
@@ -807,6 +906,8 @@
         function animate() {
             requestAnimationFrame(animate);
             const now = performance.now();
+            
+            // Agent movement animation
             agents.forEach(agent => {
                 if (agent.isMoving) {
                     const elapsedTime = now - agent.moveStartTime;
@@ -819,6 +920,24 @@
                     }
                 }
             });
+
+            // Point attractiveness change animation
+            points.forEach(point => {
+                if (point.isChanging) {
+                    const elapsedTime = now - point.changeStartTime;
+                    const progress = Math.min(elapsedTime / (config.SIMULATION_INTERVAL / 2), 1.0);
+                    const easedProgress = progress * progress * (3 - 2 * progress);
+                    
+                    const newAttractiveness = THREE.MathUtils.lerp(point.oldAttractiveness, point.attractiveness, easedProgress);
+                    updatePointVisuals(point, newAttractiveness);
+
+                    if (progress >= 1.0) {
+                        point.isChanging = false;
+                        updatePointVisuals(point); // Snap to final value
+                    }
+                }
+            });
+
             renderer.render(scene, camera);
         }
 
@@ -842,7 +961,7 @@
             stateCounts.immune.textContent = counts.M;
             stateCounts.dead.textContent = deadCount;
             
-            const prop = (count) => (initialAgentCount > 0 ? count / initialAgentCount : 0);
+            const prop = (count) => (initialAgentCount > 0 ? (count / initialAgentCount) : 0);
             simulationData.push({ Day: stepCount, S: prop(counts.S), I: prop(counts.I), H: prop(counts.H), M: prop(counts.M), D: prop(deadCount) });
 
             if (counts.I === 0 && counts.H === 0 && isRunning && !isPaused) {
@@ -884,15 +1003,31 @@
             
             csvContent += "# Simulation Parameters\n";
             for(const key in simConfig) {
-                csvContent += `# ${key},${simConfig[key]}\n`;
+                csvContent += `# ${key},${config[key]}\n`;
             }
             csvContent += "\n";
             
-            csvContent += "Day,S,I,H,M,D\n";
-            
-            data.forEach(row => {
-                csvContent += `${row.Day},${row.S},${row.I},${row.H},${row.M},${row.D}\n`;
-            });
+            if (type === 'batch_separated') {
+                data.forEach((trialData, index) => {
+                    csvContent += `# Trial ${index + 1}\n`;
+                    csvContent += "Day,S,I,H,M,D\n";
+                    trialData.forEach(row => {
+                         csvContent += `${row.Day},${row.S.toFixed(4)},${row.I.toFixed(4)},${row.H.toFixed(4)},${row.M.toFixed(4)},${row.D.toFixed(4)}\n`;
+                    });
+                    csvContent += "\n";
+                });
+            } else { // 'single' or 'batch_average'
+                csvContent += "Day,S,I,H,M,D\n";
+                data.forEach(row => {
+                    const s = typeof row.S === 'number' ? row.S.toFixed(4) : row.S;
+                    const i = typeof row.I === 'number' ? row.I.toFixed(4) : row.I;
+                    const h = typeof row.H === 'number' ? row.H.toFixed(4) : row.H;
+                    const m = typeof row.M === 'number' ? row.M.toFixed(4) : row.M;
+                    const d = typeof row.D === 'number' ? row.D.toFixed(4) : row.D;
+                    csvContent += `${row.Day},${s},${i},${h},${m},${d}\n`;
+                });
+            }
+
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
@@ -970,7 +1105,7 @@
             
             // Run headless simulation loop
             let isAtEquilibrium = false;
-            while(!isAtEquilibrium && trialStepCount < 5000) { // Safety break
+            while(!isAtEquilibrium && trialStepCount < MAX_DAYS) { // Safety break
                 trialStepCount++;
                 const agentsByPoint = {};
                 trialAgents.forEach(agent => {
@@ -1074,8 +1209,12 @@
                 await new Promise(resolve => setTimeout(resolve, 0));
             }
 
-            const averagedData = averageSimulationResults(allTrialsData, config);
-            exportDataToCSV(averagedData, config, 'batch_average');
+            if (controls.exportTypeToggle.checked) {
+                exportDataToCSV(allTrialsData, config, 'batch_separated');
+            } else {
+                const averagedData = averageSimulationResults(allTrialsData, config);
+                exportDataToCSV(averagedData, config, 'batch_average');
+            }
 
             controls.largeScaleModal.style.display = 'none';
             controls.beginBatchBtn.disabled = false;
@@ -1088,13 +1227,14 @@
          * @returns {Array<Object>} The averaged data, with one row per day.
          */
         function averageSimulationResults(allTrialsData, currentConfig) {
+            const prop = (count) => (currentConfig.NUM_AGENTS > 0 ? (count / currentConfig.NUM_AGENTS) : 0);
             const averagedResults = [{
                 Day: 0,
-                S: (1 - currentConfig.INITIAL_INFECTIOUS_PERCENT).toFixed(4),
-                I: currentConfig.INITIAL_INFECTIOUS_PERCENT.toFixed(4),
-                H: (0).toFixed(4),
-                M: (0).toFixed(4),
-                D: (0).toFixed(4)
+                S: prop(currentConfig.NUM_AGENTS * (1 - currentConfig.INITIAL_INFECTIOUS_PERCENT)),
+                I: prop(currentConfig.NUM_AGENTS * currentConfig.INITIAL_INFECTIOUS_PERCENT),
+                H: 0,
+                M: 0,
+                D: 0
             }];
             
             const aggregatedData = {};
@@ -1130,11 +1270,11 @@
                 if (dayData && dayData.count > 0) {
                      averagedResults.push({
                          Day: day,
-                         S: (dayData.S / dayData.count).toFixed(4),
-                         I: (dayData.I / dayData.count).toFixed(4),
-                         H: (dayData.H / dayData.count).toFixed(4),
-                         M: (dayData.M / dayData.count).toFixed(4),
-                         D: (dayData.D / dayData.count).toFixed(4)
+                         S: dayData.S / dayData.count,
+                         I: dayData.I / dayData.count,
+                         H: dayData.H / dayData.count,
+                         M: dayData.M / dayData.count,
+                         D: dayData.D / dayData.count
                      });
                 }
             }
