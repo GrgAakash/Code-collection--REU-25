@@ -299,8 +299,8 @@
                     <input type="range" id="latticeSpacing" min="1" max="4" value="2" step="0.1">
                 </div>
                 <div class="control-group">
-                    <label for="numAgents" title="The total number of agents (people) in the simulation.">Number of Agents: <span id="numAgents-value">160</span></label>
-                    <input type="range" id="numAgents" min="5" max="1000" value="160" step="5">
+                    <label for="numAgents" title="The total number of agents (people) in the simulation.">Number of Agents: <span id="numAgents-value">320</span></label>
+                    <input type="range" id="numAgents" min="5" max="1000" value="320" step="5">
                 </div>
                 <div class="control-group">
                     <label for="moveRadius" title="How many lattice spaces away an agent can consider moving to.">Move Radius: <span id="moveRadius-value">3</span></label>
@@ -359,12 +359,12 @@
                     <input type="range" id="pI_H" min="0" max="1" value="0.05" step="0.01" class="slider-hospitalized">
                 </div>
                  <div class="control-group">
-                    <label for="pI_D" title="Given a state change event, the probability of transitioning from Infectious to Dead.">To Dead: <span id="pI_D-value">0.01</span></label>
+                    <label for="pI_D" title="Given a state change event, the probability of transitioning from Infectious to Dead.">To Dead: <span id="pI_D-value">0.003</span></label>
                     <input type="range" id="pI_D" min="0" max="0.1" value="0.003" step="0.001" class="slider-dead">
                 </div>
                 <div class="control-group">
-                    <label for="pI_M" title="This value is automatically calculated to ensure all probabilities sum to 1.">To Immune: <span id="pI_M-value">0.20</span></label>
-                    <input type="range" id="pI_M" min="0" max="1" value="0.20" step="0.001" disabled class="slider-immune">
+                    <label for="pI_M" title="This value is automatically calculated to ensure all probabilities sum to 1.">To Immune: <span id="pI_M-value">0.207</span></label>
+                    <input type="range" id="pI_M" min="0" max="1" value="0.207" step="0.001" disabled class="slider-immune">
                 </div>
 
                 <h3>From Hospitalized</h3>
@@ -389,6 +389,20 @@
                 <div class="control-group">
                     <label for="immunityDuration" title="The average number of days (steps) an agent remains immune before becoming susceptible again. Uses a Poisson distribution for variability.">Avg. Immunity Duration (days): <span id="immunityDuration-value">270</span></label>
                     <input type="range" id="immunityDuration" min="10" max="365" value="270" step="1">
+                </div>
+
+                <h3>Variant Emergence</h3>
+                 <div class="control-group">
+                    <label for="enableVariant">Enable Variant:</label>
+                    <input type="checkbox" id="enableVariant" checked>
+                </div>
+                <div class="control-group">
+                    <label for="variantDay" title="The day (step) on which the new, more contagious variant emerges.">Emergence Day: <span id="variantDay-value">630</span></label>
+                    <input type="range" id="variantDay" min="50" max="1000" value="630" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="variantContagionIncrease" title="The percentage by which the 'Event Rate / Interaction' increases when the variant emerges.">Contagion Increase (%): <span id="variantContagionIncrease-value">25</span></label>
+                    <input type="range" id="variantContagionIncrease" min="0" max="200" value="25" step="1">
                 </div>
             </div>
             
@@ -489,6 +503,9 @@
             immunityDuration: document.getElementById('immunityDuration'),
             attractivenessChangeFreq: document.getElementById('attractivenessChangeFreq'),
             attractivenessChangePercent: document.getElementById('attractivenessChangePercent'),
+            enableVariant: document.getElementById('enableVariant'),
+            variantDay: document.getElementById('variantDay'),
+            variantContagionIncrease: document.getElementById('variantContagionIncrease'),
             startBtn: document.getElementById('startBtn'),
             togglePlayBtn: document.getElementById('togglePlayBtn'),
             exportBtn: document.getElementById('exportBtn'),
@@ -615,6 +632,10 @@
             config.PH_S = parseFloat(controls.pH_S.value);
             config.PH_D = parseFloat(controls.pH_D.value);
             config.PH_M = 1 - (config.PH_S + config.PH_D);
+            config.ENABLE_VARIANT = controls.enableVariant.checked;
+            config.VARIANT_DAY = parseInt(controls.variantDay.value);
+            config.VARIANT_CONTAGION_INCREASE = parseFloat(controls.variantContagionIncrease.value) / 100;
+
 
             // Behavior
             config.ATTRACTIVENESS_CHANGE_FREQ = parseInt(controls.attractivenessChangeFreq.value);
@@ -755,6 +776,16 @@
                 agentsByPoint[agent.currentPointIndex].push(agent);
             });
             
+            // Variant emergence logic
+            if (config.ENABLE_VARIANT && stepCount === config.VARIANT_DAY) {
+                config.INFECTION_PROB *= (1 + config.VARIANT_CONTAGION_INCREASE);
+                agents.forEach(agent => {
+                    if (agent.state === 'immune') {
+                        agent.state = 'susceptible';
+                    }
+                });
+            }
+
             Object.values(agentsByPoint).forEach(group => {
                 const infectiousCount = group.filter(a => a.state === 'infectious').length;
                 if (infectiousCount > 0) {
@@ -800,7 +831,7 @@
             }
 
             // Phase C: Update Attractiveness
-            if (stepCount % config.ATTRACTIVENESS_CHANGE_FREQ === 0) {
+            if (stepCount > 0 && stepCount % config.ATTRACTIVENESS_CHANGE_FREQ === 0) {
                 updateAttractiveness();
             }
             
@@ -961,7 +992,7 @@
             stateCounts.immune.textContent = counts.M;
             stateCounts.dead.textContent = deadCount;
             
-            const prop = (count) => (initialAgentCount > 0 ? (count / initialAgentCount) : 0);
+            const prop = (count) => (initialAgentCount > 0 ? count / initialAgentCount : 0);
             simulationData.push({ Day: stepCount, S: prop(counts.S), I: prop(counts.I), H: prop(counts.H), M: prop(counts.M), D: prop(deadCount) });
 
             if (counts.I === 0 && counts.H === 0 && isRunning && !isPaused) {
@@ -1003,7 +1034,7 @@
             
             csvContent += "# Simulation Parameters\n";
             for(const key in simConfig) {
-                csvContent += `# ${key},${config[key]}\n`;
+                csvContent += `# ${key},${simConfig[key]}\n`;
             }
             csvContent += "\n";
             
@@ -1067,6 +1098,7 @@
             const trialNeighborMap = [];
             const trialSimulationData = [];
             let trialStepCount = 0;
+            let localInfectionProb = config.INFECTION_PROB; // Use a local copy for the trial
             
             // Re-create lattice data without meshes
             const noise = getNoiseHelper();
@@ -1107,6 +1139,14 @@
             let isAtEquilibrium = false;
             while(!isAtEquilibrium && trialStepCount < MAX_DAYS) { // Safety break
                 trialStepCount++;
+                if (config.ENABLE_VARIANT && trialStepCount === config.VARIANT_DAY) {
+                    localInfectionProb *= (1 + config.VARIANT_CONTAGION_INCREASE);
+                    trialAgents.forEach(agent => {
+                        if (agent.state === 'immune') {
+                            agent.state = 'susceptible';
+                        }
+                    });
+                }
                 const agentsByPoint = {};
                 trialAgents.forEach(agent => {
                     if (!agentsByPoint[agent.currentPointIndex]) agentsByPoint[agent.currentPointIndex] = [];
@@ -1117,7 +1157,7 @@
                     const infectiousCount = group.filter(a => a.state === 'infectious').length;
                     if (infectiousCount > 0) {
                         group.forEach(agent => {
-                            if (agent.state === 'susceptible' && Math.random() < config.INFECTION_PROB) {
+                            if (agent.state === 'susceptible' && Math.random() < localInfectionProb) {
                                 agent.state = 'infectious';
                             }
                         });
@@ -1230,8 +1270,8 @@
             const prop = (count) => (currentConfig.NUM_AGENTS > 0 ? (count / currentConfig.NUM_AGENTS) : 0);
             const averagedResults = [{
                 Day: 0,
-                S: prop(currentConfig.NUM_AGENTS * (1 - currentConfig.INITIAL_INFECTIOUS_PERCENT)),
-                I: prop(currentConfig.NUM_AGENTS * currentConfig.INITIAL_INFECTIOUS_PERCENT),
+                S: (1 - currentConfig.INITIAL_INFECTIOUS_PERCENT),
+                I: currentConfig.INITIAL_INFECTIOUS_PERCENT,
                 H: 0,
                 M: 0,
                 D: 0
