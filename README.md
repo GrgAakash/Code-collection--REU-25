@@ -55,6 +55,14 @@ The `Code Results` folder contains images generated from the simulations.
 - To view the output from `siripc.m`, navigate to `Code Results/siripc_results`. For example, `R0.95.png` corresponds to a simulation where \( R_0 = 0.95 \).
 - For results from `varpreF.m`, filenames like `0.95n3.png` indicate a simulation with \( R_0 = 0.95 \) and 3 runs. For our research, a single run is typically sufficient.
 
+## 🚀Simulations
+| File | Description | Related Figure |
+|------|-------------|----------------|
+
+| `sihmd_2d.html`|2D animation |The animation can be found at https://cfbpicks.live/reu/|
+| `sihrvsODE-model.html`| SIHR's stochastic vs ODE analysis | The simulation cna be found at https://codepen.io/Swagle7/pen/KwpxRVQ |
+
+
 
 
 
