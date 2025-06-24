@@ -68,6 +68,8 @@ here we collect teh links to the java codes; I only remember Aakash's and Cadens
 
 
 https://codepen.io/Swagle7/pen/KwpxRVQ  This is for the ODE bifurcations by Aakash and Shrinkhal 
+Also here
+  https://cfbpicks.live/reu/stochastic.html
 
 https://codepen.io/GrgAakash/pen/MYwGaJP  This is by Aakash for the 2D agents based simluation
 
