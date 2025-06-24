@@ -62,7 +62,16 @@ The `Code Results` folder contains images generated from the simulations.
 | `sihrvsODE-model.html`| SIHR's stochastic vs ODE analysis | The simulation cna be found at https://codepen.io/Swagle7/pen/KwpxRVQ |
 
 
+2D simluations, especailly the java links:
 
+here we collect teh links to the java codes; I only remember Aakash's and Cadens'. Please add them all the here. 
+
+
+https://codepen.io/Swagle7/pen/KwpxRVQ  This is for the ODE bifurcations by Aakash and Shrinkhal 
+
+https://codepen.io/GrgAakash/pen/MYwGaJP  This is by Aakash for the 2D agents based simluation
+
+https://cfbpicks.live/reu  This is by Caden, the 2D agents based simulation
 
 
 ## 💡 Suggestions Welcome
