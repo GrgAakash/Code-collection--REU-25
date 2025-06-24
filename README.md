@@ -58,7 +58,6 @@ The `Code Results` folder contains images generated from the simulations.
 ## 🚀Simulations
 | File | Description | Related Figure |
 |------|-------------|----------------|
-
 | `sihmd_2d.html`|2D animation |The animation can be found at https://cfbpicks.live/reu/|
 | `sihrvsODE-model.html`| SIHR's stochastic vs ODE analysis | The simulation cna be found at https://codepen.io/Swagle7/pen/KwpxRVQ |
 
