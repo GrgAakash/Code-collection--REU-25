@@ -526,4 +526,3 @@ function plot_comparison(results, N_values, det_result, params)
 end
 
 % Run the simulation
-sihmd_multiple_populations();

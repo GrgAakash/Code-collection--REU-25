@@ -2,7 +2,7 @@ function sihmd_dynamic_beta()
     % Define model parameters structure
     params = struct(...
         'beta1', 1.0, ...    % infection rate for first part of time (β > 0)
-        'beta2', 4.0, ...    % infection rate for second part of time (β > 0)
+        'beta2', 2.0, ...    % infection rate for second part of time (β > 0)
         't1', 15, ...        % time at which β changes
         'gamma', 0.5, ...   % I transition rate (γ > 0)
         'alpha', 1.0, ...   % H transition rate (α > 0)
@@ -15,9 +15,9 @@ function sihmd_dynamic_beta()
         'pHM', 0.6, ...     % probability of H to M
         'pHD', 0.15, ...    % probability of H to D
         'tmax', 30, ...     % simulation end time
-        's0', 0.7, ...      % initial susceptible proportion
-        'i0', 0.1, ...      % initial infected proportion
-        'h0', 0.2, ...      % initial hospitalized proportion
+        's0', 0.9985, ...      % initial susceptible proportion
+        'i0', 0.0015, ...      % initial infected proportion
+        'h0', 0.0, ...      % initial hospitalized proportion
         'm0', 0.0, ...      % initial immune proportion
         'd0', 0.0 ...       % initial dead proportion
     );
@@ -485,8 +485,6 @@ function plot_comparison(results, N_values, det_result, params)
         'HorizontalAlignment', 'left', ...
         'VerticalAlignment', 'middle');
     
-    % Save the figure
-    saveas(gcf, 'SIHMD_simulation_results.png');
     
     % Create new figure for deterministic curves only
     figure('Position', [100, 100, 800, 600]);
@@ -510,9 +508,6 @@ function plot_comparison(results, N_values, det_result, params)
     % Add R0 and parameters text
     text(0.02, -0.15, sprintf('R₀=%.2f, β_1=%.2f, β_2=%.2f, γ=%.2f, α=%.2f', det_result.R0, params.beta1, params.beta2, params.gamma, params.alpha), ...
         'Units', 'normalized', 'FontSize', 12);
-    
-    % Save the deterministic plot
-    saveas(gcf, 'SIHMD_deterministic_only.png');
     
     % Plot just infected population over time (all N and deterministic)
     figure('Position', [200, 200, 900, 500]);
