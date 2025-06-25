@@ -1,0 +1,1608 @@
+<!-- Quick demo at https://grgaakash.github.io/projects -->
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIHR Model Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --background-color: #f8f9fa;
+            --deterministic-color: #805ad5;
+            --stochastic-color: #3182ce;
+            --deterministic_i-color: #ff0000;
+            --stochastic_i-color: #ff0000;
+            --success-color: #38a169;
+            --error-color: #e53e3e;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+        }
+
+        .sidebar {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            height: fit-content;
+        }
+
+        .main-content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-bottom: 1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 1rem;
+            background: var(--background-color);
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(145deg, var(--accent-color), #2980b9);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 140px;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(145deg, #2980b9, var(--accent-color));
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn.play {
+            background: linear-gradient(145deg, #38a169, #2f855a);
+        }
+
+        .btn.play:hover {
+            background: linear-gradient(145deg, #2f855a, #38a169);
+        }
+
+        .btn.reset {
+            background: linear-gradient(145deg, #e53e3e, #c53030);
+        }
+
+        .btn.reset:hover {
+            background: linear-gradient(145deg, #c53030, #e53e3e);
+        }
+
+        .btn.speed {
+            background: linear-gradient(145deg, #805ad5, #6b46c1);
+        }
+
+        .btn.speed:hover {
+            background: linear-gradient(145deg, #6b46c1, #805ad5);
+        }
+
+        .btn-icon {
+            font-size: 1.2rem;
+        }
+
+        .btn-text {
+            font-size: 0.9rem;
+        }
+
+        .status {
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .status.running {
+            background-color: rgba(56, 161, 105, 0.1);
+            color: var(--success-color);
+        }
+
+        .status.paused {
+            background-color: rgba(237, 100, 166, 0.1);
+            color: #ed64a6;
+        }
+
+        .status.stopped {
+            background-color: rgba(229, 62, 62, 0.1);
+            color: var(--error-color);
+        }
+
+        .error-message {
+            display: none;
+            padding: 1rem;
+            background-color: rgba(229, 62, 62, 0.1);
+            color: var(--error-color);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: var(--background-color);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        .parameter-controls {
+            margin-top: 1.5rem;
+        }
+
+        .parameter-group {
+            margin-bottom: 1rem;
+        }
+
+        .parameter-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .parameter-name {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .parameter-value {
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+
+        .parameter-input {
+            width: 100%;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .parameter-input input[type="range"] {
+            flex: 1;
+        }
+
+        .parameter-input input[type="number"] {
+            width: 60px;
+            padding: 0.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .apply-button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 1rem;
+            transition: all 0.2s;
+        }
+
+        .apply-button:hover {
+            background-color: #2f855a;
+            transform: translateY(-1px);
+        }
+
+        .apply-button:active {
+            transform: translateY(0);
+        }
+
+        .summary-stats {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-top: 2rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--background-color);
+            border-radius: 8px;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin: 0.5rem 0;
+        }
+
+        .summary-label {
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .pattern-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .pattern-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .pattern-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .pattern-count {
+            background: var(--accent-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .pattern-details {
+            margin-top: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-label {
+            color: var(--secondary-color);
+        }
+
+        .detail-value {
+            font-weight: 500;
+        }
+
+        .pattern-chart {
+            height: 200px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>Model Parameters</h2>
+          
+            <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">s<sub>0</sub> (susceptiple fraction)</span>
+                  <span class="parameter-value" id="s0-value">0.80</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="s0" min="0" max="1" step="0.01" value="0.80">
+                  <input type="number" id="s0-number" min="0" max="1" step="0.001" value="0.80" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial infected proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">i<sub>0</sub> (infected fraction)</span>
+                  <span class="parameter-value" id="i0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="i0" min="0" max="1" step="0.01" value="0.10">
+                  <input type="number" id="i0-number" min="0" max="1" step="0.001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial hospitalized proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">h<sub>0</sub> (hospitalized fraction)</span>
+                  <span class="parameter-value" id="h0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="h0" min="0" max="1" step="0.01" value="0.10">
+                  <input type="number" id="h0-number" min="0" max="1" step="0.001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial recovered proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">r<sub>0</sub> (recovered fraction)</span>
+                  <span class="parameter-value" id="r0-value">0.00</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="r0" min="0" max="1" step="0.01" value="0.00">
+                  <input type="number" id="r0-number" min="0" max="1" step="0.001" value="0.00" style="width: 80px;">
+                </div>
+              </div>
+          
+            <div class="parameter-controls">
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">β (Infection Rate)</span>
+                        <span class="parameter-value" id="beta-value">2.00</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="beta" min="0.1" max="10" step="0.01" value="2.00">
+                        <input type="number" id="beta-number" min="0.1" max="10" step="0.001" value="2.00" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">γ (I to H or R Rate)</span>
+                        <span class="parameter-value" id="gamma-value">1.0</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="gamma" min="0.1" max="10" step="0.01" value="1.0">
+                        <input type="number" id="gamma-number" min="0.1" max="10" step="0.001" value="1.0" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">α (H to R Rate)</span>
+                        <span class="parameter-value" id="alpha-value">1.0</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="alpha" min="0.1" max="10" step="0.01" value="1.0">
+                        <input type="number" id="alpha-number" min="0.1" max="10" step="0.001" value="1.0" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p₁ (Leave S Prob)</span>
+                        <span class="parameter-value" id="p1-value">0.5</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p1" min="0.1" max="1" step="0.01" value="0.5">
+                        <input type="number" id="p1-number" min="0.1" max="1" step="0.001" value="0.5" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p₂ (Leave I Prob)</span>
+                        <span class="parameter-value" id="p2-value">0.66</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p2" min="0.1" max="1" step="0.01" value="0.66">
+                        <input type="number" id="p2-number" min="0.1" max="1" step="0.001" value="0.66" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p₃ (Leave H Prob)</span>
+                        <span class="parameter-value" id="p3-value">0.2</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p3" min="0.1" max="1" step="0.01" value="0.2">
+                        <input type="number" id="p3-number" min="0.1" max="1" step="0.001" value="0.2" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">pₕ (I to H Prob)</span>
+                        <span class="parameter-value" id="ph-value">0.50</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="ph" min="0.1" max="1" step="0.01" value="0.50">
+                        <input type="number" id="ph-number" min="0.1" max="1" step="0.001" value="0.50" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Population Size</span>
+                        <span class="parameter-value" id="population-value">300</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="population" min="1" max="10000" step="1" value="300">
+                        <input type="number" id="population-number" min="1" max="10000" step="1" value="300" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Number of Runs</span>
+                        <span class="parameter-value" id="runs-value">50</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="runs" min="1" max="100" step="1" value="50">
+                        <input type="number" id="runs-number" min="1" max="100" step="1" value="50" style="width: 80px;">
+                    </div>
+                </div>
+
+                <button id="applyParams" class="apply-button">Apply Parameters</button>
+            </div>
+          
+          
+            <div class="sidebar">
+              <h2>Threshold Parameters</h2>
+              
+              <div class="stat-card">
+                    <div class="stat-label"><p>&sigma;</p></div>
+                    <div class="stat-value" id="sigma0-value">--</div>
+               </div>
+              
+              <div class="stat-card">
+                    <div class="stat-label"><p>&sigma;~</p></div>
+                    <div class="stat-value" id="sigma1-value">--</div>
+               </div>
+              
+              <div class="stat-card">
+                    <div class="stat-label"><p>&sigma;~~</p></div>
+                    <div class="stat-value" id="sigma2-value">--</div>
+               </div>
+              <div class="stat-card">
+                    <div class="stat-label"><p>time of peak I(tpi)</p></div>
+                    <div class="stat-value" id="tpi-value">--</div>
+               </div>
+              <div class="stat-card">
+                    <div class="stat-label"><p>h(tpi)</p></div>
+                    <div class="stat-value" id="h_tpi-value">--</div>
+               </div>
+            </div>
+          
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Current Run</div>
+                    <div class="stat-value" id="currentRun">1/50</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Population</div>
+                    <div class="stat-value" id="populationSize">300</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">R₀</div>
+                    <div class="stat-value" id="R_0-value">1.90</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Peak Hospitalization</div>
+                    <div class="stat-value" id="peakHospitalization">0.0000</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="chart-container">
+                <canvas id="hospitalChart"></canvas>
+            </div>
+            <div id="errorMessage" class="error-message"></div>
+            <div id="status" class="status">Initializing...</div>
+            <div class="controls">
+                <button id="playBtn" class="btn play">
+                    <span class="btn-icon">⏸️</span>
+                    <span class="btn-text">Pause</span>
+                </button>
+                <button id="resetBtn" class="btn reset">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Reset</span>
+                </button>
+                <button id="speedBtn" class="btn speed">
+                    <span class="btn-icon">⚡</span>
+                    <span class="btn-text">Speed: Normal</span>
+                </button>
+                <button id="analyzeBtn" class="btn" style="background: linear-gradient(145deg, #805ad5, #6b46c1);">
+                    <span class="btn-icon">📊</span>
+                    <span class="btn-text">Analyze Patterns</span>
+                </button>
+            </div>
+
+            <!-- Pattern Analysis Section -->
+            <div id="patternAnalysis" style="display: none;">
+                <div class="summary-stats">
+                    <h2>Pattern Analysis</h2>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-label">Total Patterns</div>
+                            <div class="summary-value" id="totalPatterns">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Most Common Pattern</div>
+                            <div class="summary-value" id="mostCommonPattern">0%</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Height</div>
+                            <div class="summary-value" id="avgPeakHeight">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Time</div>
+                            <div class="summary-value" id="avgPeakTime">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h2>Pattern Distribution</h2>
+                    <canvas id="patternChart"></canvas>
+                </div>
+
+                <div class="stats-grid" id="patternCards">
+                    <!-- Pattern cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if Chart.js is loaded
+        function checkChartJS() {
+            if (typeof Chart === 'undefined') {
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorMessage').innerHTML = 
+                    'Error: Chart.js failed to load. Please check your internet connection and refresh the page.';
+                return false;
+            }
+            return true;
+        }
+
+        // SIHR model parameters
+        const params = {
+            beta: 2.00,     // infection rate
+            gamma: 1.0,   // I to H rate
+            alpha: 1.0,    // H to R rate
+            p1: 0.5,       // probability of infection
+            p2: 0.66,       // probability of leaving I
+            p3: 0.2,       // probability of leaving H
+            ph: 0.50,      // probability of I to H vs R
+            tmax: 30,      // simulation end time
+            s0: 0.8,       // initial susceptible proportion
+            i0: 0.1,       // initial infected proportion
+            h0: 0.1,       // initial hospitalized proportion
+            r0: 0.0,       // initial recovered proportion
+            N: 300,
+            R_0_value: 0    // Add R₀ value to params
+        };
+
+        // Population size
+        let N = 300;
+        let totalRuns = 50;
+        
+        // Animation controls
+        let isRunning = true;
+        let currentRun = 0;
+        let animationSpeed = 800; // milliseconds per frame
+        let animationTimeout;
+        const speeds = [400, 800, 1200]; // Fast, Normal, Slow
+        let speedIndex = 1;
+
+        // Store results
+        const results = [];
+        let detResult = null;
+        let chart = null;
+
+        // Calculate R0
+        const R_0 = params.p1 * params.beta / (params.p2 * params.gamma);
+        const sigma0 = calculate_thresholds(params)[0];
+        const sigma1 = calculate_thresholds(params)[1];
+        
+        const tpi = compute_T( params.p2 * params.gamma /(params.p1 * params.beta));
+        const h_tpi = compute_h_tpi;
+        const sigma2 = calculate_thresholds(params)[2];
+
+        // Validate parameters
+        function validateParameters(params) {
+            if ([params.beta, params.gamma, params.alpha].some(x => x <= 0)) {
+                throw new Error('All rates must be positive');
+            }
+            if ([params.p1, params.p2, params.p3, params.ph].some(x => x <= 0 || x > 1)) {
+                throw new Error('All probabilities must be in (0,1]');
+            }
+            if (Math.abs(params.s0 + params.i0 + params.h0 + params.r0 - 1) > 1e-10) {
+                throw new Error('Initial conditions must sum to 1');
+            }
+        }
+
+        // Stochastic SIHR model
+        function sirAgentModel(N, params, runNumber) {
+            console.log(`🎲 Running stochastic simulation ${runNumber}/${totalRuns}`);
+            
+            // Calculate R₀ for this run
+            const R_0 = params.p1 * params.beta / (params.p2 * params.gamma);
+            
+            // Initial conditions
+            let s = Math.round(params.s0 * N);
+            let i = Math.round(params.i0 * N);
+            let h = Math.round(params.h0 * N);
+            let r = Math.round(params.r0 * N);
+            const total = s + i + h + r;
+            if (total !== N) {
+                s += N - total;
+            }
+
+            const T = [0], I_prop = [i / N], H_prop = [h / N];
+            let t = 0;
+
+            // Main simulation loop
+            while ((i > 0 || h > 0) && t < params.tmax)  {
+                const nS = s, nI = i, nH = h;
+
+                // Calculate event rates
+                const infectionRate = params.p1 * params.beta * nS * nI / N;
+                const toHospitalRate = params.p2 * params.ph * params.gamma * nI;
+                const toRecoveredFromIRate = params.p2 * (1 - params.ph) * params.gamma * nI;
+                const toRecoveredFromHRate = params.p3 * params.alpha * nH;
+                const totalRate = infectionRate + toHospitalRate + toRecoveredFromIRate + toRecoveredFromHRate;
+
+                if (totalRate === 0) break;
+
+                // Time to next event
+                const dt = -Math.log(Math.random()) / totalRate;
+                t += dt;
+
+                if (t > params.tmax) {
+                    t = params.tmax;
+                    T.push(t);
+                    I_prop.push(i / (s + i + h + r))
+                    H_prop.push(h / (s + i + h + r));
+                    break;
+                }
+
+                // Determine which event occurs
+                const chance = Math.random() * totalRate;
+                if (chance < infectionRate && nS > 0) {
+                    s--; i++;
+                } else if (chance < infectionRate + toHospitalRate && nI > 0) {
+                    i--; h++;
+                } else if (chance < infectionRate + toHospitalRate + toRecoveredFromIRate && nI > 0) {
+                    i--; r++;
+                } else if (nH > 0) {
+                    h--; r++;
+                }
+
+                T.push(t);
+                I_prop.push(i / (s + i + h + r));
+                H_prop.push(h / (s + i + h + r));
+            }
+
+            return { T, I_prop, H_prop, maxI: Math.max(...I_prop), maxH: Math.max(...H_prop) };
+        }
+
+        // Deterministic SIHR model (RK4 integration)
+        function solveDeterministicSIR(params) {
+            console.log('📊 Solving deterministic model');
+            const dt = 0.1;
+            const T = [];
+            const Y = [[params.s0, params.i0, params.h0, params.r0]];
+            
+            for (let t = 0; t <= params.tmax; t += dt) {
+                T.push(t);
+                if (t > 0) {
+                    const y = Y[Y.length - 1];
+                    const s = y[0], i = y[1], h = y[2];
+                    
+                    // ODE system
+                    const dsdt = -params.p1 * params.beta * s * i;
+                    const didt = params.p1 * params.beta * s * i - params.p2 * params.gamma * i;
+                    const dhdt = params.p2 * params.ph * params.gamma * i - params.p3 * params.alpha * h;
+                    const drdt = params.p2 * (1 - params.ph) * params.gamma * i + params.p3 * params.alpha * h;
+                    
+                    // Euler method (simplified for performance)
+                    const yNext = [
+                        s + dt * dsdt,
+                        i + dt * didt,
+                        h + dt * dhdt,
+                        y[3] + dt * drdt
+                    ];
+                    Y.push(yNext);
+                }
+            }
+
+            return { T, I_prop: Y.map(y => y[1]), H_prop: Y.map(y => y[2]) };
+        }
+
+        // Update status
+        function updateStatus(message, className = 'running') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = className;
+        }
+
+        // Animation controls
+        function toggleAnimation() {
+            isRunning = !isRunning;
+            const btn = document.getElementById('playBtn');
+            if (isRunning) {
+                btn.innerHTML = '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
+                updateStatus(`Animation running - Run ${currentRun + 1}/${totalRuns}`, 'running');
+                animate();
+            } else {
+                btn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+                updateStatus('Animation paused', 'paused');
+                if (animationTimeout) clearTimeout(animationTimeout);
+            }
+        }
+
+        function resetAnimation() {
+            // Stop any ongoing animation
+            isRunning = false;
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+            }
+            
+            // Reset current run
+            currentRun = 0;
+            
+            // Reset UI
+            const playBtn = document.getElementById('playBtn');
+            playBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Play</span>';
+            
+            if (chart && results.length > 0) {
+                updateChart();
+                updateStatus('Reset to Run 1', 'stopped');
+            }
+        }
+
+        function changeSpeed() {
+            speedIndex = (speedIndex + 1) % speeds.length;
+            animationSpeed = speeds[speedIndex];
+            const speedNames = ['Fast', 'Normal', 'Slow'];
+            document.getElementById('speedBtn').innerHTML = 
+                `<span class="btn-icon">⚡</span><span class="btn-text">Speed: ${speedNames[speedIndex]}</span>`;
+        }
+
+        // Update chart with current run
+        function updateChart() {
+            if (!chart || !results[currentRun]) return;
+
+            chart.data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun].I_prop[i] }));
+            chart.data.datasets[3].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun].H_prop[i] }));
+
+            chart.options.plugins.title.text = `Infected/Hospitalized Proportion Over Time - Run ${currentRun + 1}/${totalRuns} (N=${N})`;
+            chart.update('none');
+        }
+
+        // Update statistics display
+        function updateStatistics() {
+            document.getElementById('currentRun').textContent = `${currentRun + 1}/${totalRuns}`;
+            document.getElementById('populationSize').textContent = N;
+            document.getElementById('R_0-value').textContent = params.R_0_value.toFixed(2);
+            
+            if (results[currentRun]) {
+                const maxH = Math.max(...results[currentRun].H_prop);
+                document.getElementById('peakHospitalization').textContent = maxH.toFixed(4);
+            }
+        }
+
+        // Animation function just updates the display
+        function animate() {
+            if (!isRunning || !results.length) return;
+            
+            updateChart();
+            updateStatistics();
+            updateStatus(`Animation running - Run ${currentRun + 1}/${results.length}`, 'running');
+            
+            if (currentRun < results.length - 1) {
+                currentRun++;  // Changed from modulo operation to simple increment
+                animationTimeout = setTimeout(animate, animationSpeed);
+            } else {
+                // Stop animation when we reach the end
+                isRunning = false;
+                const playBtn = document.getElementById('playBtn');
+                playBtn.innerHTML = '<span class="btn-icon">▶️</span><span class="btn-text">Restart</span>';
+                updateStatus('Simulation completed', 'stopped');
+                
+                // Update pattern analysis if available
+                if (typeof updatePatternAnalysis === 'function') {
+                    updatePatternAnalysis();
+                }
+            }
+        }
+
+        // Function to update parameter values and display
+        function updateParameter(paramName, value) {
+            params[paramName] = parseFloat(value);
+            document.getElementById(`${paramName}-value`).textContent = value;
+            document.getElementById(`${paramName}`).value = value;
+            document.getElementById(`${paramName}-number`).value = value;
+            params.R_0_value = calculateR0(params);
+            const sigma0 = calculate_thresholds(params)[0];
+            const sigma1 = calculate_thresholds(params)[1];
+            const tpi = compute_T(params.p2 * params.gamma / (params.p1 * params.beta));
+            const h_tpi = compute_h_tpi();
+            const sigma2 = calculate_thresholds(params)[2];
+            document.getElementById('R_0-value').textContent = params.R_0_value.toFixed(2);
+            document.getElementById('sigma0-value').textContent = sigma0.toFixed(2);
+            document.getElementById('sigma1-value').textContent = sigma1.toFixed(2);
+            document.getElementById('sigma2-value').textContent = sigma2.toFixed(2);
+            document.getElementById('tpi-value').textContent = tpi.toFixed(2);
+            document.getElementById('h_tpi-value').textContent = h_tpi.toFixed(2);
+        }
+
+        // Set up event listeners for all parameters
+        ['s0','i0','r0','h0','beta', 'gamma', 'alpha', 'p1', 'p2', 'p3', 'ph'].forEach(param => {
+            const rangeInput = document.getElementById(param);
+            const numberInput = document.getElementById(`${param}-number`);
+            
+            rangeInput.addEventListener('input', (e) => {
+                updateParameter(param, e.target.value);
+            });
+
+            numberInput.addEventListener('input', (e) => {
+                let value = e.target.value;
+                
+                // Allow partial decimal input
+                if (value === '' || value === '.' || value === '-.' || value.endsWith('.')) {
+                    return;
+                }
+
+                // Convert to number and validate
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue)) {
+                    const min = parseFloat(rangeInput.min);
+                    const max = parseFloat(rangeInput.max);
+                    if (numValue >= min && numValue <= max) {
+                        updateParameter(param, numValue);
+                    }
+                }
+            });
+
+            // Update on blur (when input loses focus)
+            numberInput.addEventListener('blur', (e) => {
+                let value = e.target.value;
+                if (value === '' || value === '.' || value === '-.') {
+                    value = rangeInput.value; // Reset to current range value
+                    e.target.value = value;
+                }
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue)) {
+                    const min = parseFloat(rangeInput.min);
+                    const max = parseFloat(rangeInput.max);
+                    if (numValue >= min && numValue <= max) {
+                        updateParameter(param, numValue);
+                    }
+                }
+            });
+        });
+
+        // Population size input handling
+        const populationInput = document.getElementById('population');
+        const populationNumberInput = document.getElementById('population-number');
+        const populationValue = document.getElementById('population-value');
+
+        function updatePopulation(value) {
+            value = Math.max(1, Math.min(10000, value));
+            populationInput.value = value;
+            populationNumberInput.value = value;
+            populationValue.textContent = value;
+            params.N = value;
+        }
+
+        populationInput.addEventListener('input', (e) => {
+            updatePopulation(parseInt(e.target.value));
+        });
+
+        populationNumberInput.addEventListener('input', (e) => {
+            let value = parseInt(e.target.value);
+            if (!isNaN(value)) {
+                updatePopulation(value);
+            }
+        });
+
+        // Number of runs input handling
+        const runsInput = document.getElementById('runs');
+        const runsNumberInput = document.getElementById('runs-number');
+        const runsValue = document.getElementById('runs-value');
+
+        function updateRuns(value) {
+            value = Math.max(1, Math.min(100, value));
+            runsInput.value = value;
+            runsNumberInput.value = value;
+            runsValue.textContent = value;
+            totalRuns = value;
+        }
+
+        runsInput.addEventListener('input', (e) => {
+            updateRuns(parseInt(e.target.value));
+        });
+
+        runsNumberInput.addEventListener('input', (e) => {
+            let value = parseInt(e.target.value);
+            if (!isNaN(value)) {
+                updateRuns(value);
+            }
+        });
+        
+      // Function to integrate by Simpson's rule
+        function simpsonsRule(f, a, b, n) {
+            if (n % 2 === 1) n++; // Ensure even number of intervals
+            const h = (b - a) / n;
+            let sum = f(a) + f(b);
+
+            for (let i = 1; i < n; i++) {
+              const x = a + i * h;
+              sum += (i % 2 === 0 ? 2 : 4) * f(x);
+            }
+
+            return (h / 3) * sum;
+          }
+      
+      
+        
+      //function to calculate T(s): (-1/beta) * integral from s0 to s of dm/mI(m) 
+        function compute_T(s) {
+          
+          const I = m => params.s0 + params.i0 - m + (params.p2 * params.gamma/(params.p1 * params.beta)) * Math.log(m/params.s0);
+          const f = m => (-1 / (params.p1 * params.beta)) * 1 / (m * I(m) );
+          const a = params.s0;
+          const b = s;
+          const n = 50;
+
+          return simpsonsRule(f,a,b,n);
+          
+        }
+      
+        function i_peak(){
+          
+          const s_p = params.p2 * params.gamma/(params.p1 * params.beta);
+          const i_p =  params.s0 + params.i0 - s_p + (params.p2 * params.gamma/(params.p1 * params.beta)) * Math.log(s_p/params.s0);
+          
+          return i_p;
+        }
+      
+        function compute_h_tpi(){
+          
+          const y = params.p2 * params.gamma / (params.p1 * params.beta); // R_0 ^ -1
+          const tpi = compute_T(y);
+          f = s => (1/s) * Math.exp(params.p3 * params.alpha * compute_T(s) );
+          
+          const h_tpi = Math.exp(-params.p3 * params.alpha * tpi) * ( params.h0 + params.ph * params.p1 * params.gamma * (-1/(params.p1 * params.beta)) * simpsonsRule(f,params.s0,y,100) );
+          
+          return h_tpi;
+          
+        }
+      
+        // Function to calculate R₀ based on current parameter values
+        function calculateR0(params) {
+            return params.p1 * params.beta / (params.p2 * params.gamma);
+        }
+      
+        function calculate_thresholds(params) {
+          const sigma = params.p1 * params.beta * params.s0/ (params.p2 * params.gamma);
+          const sigma1 = params.gamma * params.ph * params.p2 * params.i0 / (params.alpha * params.p3 * params.h0);
+         
+          const i_p = i_peak();
+          const h_tpi = compute_h_tpi();
+          const sigma2 =  params.gamma * params.ph * params.p2 * i_p / (params.alpha * params.p3 * h_tpi);
+          
+          return [sigma, sigma1, sigma2];
+        }
+
+        // Setup apply button
+        document.getElementById('applyParams').addEventListener('click', () => {
+            // Pause animation if running
+            if (isRunning) {
+                toggleAnimation();
+            }
+
+            // Update parameters
+            params.beta = parseFloat(document.getElementById('beta').value);
+            params.gamma = parseFloat(document.getElementById('gamma').value);
+            params.alpha = parseFloat(document.getElementById('alpha').value);
+            params.p1 = parseFloat(document.getElementById('p1').value);
+            params.p2 = parseFloat(document.getElementById('p2').value);
+            params.p3 = parseFloat(document.getElementById('p3').value);
+            params.ph = parseFloat(document.getElementById('ph').value);
+            params.s0 = parseFloat(document.getElementById('s0').value);
+            params.i0 = parseFloat(document.getElementById('i0').value);
+            params.r0 = parseFloat(document.getElementById('r0').value);
+            params.h0 = parseFloat(document.getElementById('h0').value);
+            N = parseInt(document.getElementById('population').value);
+            totalRuns = parseInt(document.getElementById('runs').value);
+
+            // Validate parameters
+            try {
+                validateParameters(params);
+                
+                // Calculate R₀ once when parameters are applied
+                params.R_0_value = calculateR0(params);
+                
+                // Clear existing results
+                results.length = 0;
+                currentRun = 0;
+
+                // Run new simulations
+                updateStatus('Running new simulations...', 'running');
+                for (let i = 0; i < totalRuns; i++) {
+                    results.push(sirAgentModel(N, params, i + 1));
+                    if (i % 10 === 0) {
+                        updateStatus(`Running simulations... ${i + 1}/${totalRuns}`, 'running');
+                    }
+                }
+
+                // Update deterministic solution
+                detResult = solveDeterministicSIR(params);
+
+                // Update both curves in the chart
+                chart.data.datasets[0].data = detResult.T.map((t, i) => ({ 
+                    x: t, 
+                    y: detResult.I_prop[i] 
+                }));
+                chart.data.datasets[1].data = results[currentRun].T.map((t, i) => ({ 
+                    x: t, 
+                    y: results[currentRun].I_prop[i] 
+                }));
+                chart.data.datasets[2].data = detResult.T.map((t, i) => ({ 
+                    x: t, 
+                    y: detResult.H_prop[i] 
+                }));
+                chart.data.datasets[3].data = results[currentRun].T.map((t, i) => ({ 
+                    x: t, 
+                    y: results[currentRun].H_prop[i] 
+                }));
+              
+                
+                // Update chart and statistics
+                chart.update('none');
+                updateStatistics();
+
+                updateStatus('Parameters applied successfully', 'running');
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'stopped');
+            }
+        });
+
+        // Initialize everything
+        async function initialize() {
+            try {
+                // Check if Chart.js is loaded
+                if (!checkChartJS()) return;
+                
+                validateParameters(params);
+                
+                // Run all simulations
+                updateStatus('Running simulations...', 'running');
+                for (let i = 0; i < totalRuns; i++) {
+                    results.push(sirAgentModel(N, params, i + 1));
+                    if (i % 10 === 0) {
+                        updateStatus(`Running simulations... ${i + 1}/${totalRuns}`, 'running');
+                        await new Promise(resolve => setTimeout(resolve, 10)); // Allow UI to update
+                    }
+                }
+                
+                detResult = solveDeterministicSIR(params);
+                
+                // Set up Chart.js
+                updateStatus('Setting up visualization...', 'running');
+                const ctx = document.getElementById('hospitalChart').getContext('2d');
+                
+                // Destroy existing chart if it exists
+                if (chart) {
+                    chart.destroy();
+                }
+              
+                const icolor = getComputedStyle(document.documentElement)
+                    .getPropertyValue('--deterministic_i-color')
+                    .trim();
+                
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Deterministic i',
+                                data: detResult.T.map((t, i) => ({ x: t, y: detResult.I_prop[i] })),
+                                borderColor: icolor,
+                                backgroundColor: 'rgba(128, 90, 213, 0.1)',
+                                borderDash: [8, 4],
+                                borderWidth: 3,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Stochastic i',
+                                data: results[0].T.map((t, i) => ({ x: t, y: results[0].I_prop[i] })),
+                                borderColor: icolor,
+                                backgroundColor: 'rgba(49, 130, 206, 0.1)',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0.2
+                            },
+                            {
+                                label: 'Deterministic h',
+                                data: detResult.T.map((t, i) => ({ x: t, y: detResult.H_prop[i] })),
+                                borderColor: 'var(--deterministic-color)',
+                                backgroundColor: 'rgba(128, 90, 213, 0.1)',
+                                borderDash: [8, 4],
+                                borderWidth: 3,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Stochastic h',
+                                data: results[0].T.map((t, i) => ({ x: t, y: results[0].H_prop[i] })),
+                                borderColor: 'var(--stochastic-color)',
+                                backgroundColor: 'rgba(49, 130, 206, 0.1)',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0.2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 0
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: { 
+                                type: 'linear',
+                                title: { 
+                                    display: true, 
+                                    text: 'Time', 
+                                    font: { 
+                                        family: 'Inter',
+                                        size: 14 
+                                    },
+                                    color: 'var(--secondary-color)'
+                                },
+                                min: 0, 
+                                max: params.tmax,
+                                ticks: { 
+                                    color: 'var(--secondary-color)',
+                                    font: {
+                                        family: 'Inter'
+                                    }
+                                },
+                                grid: { 
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            y: { 
+                                title: { 
+                                    display: true, 
+                                    text: 'Proportion Hospitalized', 
+                                    font: { 
+                                        family: 'Inter',
+                                        size: 14 
+                                    },
+                                    color: 'var(--secondary-color)'
+                                },
+                                min: 0,
+                                max: 0.5,
+                                ticks: { 
+                                    color: 'var(--secondary-color)',
+                                    font: {
+                                        family: 'Inter'
+                                    }
+                                },
+                                grid: { 
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: { 
+                                display: true, 
+                                text: `Hospitalized Proportion Over Time - Run 1/${totalRuns} (N=${N})`,
+                                font: { 
+                                    family: 'Inter',
+                                    size: 16 
+                                },
+                                color: 'var(--primary-color)'
+                            },
+                            legend: { 
+                                position: 'top',
+                                labels: { 
+                                    color: 'var(--primary-color)',
+                                    font: {
+                                        family: 'Inter'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: '#fff',
+                                borderWidth: 1,
+                                padding: 12,
+                                boxPadding: 6,
+                                usePointStyle: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(4)}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Setup control buttons
+                document.getElementById('playBtn').addEventListener('click', toggleAnimation);
+                document.getElementById('resetBtn').addEventListener('click', resetAnimation);
+                document.getElementById('speedBtn').addEventListener('click', changeSpeed);
+
+                // Start animation
+                updateStatus(`Animation ready - Run 1/${totalRuns}`, 'running');
+                setTimeout(() => animate(), 1000); // Start after 1 second
+                
+                console.log('✅ Initialization complete');
+                
+            } catch (error) {
+                console.error('❌ Error:', error.message);
+                updateStatus(`Error: ${error.message}`, 'stopped');
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorMessage').innerHTML = `Error: ${error.message}`;
+            }
+        }
+
+        // Start when page loads
+        window.addEventListener('load', async () => {
+            console.log('🔄 Page loaded, initializing...');
+            await initialize();
+        });
+
+        // Add pattern analysis functions
+        function updatePatternAnalysis() {
+            const patternSection = document.getElementById('patternAnalysis');
+            
+            if (!results.length) {
+                patternSection.style.display = 'none';
+                return;
+            }
+
+            try {
+                // Group the runs
+                const runCharacteristics = results.map(calculateRunCharacteristics);
+                runGroups = groupSimilarRuns(runCharacteristics);
+                
+                // Update summary statistics
+                const totalPatterns = runGroups.length;
+                const mostCommonPattern = Math.max(...runGroups.map(g => g.runs.length)) / results.length * 100;
+                const avgPeakHeight = runGroups.reduce((sum, g) => sum + g.representative.maxH, 0) / totalPatterns;
+                const avgPeakTime = runGroups.reduce((sum, g) => sum + g.representative.peakTime, 0) / totalPatterns;
+
+                document.getElementById('totalPatterns').textContent = totalPatterns;
+                document.getElementById('mostCommonPattern').textContent = `${mostCommonPattern.toFixed(1)}%`;
+                document.getElementById('avgPeakHeight').textContent = avgPeakHeight.toFixed(4);
+                document.getElementById('avgPeakTime').textContent = avgPeakTime.toFixed(1);
+
+                // Create pattern cards
+                createPatternCards(runGroups);
+
+                // Create pattern distribution chart
+                createPatternChart(runGroups);
+
+                patternSection.style.display = 'block';
+            } catch (error) {
+                console.error('Error in pattern analysis:', error);
+                updateStatus(`Error in pattern analysis: ${error.message}`, 'stopped');
+            }
+        }
+
+        // Function to calculate key characteristics of a run
+        function calculateRunCharacteristics(run) {
+            const H_prop = run.H_prop;
+            const T = run.T;
+            
+            // Find peak
+            const maxH = Math.max(...H_prop);
+            const peakTime = T[H_prop.indexOf(maxH)];
+            
+            // Count major fluctuations (peaks and troughs)
+            let fluctuations = 0;
+            let prevDiff = 0;
+            for (let i = 1; i < H_prop.length; i++) {
+                const diff = H_prop[i] - H_prop[i-1];
+                if (prevDiff * diff < 0) { // Sign change indicates peak or trough
+                    fluctuations++;
+                }
+                prevDiff = diff;
+            }
+            
+            return {
+                maxH,
+                peakTime,
+                fluctuations,
+                curve: H_prop // Store the actual curve for shape comparison
+            };
+        }
+
+        // Function to group similar runs
+        function groupSimilarRuns(runCharacteristics) {
+            const groups = [];
+            
+            runCharacteristics.forEach((char, index) => {
+                let addedToGroup = false;
+                
+                // Try to add to existing group
+                for (let group of groups) {
+                    if (areRunsSimilar(char, group.representative)) {
+                        group.runs.push(index);
+                        addedToGroup = true;
+                        break;
+                    }
+                }
+                
+                // Create new group if no match found
+                if (!addedToGroup) {
+                    groups.push({
+                        representative: char,
+                        runs: [index]
+                    });
+                }
+            });
+            
+            return groups;
+        }
+
+        // Function to compare two runs for similarity
+        function areRunsSimilar(run1, run2, thresholds = {
+            peakHeight: 0.1,    // 10% difference allowed
+            peakTime: 2,        // 2 days difference allowed
+            fluctuations: 1,    // 1 fluctuation difference allowed
+            shapeSimilarity: 0.8 // 80% shape similarity required
+        }) {
+            // Compare peak heights
+            const heightDiff = Math.abs(run1.maxH - run2.maxH) / Math.max(run1.maxH, run2.maxH);
+            if (heightDiff > thresholds.peakHeight) return false;
+            
+            // Compare peak times
+            const timeDiff = Math.abs(run1.peakTime - run2.peakTime);
+            if (timeDiff > thresholds.peakTime) return false;
+            
+            // Compare number of fluctuations
+            const fluctDiff = Math.abs(run1.fluctuations - run2.fluctuations);
+            if (fluctDiff > thresholds.fluctuations) return false;
+            
+            // Compare overall shape using correlation
+            const shapeSimilarity = calculateShapeSimilarity(run1.curve, run2.curve);
+            if (shapeSimilarity < thresholds.shapeSimilarity) return false;
+            
+            return true;
+        }
+
+        // Function to calculate shape similarity between two curves
+        function calculateShapeSimilarity(curve1, curve2) {
+            // Normalize curves to same length
+            const length = Math.min(curve1.length, curve2.length);
+            const norm1 = curve1.slice(0, length);
+            const norm2 = curve2.slice(0, length);
+            
+            // Calculate correlation coefficient
+            const mean1 = norm1.reduce((a, b) => a + b) / length;
+            const mean2 = norm2.reduce((a, b) => a + b) / length;
+            
+            let numerator = 0;
+            let denom1 = 0;
+            let denom2 = 0;
+            
+            for (let i = 0; i < length; i++) {
+                const diff1 = norm1[i] - mean1;
+                const diff2 = norm2[i] - mean2;
+                numerator += diff1 * diff2;
+                denom1 += diff1 * diff1;
+                denom2 += diff2 * diff2;
+            }
+            
+            return Math.abs(numerator / Math.sqrt(denom1 * denom2));
+        }
+
+        function createPatternCards(groups) {
+            const container = document.getElementById('patternCards');
+            container.innerHTML = '';
+
+            groups.forEach((group, index) => {
+                const card = document.createElement('div');
+                card.className = 'pattern-card';
+                card.innerHTML = `
+                    <div class="pattern-header">
+                        <div class="pattern-title">Pattern ${index + 1}</div>
+                        <div class="pattern-count">${group.runs.length} runs (${((group.runs.length / results.length) * 100).toFixed(1)}%)</div>
+                    </div>
+                    <div class="pattern-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Peak Height</span>
+                            <span class="detail-value">${group.representative.maxH.toFixed(4)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Peak Time</span>
+                            <span class="detail-value">${group.representative.peakTime.toFixed(1)} days</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Fluctuations</span>
+                            <span class="detail-value">${group.representative.fluctuations}</span>
+                        </div>
+                    </div>
+                    <div class="pattern-chart">
+                        <canvas id="pattern${index}Chart"></canvas>
+                    </div>
+                `;
+                container.appendChild(card);
+
+                // Create mini chart for this pattern
+                const ctx = document.getElementById(`pattern${index}Chart`).getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array.from({length: group.representative.curve.length}, (_, i) => i),
+                        datasets: [{
+                            data: group.representative.curve,
+                            borderColor: `hsl(${index * 360 / groups.length}, 70%, 50%)`,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false }
+                        }
+                    }
+                });
+            });
+        }
+
+        function createPatternChart(groups) {
+            const ctx = document.getElementById('patternChart').getContext('2d');
+            
+            // Properly destroy existing chart if it exists
+            if (window.patternChart instanceof Chart) {
+                window.patternChart.destroy();
+            }
+            
+            // Create new chart
+            window.patternChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: groups.map((_, i) => `Pattern ${i + 1}`),
+                    datasets: [{
+                        data: groups.map(g => g.runs.length),
+                        backgroundColor: groups.map((_, i) => 
+                            `hsl(${i * 360 / groups.length}, 70%, 50%)`
+                        )
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Number of Runs per Pattern'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Runs'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Add click handler for analyze button
+        document.getElementById('analyzeBtn').addEventListener('click', function() {
+            const patternSection = document.getElementById('patternAnalysis');
+            if (patternSection.style.display === 'none') {
+                updatePatternAnalysis();
+            } else {
+                patternSection.style.display = 'none';
+            }
+        });
+
+        // Update pattern analysis when simulation completes
+        function onSimulationComplete() {
+            updatePatternAnalysis();
+        }
+    </script>
+</body>
+</html>
+
+
