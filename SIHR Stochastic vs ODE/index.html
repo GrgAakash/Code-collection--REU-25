@@ -1,0 +1,310 @@
+<!-- Quick demo at https://grgaakash.github.io/projects -->
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario's Epidemic Adventure - SIHR Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="src/css/styles.css">
+</head>
+<body>
+    <!-- Matrix-style falling code background -->
+    <div class="matrix-bg" id="matrixBg"></div>
+
+    <!-- Mario Decorative Coins -->
+    <div class="mario-coin coin-1" draggable="true"></div>
+    <div class="mario-coin coin-2" draggable="true"></div>
+    <div class="mario-coin coin-3" draggable="true"></div>
+    <div class="mario-coin coin-4" draggable="true"></div>
+
+    <!-- Mario Title -->
+    <div class="mario-title">
+        MARIO'S EPIDEMIC ADVENTURE
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>Model Parameters</h2>
+          
+            <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">s<sub>0</sub> (susceptiple fraction)</span>
+                  <span class="parameter-value" id="s0-value">0.80</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="s0" min="0" max="1" step="0.01" value="0.80">
+                  <input type="number" id="s0-number" min="0" max="1" step="0.001" value="0.80" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial infected proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">i<sub>0</sub> (infected fraction)</span>
+                  <span class="parameter-value" id="i0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="i0" min="0" max="1" step="0.01" value="0.10">
+                  <input type="number" id="i0-number" min="0" max="1" step="0.001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial hospitalized proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">h<sub>0</sub> (hospitalized fraction)</span>
+                  <span class="parameter-value" id="h0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="h0" min="0" max="1" step="0.01" value="0.10">
+                  <input type="number" id="h0-number" min="0" max="1" step="0.001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial recovered proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">r<sub>0</sub> (recovered fraction)</span>
+                  <span class="parameter-value" id="r0-value">0.00</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="r0" min="0" max="1" step="0.01" value="0.00">
+                  <input type="number" id="r0-number" min="0" max="1" step="0.001" value="0.00" style="width: 80px;">
+                </div>
+              </div>
+          
+            <div class="parameter-controls">
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">β (Infection Rate)</span>
+                        <span class="parameter-value" id="beta-value">2.00</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="beta" min="0.1" max="10" step="0.01" value="2.00">
+                        <input type="number" id="beta-number" min="0.1" max="10" step="0.001" value="2.00" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">γ (I to H rate)</span>
+                        <span class="parameter-value" id="gamma-value">1.0</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="gamma" min="0.1" max="10" step="0.01" value="1.0">
+                        <input type="number" id="gamma-number" min="0.1" max="10" step="0.001" value="1.0" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">α (H to R Rate)</span>
+                        <span class="parameter-value" id="alpha-value">1.0</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="alpha" min="0.1" max="10" step="0.01" value="1.0">
+                        <input type="number" id="alpha-number" min="0.1" max="10" step="0.001" value="1.0" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p₁ (Leave S Prob)</span>
+                        <span class="parameter-value" id="p1-value">0.5</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p1" min="0.1" max="1" step="0.01" value="0.5">
+                        <input type="number" id="p1-number" min="0.1" max="1" step="0.001" value="0.5" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p₂ (Leave I Prob)</span>
+                        <span class="parameter-value" id="p2-value">0.66</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p2" min="0.1" max="1" step="0.01" value="0.66">
+                        <input type="number" id="p2-number" min="0.1" max="1" step="0.001" value="0.66" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p₃ (Leave H Prob)</span>
+                        <span class="parameter-value" id="p3-value">0.2</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p3" min="0.1" max="1" step="0.01" value="0.2">
+                        <input type="number" id="p3-number" min="0.1" max="1" step="0.001" value="0.2" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">pₕ (I to H Prob)</span>
+                        <span class="parameter-value" id="ph-value">0.50</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="ph" min="0.1" max="1" step="0.01" value="0.50">
+                        <input type="number" id="ph-number" min="0.1" max="1" step="0.001" value="0.50" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Population Size</span>
+                        <span class="parameter-value" id="population-value">300</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="population" min="1" max="10000" step="1" value="300">
+                        <input type="number" id="population-number" min="1" max="10000" step="1" value="300" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Number of Runs</span>
+                        <span class="parameter-value" id="runs-value">50</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="runs" min="1" max="100" step="1" value="50">
+                        <input type="number" id="runs-number" min="1" max="100" step="1" value="50" style="width: 80px;">
+                    </div>
+                </div>
+
+                <button id="applyParams" class="apply-button">Apply Parameters</button>
+            </div>
+          
+          
+            <div class="sidebar">
+              <h2>Threshold Parameters</h2>
+              
+              <div class="stat-card">
+                    <div class="stat-label"><p>&sigma;</p></div>
+                    <div class="stat-value" id="sigma0-value">--</div>
+               </div>
+              
+              <div class="stat-card">
+                    <div class="stat-label"><p>&sigma;~</p></div>
+                    <div class="stat-value" id="sigma1-value">--</div>
+               </div>
+              
+              <div class="stat-card">
+                    <div class="stat-label"><p>&sigma;~~</p></div>
+                    <div class="stat-value" id="sigma2-value">--</div>
+               </div>
+              <div class="stat-card">
+                    <div class="stat-label"><p>time of peak I(tpi)</p></div>
+                    <div class="stat-value" id="tpi-value">--</div>
+               </div>
+              <div class="stat-card">
+                    <div class="stat-label"><p>h(tpi)</p></div>
+                    <div class="stat-value" id="h_tpi-value">--</div>
+               </div>
+            </div>
+          
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Current Run</div>
+                    <div class="stat-value" id="currentRun">1/50</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Population</div>
+                    <div class="stat-value" id="populationSize">300</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">R₀</div>
+                    <div class="stat-value" id="R_0-value">1.90</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Peak Hospitalization</div>
+                    <div class="stat-value" id="peakHospitalization">0.0000</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="chart-container">
+                <canvas id="chart"></canvas>
+            </div>
+            
+            <div id="errorMessage" class="error-message"></div>
+            <div id="status" class="status">Initializing...</div>
+            <div class="controls">
+                <button id="playBtn" class="btn play">
+                    <span class="btn-text">Play</span>
+                </button>
+                <button id="resetBtn" class="btn reset">
+                    <span class="btn-text">Reset</span>
+                </button>
+                <button id="speedBtn" class="btn speed">
+                    <span class="btn-text">Speed: Normal</span>
+                </button>
+                <button id="analyzeBtn" class="btn analyze">
+                    <span class="btn-text">Analyze</span>
+                </button>
+            </div>
+
+            <!-- Pattern Analysis Section -->
+            <div id="patternAnalysis" style="display: none;">
+                <div class="summary-stats">
+                    <h2>Pattern Analysis</h2>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-label">Total Patterns</div>
+                            <div class="summary-value" id="totalPatterns">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Most Common Pattern</div>
+                            <div class="summary-value" id="mostCommonPattern">0%</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Height</div>
+                            <div class="summary-value" id="avgPeakHeight">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Time</div>
+                            <div class="summary-value" id="avgPeakTime">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h2>Pattern Distribution</h2>
+                    <canvas id="patternChart"></canvas>
+                </div>
+
+                <div class="stats-grid" id="patternCards">
+                    <!-- Pattern cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pattern Details Modal -->
+    <div id="patternModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Pattern Details</h2>
+                <button class="close-modal" onclick="closePatternModal()">&times;</button>
+            </div>
+            <div id="modalContent">
+                <!-- Content will be dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript modules -->
+    <script src="src/js/models/sihr-model.js"></script>
+    <script src="src/js/utils/audio.js"></script>
+    <script src="src/js/components/pattern-analysis.js"></script>
+    <script src="src/js/components/ui-controls.js"></script>
+    <script src="src/js/components/download-utils.js"></script>
+    <script src="src/js/main.js"></script>
+</body>
+</html> 
