@@ -139,21 +139,23 @@ async function initialize() {
                     mode: 'index'
                 },
                 plugins: {
-                    title: { 
-                        display: true, 
-                        text: `Hospitalized Proportion Over Time - Run 1/${totalRuns} (N=${N})`,
-                        font: { 
-                            family: 'Inter',
-                            size: 16 
+                    title: {
+                        display: true,
+                        text: 'Infected/Hospitalized Proportion Over Time - Run 1/' + totalRuns + ' (N=' + N + ')',
+                        font: {
+                            family: "'Press Start 2P', cursive",
+                            size: 18,
+                            weight: 'bold'
                         },
                         color: 'var(--primary-color)'
                     },
-                    legend: { 
+                    legend: {
                         position: 'top',
-                        labels: { 
+                        labels: {
                             color: 'var(--primary-color)',
                             font: {
-                                family: 'Inter'
+                                family: "'Press Start 2P', cursive",
+                                size: 12
                             }
                         }
                     },
@@ -174,16 +176,17 @@ async function initialize() {
                     }
                 },
                 scales: {
-                    x: { 
+                    x: {
                         type: 'linear',
-                        title: { 
-                            display: true, 
-                            text: 'Time', 
-                            font: { 
-                                family: 'Inter',
-                                size: 14 
+                        title: {
+                            display: true,
+                            text: 'Time (days)',
+                            font: {
+                                family: "'Press Start 2P', cursive",
+                                size: 14,
+                                weight: 'bold'
                             },
-                            color: 'var(--secondary-color)'
+                            color: 'var(--primary-color)'
                         },
                         min: 0, 
                         max: params.tmax,
@@ -198,14 +201,15 @@ async function initialize() {
                         }
                     },
                     y: { 
-                        title: { 
-                            display: true, 
-                            text: 'Proportion', 
-                            font: { 
-                                family: 'Inter',
-                                size: 14 
+                        title: {
+                            display: true,
+                            text: 'Proportion',
+                            font: {
+                                family: "'Press Start 2P', cursive",
+                                size: 14,
+                                weight: 'bold'
                             },
-                            color: 'var(--secondary-color)'
+                            color: 'var(--primary-color)'
                         },
                         min: 0,
                         max: 0.5,
@@ -304,12 +308,14 @@ function updatePopulation(value) {
 }
 
 populationInput.addEventListener('input', (e) => {
+    playCoinSound(); // Play coin sound for slider movement
     updatePopulation(parseInt(e.target.value));
 });
 
 populationNumberInput.addEventListener('input', (e) => {
     let value = parseInt(e.target.value);
     if (!isNaN(value)) {
+        playCoinSound(); // Play coin sound for number input
         updatePopulation(value);
     }
 });
@@ -320,7 +326,7 @@ const runsNumberInput = document.getElementById('runs-number');
 const runsValue = document.getElementById('runs-value');
 
 function updateRuns(value) {
-    value = Math.max(1, Math.min(100, value));
+    value = Math.max(1, Math.min(1000, value));
     runsInput.value = value;
     runsNumberInput.value = value;
     runsValue.textContent = value;
@@ -328,12 +334,14 @@ function updateRuns(value) {
 }
 
 runsInput.addEventListener('input', (e) => {
+    playCoinSound(); // Play coin sound for slider movement
     updateRuns(parseInt(e.target.value));
 });
 
 runsNumberInput.addEventListener('input', (e) => {
     let value = parseInt(e.target.value);
     if (!isNaN(value)) {
+        playCoinSound(); // Play coin sound for number input
         updateRuns(value);
     }
 });
@@ -403,7 +411,7 @@ document.getElementById('applyParams').addEventListener('click', () => {
         }));
       
         // Update chart title and properties
-        chart.options.plugins.title.text = `Hospitalized Proportion Over Time - Run 1/${totalRuns} (N=${N})`;
+        chart.options.plugins.title.text = 'Infected/Hospitalized Proportion Over Time - Run 1/' + totalRuns + ' (N=' + N + ')';
         chart.options.scales.x.max = params.tmax;
         
         // Update chart and statistics
@@ -606,10 +614,82 @@ window.onclick = function(event) {
     }
 }
 
+// Modal logic for ODE info
+const odeModal = document.getElementById('odeModal');
+const closeOdeModal = document.getElementById('closeOdeModal');
+
+// Attach click event only to the 1-star Dragon Ball
+const dragonBall1 = document.querySelector('.dragon-ball-1');
+if (odeModal && closeOdeModal && dragonBall1) {
+    dragonBall1.addEventListener('click', () => {
+        odeModal.style.display = 'flex';
+        if (window.MathJax) {
+            MathJax.typesetPromise();
+        }
+    });
+    closeOdeModal.addEventListener('click', () => {
+        odeModal.style.display = 'none';
+    });
+    // Close modal when clicking outside modal-content
+    odeModal.addEventListener('click', (e) => {
+        if (e.target === odeModal) {
+            odeModal.style.display = 'none';
+        }
+    });
+}
+
+// Modal logic for Hospitalization Pattern Classification (2-star ball)
+const patternClassModal = document.getElementById('patternClassModal');
+const closePatternClassModal = document.getElementById('closePatternClassModal');
+const dragonBall2 = document.querySelector('.dragon-ball-2');
+if (patternClassModal && closePatternClassModal && dragonBall2) {
+    dragonBall2.addEventListener('click', () => {
+        patternClassModal.style.display = 'flex';
+        if (window.MathJax) {
+            MathJax.typesetPromise();
+        }
+    });
+    closePatternClassModal.addEventListener('click', () => {
+        patternClassModal.style.display = 'none';
+    });
+    patternClassModal.addEventListener('click', (e) => {
+        if (e.target === patternClassModal) {
+            patternClassModal.style.display = 'none';
+        }
+    });
+}
+
+// Modal logic for SIHR Flowchart (3-star ball)
+const sihrFlowModal = document.getElementById('sihrFlowModal');
+const closeSihrFlowModal = document.getElementById('closeSihrFlowModal');
+const dragonBall3 = document.querySelector('.dragon-ball-3');
+if (sihrFlowModal && closeSihrFlowModal && dragonBall3) {
+    dragonBall3.addEventListener('click', () => {
+        sihrFlowModal.style.display = 'flex';
+    });
+    closeSihrFlowModal.addEventListener('click', () => {
+        sihrFlowModal.style.display = 'none';
+    });
+    sihrFlowModal.addEventListener('click', (e) => {
+        if (e.target === sihrFlowModal) {
+            sihrFlowModal.style.display = 'none';
+        }
+    });
+}
+
 // Start when page loads
 window.addEventListener('load', async () => {
+    // Hide pattern details modal on load
+    const patternModal = document.getElementById('patternModal');
+    if (patternModal) patternModal.style.display = 'none';
+
     console.log('🔄 Page loaded, initializing...');
     initMatrixBackground(); // Initialize Matrix background
     await initialize();
     initDraggableCoins(); // Initialize draggable coins
+    if (window.initDraggableDragonBalls) {
+        window.initDraggableDragonBalls();
+    } else if (typeof initDraggableDragonBalls === 'function') {
+        initDraggableDragonBalls();
+    }
 }); 

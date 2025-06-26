@@ -14,11 +14,23 @@
     <!-- Matrix-style falling code background -->
     <div class="matrix-bg" id="matrixBg"></div>
 
-    <!-- Mario Decorative Coins -->
-    <div class="mario-coin coin-1" draggable="true"></div>
-    <div class="mario-coin coin-2" draggable="true"></div>
-    <div class="mario-coin coin-3" draggable="true"></div>
-    <div class="mario-coin coin-4" draggable="true"></div>
+    <!-- Dragon Balls -->
+    <div class="dragon-ball dragon-ball-1" title="1-Star Ball">
+      <svg viewBox="0 0 32 32"><polygon points="16,6 18,14 26,14 19,18 21,26 16,21 11,26 13,18 6,14 14,14" fill="#e53935"/></svg>
+    </div>
+    <div class="dragon-ball dragon-ball-2" title="2-Star Ball">
+      <svg viewBox="0 0 32 32">
+        <polygon points="8,10 9,14 13,14 10,16 11,20 8,17 5,20 6,16 3,14 7,14" fill="#e53935"/>
+        <polygon points="24,10 25,14 29,14 26,16 27,20 24,17 21,20 22,16 19,14 23,14" fill="#e53935"/>
+      </svg>
+    </div>
+    <div class="dragon-ball dragon-ball-3" title="3-Star Ball">
+      <svg viewBox="0 0 32 32">
+        <polygon points="8,10 9,14 13,14 10,16 11,20 8,17 5,20 6,16 3,14 7,14" fill="#e53935"/>
+        <polygon points="24,10 25,14 29,14 26,16 27,20 24,17 21,20 22,16 19,14 23,14" fill="#e53935"/>
+        <polygon points="16,22 17,26 21,26 18,28 19,32 16,29 13,32 14,28 11,26 15,26" fill="#e53935"/>
+      </svg>
+    </div>
 
     <!-- Mario Title -->
     <div class="mario-title">
@@ -171,8 +183,8 @@
                         <span class="parameter-value" id="runs-value">50</span>
                     </div>
                     <div class="parameter-input">
-                        <input type="range" id="runs" min="1" max="100" step="1" value="50">
-                        <input type="number" id="runs-number" min="1" max="100" step="1" value="50" style="width: 80px;">
+                        <input type="range" id="runs" min="1" max="1000" step="1" value="50">
+                        <input type="number" id="runs-number" min="1" max="1000" step="1" value="50" style="width: 80px;">
                     </div>
                 </div>
 
@@ -250,6 +262,88 @@
                 </button>
             </div>
 
+            <!-- Modal for ODEs -->
+            <div id="odeModal" class="modal" style="display:none;">
+              <div class="modal-content">
+                <span class="close-modal" id="closeOdeModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+                <h2>SIHR Model: System of ODEs</h2>
+                <div id="odeMath" style="font-size:1.2rem; margin-top:1rem;">
+                  <p>
+                    \[
+                    \begin{align*}
+                    \frac{dS}{dt} &= -p_1 \beta S I \\
+                    \frac{dI}{dt} &= p_1 \beta S I - p_2 \gamma I \\
+                    \frac{dH}{dt} &= p_2 p_h \gamma I - p_3 \alpha H \\
+                    \frac{dR}{dt} &= p_2 (1-p_h) \gamma I + p_3 \alpha H
+                    \end{align*}
+                    \]
+                  </p>
+                  <ul style="margin-top:1rem;">
+                    <li><b>S</b>: Susceptible</li>
+                    <li><b>I</b>: Infected</li>
+                    <li><b>H</b>: Hospitalized</li>
+                    <li><b>R</b>: Recovered</li>
+                    <li><b>β, γ, α</b>: rates</li>
+                    <li><b>p₁, p₂, p₃, pₕ</b>: probabilities</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modal for Hospitalization Pattern Classification (2-star ball) -->
+            <div id="patternClassModal" class="modal" style="display:none;">
+              <div class="modal-content">
+                <span class="close-modal" id="closePatternClassModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+                <h2>Hospitalization Pattern Classification</h2>
+                <div style="font-size:1.1rem; margin-top:1rem;">
+                  <p>
+                    The SIHR model's hospitalized population \( h(t) \) exhibits <b>diminishing</b> (monotonically decreasing), <b>viral</b> (initially increasing, then decreasing after a peak), or <b>outbreak</b> (initially decreasing, then increasing to a peak, then decreasing) behavior, determined by:
+                  </p>
+                  <p>
+                    \[
+                    \sigma_0 = s_0 \frac{\beta}{\gamma}, \quad
+                    \tilde{\sigma}_0 = \frac{\gamma p_{IH} i_0}{\alpha h_0}, \quad
+                    \tilde{\tilde{\sigma}}_0 = \frac{\gamma p_{IH} i(t_{p,i})}{\alpha h(t_{p,i})}
+                    \]
+                    where \( t_{p,i} \) is the peak time of \( i \).
+                  </p>
+                  <p>Now we categorize the outcomes of \( h \) as:</p>
+                  <div style="overflow-x:auto;">
+                  \[
+                  \begin{aligned}
+                  &\textbf{If } h_0 = 0: &&\quad \boxed{\text{viral}} \\[10pt]
+                  &\textbf{If } h_0 > 0: && \quad
+                    \left\{
+                      \begin{array}{ll}
+                        \sigma_0 \leq 1: &
+                          \left\{
+                            \begin{array}{ll}
+                              \tilde{\sigma}_0 \geq 1 &\Rightarrow \text{viral} \\
+                              \tilde{\sigma}_0 < 1 &\Rightarrow \text{diminishing}
+                            \end{array}
+                          \right. \\[12pt]
+                        \sigma_0 > 1: &
+                          \left\{
+                            \begin{array}{ll}
+                              \tilde{\sigma}_0 > 1 &\Rightarrow \text{viral} \\
+                              \tilde{\sigma}_0 \leq 1 &
+                                \left\{
+                                  \begin{array}{ll}
+                                    \tilde{\tilde{\sigma}}_0 < 1 &\Rightarrow \text{diminishing} \\
+                                    \tilde{\tilde{\sigma}}_0 \geq 1 &\Rightarrow \text{outbreak}
+                                  \end{array}
+                                \right.
+                            \end{array}
+                          \right.
+                      \end{array}
+                    \right.
+                  \end{aligned}
+                  \]
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Pattern Analysis Section -->
             <div id="patternAnalysis" style="display: none;">
                 <div class="summary-stats">
@@ -299,6 +393,17 @@
         </div>
     </div>
 
+    <!-- Modal for SIHR Flowchart (3-star ball) -->
+    <div id="sihrFlowModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <span class="close-modal" id="closeSihrFlowModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+        <h2>SIHR Model Flowchart</h2>
+        <div style="text-align:center; margin-top:1.5rem;">
+          <img src="src/assets/images/SIHR_FC.png" alt="SIHR Model Flowchart" style="max-width:100%; height:auto; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.12);">
+        </div>
+      </div>
+    </div>
+
     <!-- Load JavaScript modules -->
     <script src="src/js/models/sihr-model.js"></script>
     <script src="src/js/utils/audio.js"></script>
@@ -306,5 +411,19 @@
     <script src="src/js/components/ui-controls.js"></script>
     <script src="src/js/components/download-utils.js"></script>
     <script src="src/js/main.js"></script>
+
+    <!-- Add MathJax for LaTeX rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <!-- MathJax config for best LaTeX rendering -->
+    <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+    </script>
 </body>
 </html> 

@@ -42,15 +42,53 @@ function resetAnimation() {
     
     // Reset current run
     currentRun = 0;
+
+    // Hide pattern analysis section
+    const patternSection = document.getElementById('patternAnalysis');
+    if (patternSection) {
+        patternSection.style.display = 'none';
+    }
+
+    // Clear existing results
+    results.length = 0;
+
+    // Rerun stochastic simulations with current parameters
+    updateStatus('Running new simulations...', 'running');
+    for (let i = 0; i < totalRuns; i++) {
+        results.push(sirAgentModel(N, params, i + 1));
+    }
+
+    // Update deterministic solution
+    detResult = solveDeterministicSIR(params);
+
+    // Update both curves in the chart
+    if (chart) {
+        chart.data.datasets[0].data = detResult.T.map((t, i) => ({ 
+            x: t, 
+            y: detResult.I_prop[i] 
+        }));
+        chart.data.datasets[1].data = results[currentRun].T.map((t, i) => ({ 
+            x: t, 
+            y: results[currentRun].I_prop[i] 
+        }));
+        chart.data.datasets[2].data = detResult.T.map((t, i) => ({ 
+            x: t, 
+            y: detResult.H_prop[i] 
+        }));
+        chart.data.datasets[3].data = results[currentRun].T.map((t, i) => ({ 
+            x: t, 
+            y: results[currentRun].H_prop[i] 
+        }));
+        chart.options.plugins.title.text = `Hospitalized Proportion Over Time - Run 1/${totalRuns} (N=${N})`;
+        chart.options.scales.x.max = params.tmax;
+        chart.update('none');
+        updateStatistics();
+        updateStatus('Reset to Run 1 (new batch)', 'stopped');
+    }
     
     // Reset UI
     const playBtn = document.getElementById('playBtn');
     playBtn.innerHTML = '<span class="btn-text">Play</span>';
-    
-    if (chart && results.length > 0) {
-        updateChart();
-        updateStatus('Reset to Run 1', 'stopped');
-    }
 }
 
 function changeSpeed() {
@@ -241,6 +279,62 @@ function initDraggableCoins() {
     }
 }
 
+// Draggable Dragon Balls
+function initDraggableDragonBalls() {
+    const balls = document.querySelectorAll('.dragon-ball');
+    let isDragging = false;
+    let currentBall = null;
+    let offsetX, offsetY;
+
+    balls.forEach(ball => {
+        ball.addEventListener('mousedown', startDrag);
+        ball.addEventListener('touchstart', startDrag, { passive: false });
+    });
+
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('mouseup', endDrag);
+    document.addEventListener('touchend', endDrag);
+
+    function startDrag(e) {
+        e.preventDefault();
+        isDragging = true;
+        currentBall = e.target.closest('.dragon-ball');
+        if (!currentBall) return;
+        const rect = currentBall.getBoundingClientRect();
+        const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+        currentBall.style.zIndex = '1000';
+        currentBall.style.cursor = 'grabbing';
+        playCoinSound();
+    }
+
+    function drag(e) {
+        if (!isDragging || !currentBall) return;
+        e.preventDefault();
+        const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+        const x = clientX - offsetX;
+        const y = clientY - offsetY;
+        // Keep ball within viewport bounds
+        const maxX = window.innerWidth - currentBall.offsetWidth;
+        const maxY = window.innerHeight - currentBall.offsetHeight;
+        currentBall.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+        currentBall.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+    }
+
+    function endDrag(e) {
+        if (!isDragging || !currentBall) return;
+        isDragging = false;
+        currentBall.style.zIndex = '10';
+        currentBall.style.cursor = 'grab';
+        currentBall = null;
+        playCoinSound();
+    }
+}
+
 // Export functions for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -253,6 +347,7 @@ if (typeof module !== 'undefined' && module.exports) {
         animate,
         updateParameter,
         initMatrixBackground,
-        initDraggableCoins
+        initDraggableCoins,
+        initDraggableDragonBalls
     };
 } 
