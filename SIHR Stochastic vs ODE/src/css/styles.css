@@ -491,7 +491,7 @@ body::before {
 h2 {
     font-family: 'Press Start 2P', cursive;
     color: var(--mario-red);
-    text-shadow: 2px 2px 0px #000;
+    text-shadow: none;
     margin-bottom: 1rem;
     font-size: 1.4rem;
 }

@@ -138,7 +138,7 @@ function animate() {
         // Stop animation when we reach the end
         isRunning = false;
         const playBtn = document.getElementById('playBtn');
-        playBtn.innerHTML = '<span class="btn-text">Restart</span>';
+        playBtn.innerHTML = '<span class="btn-text">Play</span>';
         updateStatus('Simulation completed', 'stopped');
         
         // Update pattern analysis if available
