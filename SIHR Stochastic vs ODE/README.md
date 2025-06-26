@@ -1,3 +1,5 @@
+Demo at : https://grgaakash.github.io/sihrvsODE-model.html
+
 ## Mathematical Background
 
 The SIHR model extends the classic SIR model by adding a hospitalized compartment:
@@ -14,3 +16,4 @@ Where:
 - I: Infected individuals  
 - H: Hospitalized individuals
 - R: Recovered individuals
+
