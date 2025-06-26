@@ -1,4 +1,4 @@
-Demo at : https://grgaakash.github.io/sihrvsODE-model.html
+Demo at : https://grgaakash.github.io/SIHR%20Stochastic%20vs%20ODE/index.html
 
 ## Mathematical Background
 
