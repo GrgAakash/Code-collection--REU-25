@@ -59,12 +59,14 @@ The `Code Results` folder contains images generated from the simulations.
 | File | Description | Related Figure |
 |------|-------------|----------------|
 | `sihmd_2d.html`|2D animation |The animation can be found at https://cfbpicks.live/reu/|
-| `sihrvsODE-model.html`| SIHR's stochastic vs ODE analysis | The simulation cna be found at https://codepen.io/Swagle7/pen/KwpxRVQ |
+| `sihrvsODE-model.html`| SIHR's stochastic vs ODE analysis | The simulation can be found at https://grgaakash.github.io/sihrvsODE-model.html|
+
+
 
 
 2D simluations, especailly the java links:
 
-here we collect teh links to the java codes; I only remember Aakash's and Cadens'. Please add them all the here. 
+here we collect the links to the java codes; I only remember Aakash's and Cadens'. Please add them all the here. 
 
 
 https://codepen.io/Swagle7/pen/KwpxRVQ  This is for the ODE bifurcations by Aakash and Shrinkhal 
