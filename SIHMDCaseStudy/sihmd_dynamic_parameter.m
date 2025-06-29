@@ -1,25 +1,27 @@
-function sihmd_multiple_populations()
+function sihmd_dynamic_parameter()
     % Define model parameters structure
     params = struct(...
-        'beta', .586, ...    % infection rate (β > 0)
-        'gamma', 0.07, ...   % I transition rate (γ > 0)
+        'beta', 1.0, ...    % infection rate (β > 0)
+        'hosp_threshold', 0.05, ...     % point at which pIH changes
+        'gamma', 0.5, ...   % I transition rate (γ > 0)
         'alpha', 1.0, ...   % H transition rate (α > 0)
         'pI', 1.0, ...      % probability of S to I (p_I in (0,1])
-        'pIS', 0.944624, ... % probability of I to S
-        'pIH', 0.003276, ...    % probability of I to H
-        'pIM', 0.05, ...     % probability of I to M
-        'pID', 0.0021, ... % probability of I to D
+        'pIS', 0.6, ... % probability of I to S after threshold
+        'pIH1', 0.08, ...    % probability of I to H before threshold
+        'pIH2', 0.00000001, ...    % probability of I to H after threshold
+        'pIM', 0.2, ...     % probability of I to M
+        'pID', 0.010175, ... % probability of I to D
+        'pII1', 1 - 0.6 - 0.08 - 0.2 - 0.010175, ... % probability of I to I
+        'pII2', 1 - 0.6 - 0.00000001 - 0.2 - 0.010175, ... % probability of I to I after threshold
         'pHS', 0.25, ...    % probability of H to S
         'pHM', 0.6, ...     % probability of H to M
         'pHD', 0.15, ...    % probability of H to D
-        'tmax', 120, ...     % simulation end time
-        's0', 0.99978, ...      % initial susceptible proportion
-        'i0', 0.0002, ...      % initial infected proportion
-        'h0', 0.00002, ...      % initial hospitalized proportion
+        'tmax', 30, ...     % simulation end time
+        's0', 0.985, ...      % initial susceptible proportion
+        'i0', 0.015, ...      % initial infected proportion
+        'h0', 0.0, ...      % initial hospitalized proportion
         'm0', 0.0, ...      % initial immune proportion
-        'd0', 0.0 ...       % initial dead proportion
-    );
-
+        'd0', 0.0);     % initial dead proportion
     % Validate parameters
     validateParameters(params);
     
@@ -29,8 +31,8 @@ function sihmd_multiple_populations()
     end
 
     % Population sizes to test
-    N_values = [3235];
-
+    N_values = [316, 1000, 3162, 10000];
+  
     % Input validation
     if any(N_values <= 0)
         error('Population sizes must be positive integers');
@@ -66,13 +68,16 @@ function validateParameters(params)
     end
     
     % Validate probabilities are in (0,1]
-    probs = [params.pI, params.pIS, params.pIH, params.pIM, params.pID, params.pHS, params.pHM, params.pHD];
+    probs = [params.pI, params.pIS, params.pIH1, params.pIH2, params.pIM, params.pID, params.pII1, params.pII2, params.pHS, params.pHM, params.pHD];
     if any(probs <= 0 | probs > 1)
         error('All probabilities must be in (0,1]');
     end
     
     % Validate probability sums
-    if abs((params.pIS + params.pIH + params.pIM + params.pID) - 1) > 1e-10
+    if abs((params.pIS + params.pIH1 + params.pIM + params.pID + params.pII1) - 1) > 1e-10
+        error('I transition probabilities must sum to 1');
+    end
+    if abs((params.pIS + params.pIH2 + params.pIM + params.pID + params.pII2) - 1) > 1e-10
         error('I transition probabilities must sum to 1');
     end
     if abs((params.pHS + params.pHM + params.pHD) - 1) > 1e-10
@@ -162,6 +167,14 @@ function result = sihmd_agent_model(N, params)
     
     % Main simulation loop
     while ~isempty(I) && t < params.tmax
+        % Check if we need to change p_IH
+        if H_prop(event_count) >= params.hosp_threshold
+            pIH = params.pIH2;
+            pII = params.pII2;
+        else
+            pIH = params.pIH1;
+            pII = params.pII1;
+        end
         nS = numel(S);
         nI = numel(I);
         nH = numel(H);
@@ -169,7 +182,7 @@ function result = sihmd_agent_model(N, params)
         % Calculate event rates according to the mathematical model
         infection_rate = params.pI * params.beta * nS * nI / N;  % S to I rate
         to_susceptible_from_I_rate = params.gamma * nI * params.pIS;  % I to S rate
-        to_hospital_rate = params.gamma * nI * params.pIH;  % I to H rate
+        to_hospital_rate = params.gamma * nI * pIH;  % I to H rate
         to_immune_from_I_rate = params.gamma * nI * params.pIM;  % I to M rate
         to_dead_from_I_rate = params.gamma * nI * params.pID;  % I to D rate
         to_susceptible_from_H_rate = params.alpha * nH * params.pHS;  % H to S rate
@@ -206,70 +219,96 @@ function result = sihmd_agent_model(N, params)
         T(event_count) = t;
         
         % Determine which event occurs
+        % NOTE: To allow I agents to stay I after clock advancement with probability pII,
+        % we must include an explicit "I to I" event in the event selection.
+        % First, define pIS and pII for this time step:
+        if H_prop(event_count) >= params.hosp_threshold
+            pIH = params.pIH2;
+            pII = params.pII2;
+        else
+            pIH = params.pIH1;
+            pII = params.pII1;
+        end
+
+        % Recalculate rates for I transitions (including I->I)
+        to_susceptible_from_I_rate = params.gamma * nI * params.pIS;  % I to S
+        to_hospital_rate = params.gamma * nI * pIH;             % I to H
+        to_immune_from_I_rate = params.gamma * nI * params.pIM; % I to M
+        to_dead_from_I_rate = params.gamma * nI * params.pID;   % I to D
+        to_stay_infected_rate = params.gamma * nI * pII;        % I to I (no change)
+
+        % Update total_rate to include I->I
+        total_rate = infection_rate + to_susceptible_from_I_rate + to_hospital_rate + ...
+                 to_immune_from_I_rate + to_dead_from_I_rate + to_stay_infected_rate + ...
+                 to_susceptible_from_H_rate + to_immune_from_H_rate + to_dead_from_H_rate;
+
         chance = rand * total_rate;
         if chance < infection_rate
             % S to I transition
             if nS > 0
-                num = randi([1, nS]);
-                infected_agent = S(num);
-                S(num) = [];
-                I(end+1) = infected_agent;
+            num = randi([1, nS]);
+            infected_agent = S(num);
+            S(num) = [];
+            I(end+1) = infected_agent;
             end
         elseif chance < (infection_rate + to_susceptible_from_I_rate)
             % I to S transition
             if nI > 0
-                num = randi([1, nI]);
-                susceptible_agent = I(num);
-                I(num) = [];
-                S(end+1) = susceptible_agent;
+            num = randi([1, nI]);
+            susceptible_agent = I(num);
+            I(num) = [];
+            S(end+1) = susceptible_agent;
             end
         elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate)
             % I to H transition
             if nI > 0
-                num = randi([1, nI]);
-                hospitalized_agent = I(num);
-                I(num) = [];
-                H(end+1) = hospitalized_agent;
+            num = randi([1, nI]);
+            hospitalized_agent = I(num);
+            I(num) = [];
+            H(end+1) = hospitalized_agent;
             end
         elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate + to_immune_from_I_rate)
             % I to M transition
             if nI > 0
-                num = randi([1, nI]);
-                immune_agent = I(num);
-                I(num) = [];
-                M(end+1) = immune_agent;
+            num = randi([1, nI]);
+            immune_agent = I(num);
+            I(num) = [];
+            M(end+1) = immune_agent;
             end
         elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate + to_immune_from_I_rate + to_dead_from_I_rate)
             % I to D transition
             if nI > 0
-                num = randi([1, nI]);
-                dead_agent = I(num);
-                I(num) = [];
-                D(end+1) = dead_agent;
+            num = randi([1, nI]);
+            dead_agent = I(num);
+            I(num) = [];
+            D(end+1) = dead_agent;
             end
-        elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate + to_immune_from_I_rate + to_dead_from_I_rate + to_susceptible_from_H_rate)
+        elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate + to_immune_from_I_rate + to_dead_from_I_rate + to_stay_infected_rate)
+            % I to I transition (agent stays infected, no change)
+            % No action needed, just advance time
+        elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate + to_immune_from_I_rate + to_dead_from_I_rate + to_stay_infected_rate + to_susceptible_from_H_rate)
             % H to S transition
             if nH > 0
-                num = randi([1, nH]);
-                susceptible_agent = H(num);
-                H(num) = [];
-                S(end+1) = susceptible_agent;
+            num = randi([1, nH]);
+            susceptible_agent = H(num);
+            H(num) = [];
+            S(end+1) = susceptible_agent;
             end
-        elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate + to_immune_from_I_rate + to_dead_from_I_rate + to_susceptible_from_H_rate + to_immune_from_H_rate)
+        elseif chance < (infection_rate + to_susceptible_from_I_rate + to_hospital_rate + to_immune_from_I_rate + to_dead_from_I_rate + to_stay_infected_rate + to_susceptible_from_H_rate + to_immune_from_H_rate)
             % H to M transition
             if nH > 0
-                num = randi([1, nH]);
-                immune_agent = H(num);
-                H(num) = [];
-                M(end+1) = immune_agent;
+            num = randi([1, nH]);
+            immune_agent = H(num);
+            H(num) = [];
+            M(end+1) = immune_agent;
             end
         else
             % H to D transition
             if nH > 0
-                num = randi([1, nH]);
-                dead_agent = H(num);
-                H(num) = [];
-                D(end+1) = dead_agent;
+            num = randi([1, nH]);
+            dead_agent = H(num);
+            H(num) = [];
+            D(end+1) = dead_agent;
             end
         end
         
@@ -315,34 +354,65 @@ end
 
 function det_result = solve_deterministic_sihmd(params)
     % Solve the deterministic SIHMD model using ODE45
-    
+
     % Time span
     tspan = [0, params.tmax];
-    
+
+    % Define time-dependent pIH function
+    % Use a persistent variable to store the first time H_prop crosses the threshold
+    persistent t_threshold
+    t_threshold = [];
+
+    % ODE system with dynamic pIH and pIS based on H proportion
+    function dydt = ode_system_with_dynamic_pIH(t, y)
+        H_prop = y(3);
+        if isempty(t_threshold) && (H_prop >= params.hosp_threshold)
+            t_threshold = t;
+        end
+        if ~isempty(t_threshold) && (t >= t_threshold)
+            pIH = params.pIH2;
+            pII = params.pII2;
+        else
+            pIH = params.pIH1;
+            pII = params.pII1;
+        end
+        % In the ODE model, the probability of staying infected (pII) reduces the outflow from I.
+        % All transitions out of I are multiplied by (1 - pII).
+        gamma_eff = params.gamma * (1 - pII);
+        dydt = [
+            -params.beta * y(1) * y(2) * params.pI + gamma_eff * y(2) * params.pIS + params.alpha * y(3) * params.pHS; % ds/dt
+            params.beta * y(1) * y(2) * params.pI - gamma_eff * y(2); % di/dt
+            gamma_eff * y(2) * pIH - params.alpha * y(3);             % dh/dt
+            gamma_eff * y(2) * params.pIM + params.alpha * y(3) * params.pHM; % dm/dt
+            gamma_eff * y(2) * params.pID + params.alpha * y(3) * params.pHD  % dd/dt
+        ];
+    end
+
     % Initial conditions vector
     y0 = [params.s0; params.i0; params.h0; params.m0; params.d0];
-    
-    % Define the ODE system exactly as in the mathematical model
-    ode_system = @(t, y) [
-        -params.beta * y(1) * y(2) * params.pI + params.gamma * y(2) * params.pIS + params.alpha * y(3) * params.pHS; % ds/dt
-        params.beta * y(1) * y(2) * params.pI - params.gamma * y(2);                                                  % di/dt
-        params.gamma * y(2) * params.pIH - params.alpha * y(3);                                                       % dh/dt
-        params.gamma * y(2) * params.pIM + params.alpha * y(3) * params.pHM;                                         % dm/dt
-        params.gamma * y(2) * params.pID + params.alpha * y(3) * params.pHD                                          % dd/dt
-    ];
-    
+    ode_system = @ode_system_with_dynamic_pIH;
+
+    % Define the ODE system using time-dependent pIH
+    % ode_system = @(t, y) [
+    %     -params.beta * y(1) * y(2) * params.pI + params.gamma * y(2) * pIS_func(t) + params.alpha * y(3) * params.pHS; % ds/dt
+    %     params.beta * y(1) * y(2) * params.pI - params.gamma * y(2); % di/dt
+    %     params.gamma * y(2) * pIH_func(t) - params.alpha * y(3);                                                        % dh/dt
+    %     params.gamma * y(2) * params.pIM + params.alpha * y(3) * params.pHM;                                           % dm/dt
+    %     params.gamma * y(2) * params.pID + params.alpha * y(3) * params.pHD                                            % dd/dt
+    % ];
+
     % Set ODE options for better accuracy
     options = odeset('RelTol', 1e-8, 'AbsTol', 1e-10);
-    
+
     % Solve the ODE system
     [T, Y] = ode45(ode_system, tspan, y0, options);
-    
+
     % Verify conservation
     sum_y = sum(Y, 2);
     if any(abs(sum_y - 1) > 1e-6)
         warning('Conservation of population not satisfied');
     end
-    
+
     % Store results
     det_result.T = T;
     det_result.S_prop = Y(:, 1);
@@ -350,23 +420,23 @@ function det_result = solve_deterministic_sihmd(params)
     det_result.H_prop = Y(:, 3);
     det_result.M_prop = Y(:, 4);
     det_result.D_prop = Y(:, 5);
-    
+
     % Find peak infected and peak time
     [peak_infected_prop, peak_idx] = max(det_result.I_prop);
     det_result.peak_infected_prop = peak_infected_prop;
     det_result.peak_time = T(peak_idx);
     det_result.final_time = T(end);
-    
-    % Calculate R0
+
+    % Calculate R0 using beta
     det_result.R0 = params.pI * params.beta / params.gamma;
-    
+
     % Store asymptotic values
     det_result.s_inf = det_result.S_prop(end);
     det_result.i_inf = det_result.I_prop(end);
     det_result.h_inf = det_result.H_prop(end);
     det_result.m_inf = det_result.M_prop(end);
     det_result.d_inf = det_result.D_prop(end);
-    
+
     % Verify asymptotic behavior
     if det_result.i_inf > 1e-6
         warning('i(∞) may not be approaching 0 as expected');
@@ -386,7 +456,7 @@ function plot_comparison(results, N_values, det_result, params)
     t = tiledlayout(3, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
     
     % Colors for different population sizes and deterministic
-    colors = {'#0072BD', '#77AC30', '#A2142F', '#EDB120'}; % More distinctive colors
+    colors = {'#0072BD', '#77AC30', '#A2142F', '#FF00FF'}; % More distinctive colors
     det_color = '#7E2F8E';  % Purple for deterministic
     
     % Plot 1: Susceptible Proportion Over Time
@@ -463,9 +533,9 @@ function plot_comparison(results, N_values, det_result, params)
     lgd.Layout.Tile = 'south';
     
     % Add parameter display including R0
-    param_text = sprintf('R₀=%.2f, β=%.2f, γ=%.2f, α=%.2f\np_I=%.2f, p_IS=%.2f, p_IH=%.2f, p_IM=%.2f, p_ID=%.2f\np_HS=%.2f, p_HM=%.2f, p_HD=%.2f', ...
+    param_text = sprintf('R₀=%.2f, β=%.2f, γ=%.2f, α=%.2f\np_I=%.2f, p_II1=%.2f, p_II2=%.2f, p_IH1=%.2f, p_IH2 = %.2f, p_IM=%.2f, p_ID=%.2f\np_HS=%.2f, p_HM=%.2f, p_HD=%.2f', ...
         det_result.R0, params.beta, params.gamma, params.alpha, ...
-        params.pI, params.pIS, params.pIH, params.pIM, params.pID, ...
+        params.pI, params.pII1, params.pII2, params.pIH1, params.pIH2, params.pIM, params.pID, ...
         params.pHS, params.pHM, params.pHD);
     annotation('textbox', [0.05, 0.02, 0.9, 0.05], ...
         'String', param_text, ...
@@ -474,8 +544,6 @@ function plot_comparison(results, N_values, det_result, params)
         'HorizontalAlignment', 'left', ...
         'VerticalAlignment', 'middle');
     
-    % Save the figure
-    saveas(gcf, 'SIHMD_simulation_results.png');
     
     % Create new figure for deterministic curves only
     figure('Position', [100, 100, 800, 600]);
@@ -500,8 +568,37 @@ function plot_comparison(results, N_values, det_result, params)
     text(0.02, -0.15, sprintf('R₀=%.2f, β=%.2f, γ=%.2f, α=%.2f', det_result.R0, params.beta, params.gamma, params.alpha), ...
         'Units', 'normalized', 'FontSize', 12);
     
-    % Save the deterministic plot
-    saveas(gcf, 'SIHMD_deterministic_only.png');
+    % Plot just infected population over time (all N and deterministic)
+    figure('Position', [200, 200, 900, 500]);
+    hold on;
+    for i = 1:length(results)
+        plot(results{i}.T, results{i}.I_prop, 'Color', colors{i}, 'LineWidth', 2, ...
+            'DisplayName', sprintf('N=%d', results{i}.N));
+    end
+    plot(det_result.T, det_result.I_prop, '--', 'Color', det_color, 'LineWidth', 2.5, 'DisplayName', 'Deterministic');
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion Infected', 'FontSize', 14);
+    title('Infected Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    legend('Location', 'northeast', 'FontSize', 12);
+    saveas(gcf, 'SIHMD_infected_only.png');
+
+    % Plot just hospitalized population over time (all N and deterministic)
+    figure('Position', [200, 200, 900, 500]);
+    hold on;
+    for i = 1:length(results)
+        plot(results{i}.T, results{i}.H_prop, 'Color', colors{i}, 'LineWidth', 2, ...
+            'DisplayName', sprintf('N=%d', results{i}.N));
+    end
+    plot(det_result.T, det_result.H_prop, '--', 'Color', det_color, 'LineWidth', 2.5, 'DisplayName', 'Deterministic');
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion of Population', 'FontSize', 14);
+    title('Hospitalized Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    legend('Location', 'northeast', 'FontSize', 12);
+    saveas(gcf, 'SIHMD_hospitalized_only.png');
     
     % Print summary statistics
     fprintf('\n=== SIMULATION SUMMARY ===\n');
@@ -524,5 +621,3 @@ function plot_comparison(results, N_values, det_result, params)
     fprintf('m(∞) = %.6f\n', det_result.m_inf);
     fprintf('d(∞) = %.6f\n', det_result.d_inf);
 end
-
-% Run the simulation

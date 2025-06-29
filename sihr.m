@@ -3,18 +3,18 @@ close all;
 function sir_multiple_populations()
     % Define model parameters structure
     params = struct(...
-        'beta', 0.95, ...    % infection rate (β > 0)
-        'gamma1', 0.5, ...  % I to H rate (γ₁ > 0)
-        'gamma2', 1.5, ...  % I to R rate (γ₂ > 0)
+        'beta', 0.586, ...    % infection rate (β > 0)
+        'gamma1', 0.003, ...  % I to H rate (γ₁ > 0)
+        'gamma2', 0.2, ...  % I to R rate (γ₂ > 0)
         'alpha', 1.00, ...   % H to R rate (α > 0)
         'p1', 0.5, ...      % probability of infection (p₁ in (0,1])
         'p2', 0.5, ...      % probability of leaving I (p₂ in (0,1])
         'p3', 0.2, ...      % probability of leaving H (p₃ in (0,1])
         'ph', 0.80, ...      % probability of I to H vs R (p_h in (0,1])
-        'tmax', 30, ...     % simulation end time
-        's0', 0.8, ...     % initial susceptible proportion
-        'i0', 0.1, ...     % initial infected proportion
-        'h0', 0.1, ...     % initial hospitalized proportion
+        'tmax', 120, ...     % simulation end time
+        's0', 0.99978, ...     % initial susceptible proportion
+        'i0', 0.0002, ...     % initial infected proportion
+        'h0', 0.00002, ...     % initial hospitalized proportion
         'r0', 0.00 ...      % initial recovered proportion
     );
 
@@ -426,4 +426,3 @@ function plot_comparison(results, N_values, det_result, params)
 end
 
 % Run the simulation
-sir_multiple_populations();
