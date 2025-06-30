@@ -17,8 +17,8 @@ function sihmd_dynamic_parameter()
         'pHM', 0.6, ...     % probability of H to M
         'pHD', 0.15, ...    % probability of H to D
         'tmax', 30, ...     % simulation end time
-        's0', 0.985, ...      % initial susceptible proportion
-        'i0', 0.015, ...      % initial infected proportion
+        's0', 0.9986, ...      % initial susceptible proportion
+        'i0', 0.0014, ...      % initial infected proportion
         'h0', 0.0, ...      % initial hospitalized proportion
         'm0', 0.0, ...      % initial immune proportion
         'd0', 0.0);     % initial dead proportion
@@ -31,7 +31,7 @@ function sihmd_dynamic_parameter()
     end
 
     % Population sizes to test
-    N_values = [316, 1000, 3162, 10000];
+    N_values = [1749];
   
     % Input validation
     if any(N_values <= 0)
@@ -620,4 +620,20 @@ function plot_comparison(results, N_values, det_result, params)
     fprintf('h(∞) = %.6f (should be ≈ 0)\n', det_result.h_inf);
     fprintf('m(∞) = %.6f\n', det_result.m_inf);
     fprintf('d(∞) = %.6f\n', det_result.d_inf);
+
+    % Export simulation data to CSV for Python plotting
+    % Export agent-based results (first N only, for simplicity)
+    if ~isempty(results)
+        sim_table = table(results{1}.T', results{1}.S_prop', results{1}.I_prop', results{1}.H_prop', ...
+                          results{1}.M_prop', results{1}.D_prop', results{1}.I_count', ...
+                          'VariableNames', {'Time', 'S', 'I', 'H', 'M', 'D', 'I_count'});
+        writetable(sim_table, sprintf('SIHMD_agent_N%d.csv', results{1}.N));
+    end
+
+    % Export deterministic results
+    det_table = table(det_result.T, det_result.S_prop, det_result.I_prop, det_result.H_prop, ...
+                      det_result.M_prop, det_result.D_prop, ...
+                      'VariableNames', {'Time', 'S_prop', 'I_prop', 'H_prop', 'M_prop', 'D_prop'});
+    writetable(det_table, 'SIHMD_deterministic.csv');
+
 end
