@@ -1,21 +1,21 @@
-function sihmd_multiple_populations()
+function SIHMD()
     % Define model parameters structure
     params = struct(...
-        'beta', .586, ...    % infection rate (β > 0)
-        'gamma', 0.07, ...   % I transition rate (γ > 0)
+        'beta', 1.0, ...    % infection rate (β > 0)
+        'gamma', 0.5, ...   % I transition rate (γ > 0)
         'alpha', 1.0, ...   % H transition rate (α > 0)
         'pI', 1.0, ...      % probability of S to I (p_I in (0,1])
-        'pIS', 0.944624, ... % probability of I to S
-        'pIH', 0.003276, ...    % probability of I to H
-        'pIM', 0.05, ...     % probability of I to M
-        'pID', 0.0021, ... % probability of I to D
+        'pIS', 0.9, ... % probability of I to S
+        'pIH', 0.005, ...    % probability of I to H
+        'pIM', 0.093, ...     % probability of I to M
+        'pID', 0.002, ... % probability of I to D
         'pHS', 0.25, ...    % probability of H to S
         'pHM', 0.6, ...     % probability of H to M
         'pHD', 0.15, ...    % probability of H to D
         'tmax', 120, ...     % simulation end time
-        's0', 0.99978, ...      % initial susceptible proportion
-        'i0', 0.0002, ...      % initial infected proportion
-        'h0', 0.00002, ...      % initial hospitalized proportion
+        's0', 0.96, ...      % initial susceptible proportion
+        'i0', 0.04, ...      % initial infected proportion
+        'h0', 0.0, ...      % initial hospitalized proportion
         'm0', 0.0, ...      % initial immune proportion
         'd0', 0.0 ...       % initial dead proportion
     );
@@ -29,7 +29,7 @@ function sihmd_multiple_populations()
     end
 
     % Population sizes to test
-    N_values = [3235];
+    N_values = [316 1000 3162 10000];
 
     % Input validation
     if any(N_values <= 0)
@@ -378,17 +378,17 @@ end
 
 function plot_comparison(results, N_values, det_result, params)
     % Create comparison plots including deterministic solution
-    
+
     % Create two figures
     figure('Position', [100, 100, 1920, 1440]);  % Original comparison plots
-    
+
     % Use tiledlayout for better spacing control
     t = tiledlayout(3, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
-    
+
     % Colors for different population sizes and deterministic
     colors = {'#0072BD', '#77AC30', '#A2142F', '#EDB120'}; % More distinctive colors
     det_color = '#7E2F8E';  % Purple for deterministic
-    
+
     % Plot 1: Susceptible Proportion Over Time
     nexttile;
     hold on;
@@ -404,7 +404,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Susceptible Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
-    
+
     % Plot 2: Infected Proportion Over Time
     nexttile;
     hold on;
@@ -417,7 +417,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Infected Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
-    
+
     % Plot 3: Hospitalized Proportion Over Time
     nexttile;
     hold on;
@@ -430,7 +430,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Hospitalized Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
-    
+
     % Plot 4: Immune Proportion Over Time
     nexttile;
     hold on;
@@ -443,7 +443,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Immune Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
-    
+
     % Plot 5: Dead Proportion Over Time
     nexttile;
     hold on;
@@ -456,12 +456,12 @@ function plot_comparison(results, N_values, det_result, params)
     title('Dead Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
-    
+
     % Add a single legend below all plots
     lgd = legend(plot_handles, [arrayfun(@(x) sprintf('N=%d', x), N_values, 'UniformOutput', false), {'Deterministic'}], ...
         'Orientation', 'horizontal', 'Location', 'southoutside', 'FontSize', 12);
     lgd.Layout.Tile = 'south';
-    
+
     % Add parameter display including R0
     param_text = sprintf('R₀=%.2f, β=%.2f, γ=%.2f, α=%.2f\np_I=%.2f, p_IS=%.2f, p_IH=%.2f, p_IM=%.2f, p_ID=%.2f\np_HS=%.2f, p_HM=%.2f, p_HD=%.2f', ...
         det_result.R0, params.beta, params.gamma, params.alpha, ...
@@ -473,21 +473,21 @@ function plot_comparison(results, N_values, det_result, params)
         'EdgeColor', 'none', ...
         'HorizontalAlignment', 'left', ...
         'VerticalAlignment', 'middle');
-    
+
     % Save the figure
     saveas(gcf, 'SIHMD_simulation_results.png');
-    
+
     % Create new figure for deterministic curves only
     figure('Position', [100, 100, 800, 600]);
     hold on;
-    
+
     % Plot all deterministic curves together
     plot(det_result.T, det_result.S_prop, 'LineWidth', 2, 'DisplayName', 'Susceptible');
     plot(det_result.T, det_result.I_prop, 'LineWidth', 2, 'DisplayName', 'Infected');
     plot(det_result.T, det_result.H_prop, 'LineWidth', 2, 'DisplayName', 'Hospitalized');
     plot(det_result.T, det_result.M_prop, 'LineWidth', 2, 'DisplayName', 'Immune');
     plot(det_result.T, det_result.D_prop, 'LineWidth', 2, 'DisplayName', 'Dead');
-    
+
     % Customize the plot
     xlabel('Time', 'FontSize', 14);
     ylabel('Population Proportion', 'FontSize', 14);
@@ -495,14 +495,44 @@ function plot_comparison(results, N_values, det_result, params)
     grid on;
     xlim([0, params.tmax]);
     legend('Location', 'east', 'FontSize', 12);
-    
+
     % Add R0 and parameters text
     text(0.02, -0.15, sprintf('R₀=%.2f, β=%.2f, γ=%.2f, α=%.2f', det_result.R0, params.beta, params.gamma, params.alpha), ...
         'Units', 'normalized', 'FontSize', 12);
-    
+
     % Save the deterministic plot
     saveas(gcf, 'SIHMD_deterministic_only.png');
-    
+
+    % --- Additional: Plot only Infected on its own figure ---
+    figure('Position', [200, 200, 900, 500]);
+    hold on;
+    for i = 1:length(results)
+        plot(results{i}.T, results{i}.I_prop, 'Color', colors{i}, 'LineWidth', 1.8, 'DisplayName', sprintf('N=%d', N_values(i)));
+    end
+    plot(det_result.T, det_result.I_prop, '--', 'Color', det_color, 'LineWidth', 2.2, 'DisplayName', 'Deterministic');
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion Infected', 'FontSize', 14);
+    title('Infected Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    legend('Location', 'northeast', 'FontSize', 12);
+    saveas(gcf, 'SIHMD_infected_only.png');
+
+    % --- Additional: Plot only Hospitalized on its own figure ---
+    figure('Position', [250, 250, 900, 500]);
+    hold on;
+    for i = 1:length(results)
+        plot(results{i}.T, results{i}.H_prop, 'Color', colors{i}, 'LineWidth', 1.8, 'DisplayName', sprintf('N=%d', N_values(i)));
+    end
+    plot(det_result.T, det_result.H_prop, '--', 'Color', det_color, 'LineWidth', 2.2, 'DisplayName', 'Deterministic');
+    xlabel('Time', 'FontSize', 14);
+    ylabel('Proportion Hospitalized', 'FontSize', 14);
+    title('Hospitalized Proportion Over Time', 'FontSize', 16);
+    grid on;
+    xlim([0, params.tmax]);
+    legend('Location', 'northeast', 'FontSize', 12);
+    saveas(gcf, 'SIHMD_hospitalized_only.png');
+
     % Print summary statistics
     fprintf('\n=== SIMULATION SUMMARY ===\n');
     fprintf('Population Size | Peak Infected | Peak Time | s(∞) | i(∞) | h(∞) | m(∞) | d(∞)\n');
@@ -515,7 +545,7 @@ function plot_comparison(results, N_values, det_result, params)
     fprintf('%15s | %13.4f | %9.2f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f\n', ...
         'Deterministic', det_result.peak_infected_prop, det_result.peak_time, ...
         det_result.s_inf, det_result.i_inf, det_result.h_inf, det_result.m_inf, det_result.d_inf);
-    
+
     % Print asymptotic analysis
     fprintf('\n=== ASYMPTOTIC ANALYSIS ===\n');
     fprintf('R₀ = %.4f\n', det_result.R0);

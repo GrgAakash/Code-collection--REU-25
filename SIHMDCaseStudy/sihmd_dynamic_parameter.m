@@ -17,8 +17,8 @@ function sihmd_dynamic_parameter()
         'pHM', 0.6, ...     % probability of H to M
         'pHD', 0.15, ...    % probability of H to D
         'tmax', 30, ...     % simulation end time
-        's0', 0.9986, ...      % initial susceptible proportion
-        'i0', 0.0014, ...      % initial infected proportion
+        's0', 0.98, ...      % initial susceptible proportion
+        'i0', 0.02, ...      % initial infected proportion
         'h0', 0.0, ...      % initial hospitalized proportion
         'm0', 0.0, ...      % initial immune proportion
         'd0', 0.0);     % initial dead proportion
