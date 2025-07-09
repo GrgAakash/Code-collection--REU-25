@@ -308,6 +308,7 @@ function det_result = solve_deterministic_sihrs(params)
     
     y0 = [params.s0; params.i0; params.h0; params.r0; params.d0];
     
+    
     ode_system = @(t, y) [
         -params.beta * y(1) * y(2) * params.pSI + params.pRS * params.lambda * y(4); % ds/dt
         params.beta * y(1) * y(2) * params.pSI - params.gamma * (1 - params.pII) * y(2); % di/dt
@@ -318,13 +319,17 @@ function det_result = solve_deterministic_sihrs(params)
     
     options = odeset('RelTol', 1e-8, 'AbsTol', 1e-10);
     
+    
+
+
     [T, Y] = ode45(ode_system, tspan, y0, options);
 
     sum_y = sum(Y, 2);
     if any(abs(sum_y - 1) > 1e-6)
         warning('Conservation of population not satisfied');
     end
-
+    
+    % Store results
     det_result.T = T;
     det_result.S_prop = Y(:, 1);
     det_result.I_prop = Y(:, 2);
