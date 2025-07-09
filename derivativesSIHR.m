@@ -1,18 +1,18 @@
 clear all;
 close all;
 params = struct(...
-        'beta', 2.95, ...    % infection rate (β > 0)
-        'gamma1', 0.5, ...  % I to H rate (γ₁ > 0)
+        'beta', 30.00, ...    % infection rate (β > 0)
+        'gamma1', 1.5, ...  % I to H rate (γ₁ > 0)
         'gamma2', 1.5, ...  % I to R rate (γ₂ > 0)
-        'alpha', 1.00, ...   % H to R rate (α > 0)
+        'alpha', 0.40, ...   % H to R rate (α > 0)
         'p1', 0.5, ...      % probability of infection (p₁ in (0,1])
         'p2', 0.5, ...      % probability of leaving I (p₂ in (0,1])
         'p3', 0.5, ...      % probability of leaving H (p₃ in (0,1])
-        'ph', 0.50, ...      % probability of I to H vs R (p_h in (0,1])
+        'ph', 0.80, ...      % probability of I to H vs R (p_h in (0,1])
         'tmax', 30, ...     % simulation end time
-        's0', 0.85, ...     % initial susceptible proportion
-        'i0', 0.05, ...     % initial infected proportion
-        'h0', 0.10, ...     % initial hospitalized proportion
+        's0', 0.96, ...     % initial susceptible proportion
+        'i0', 0.04, ...     % initial infected proportion
+        'h0', 0.00, ...     % initial hospitalized proportion
         'r0', 0.00 ...      % initial recovered proportion
     );
 
