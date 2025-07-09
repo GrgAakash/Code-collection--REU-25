@@ -1,3 +1,6 @@
+clear all;
+close all;
+
 function sihrs_multiple_populations()
    
     params = struct(...
