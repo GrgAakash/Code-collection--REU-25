@@ -1,13 +1,13 @@
 function sihmd_variance_error_bars() 
     %% Model Parameters
     constants.max_t = 30;
-    constants.susceptible_event_rate = 1.3; 
+    constants.susceptible_event_rate = 1.5; 
     constants.s_i_prob = 1;
 
-    constants.infected_event_rate = 1;
-    constants.i_m_prob = 0.2; 
-    constants.i_d_prob = 0.010175;
-    constants.i_h_prob = 0.04;
+    constants.infected_event_rate = 0.5;
+    constants.i_m_prob = 0.095; 
+    constants.i_d_prob = 0.005;
+    constants.i_h_prob = 0.005;
     constants.i_s_prob = 1 - constants.i_m_prob - constants.i_h_prob - constants.i_d_prob;
     
     constants.hospitalized_event_rate = 1; 
@@ -113,8 +113,8 @@ function data = simulate_ipc(S, I, H, M, D, constants, data)
     h_clock = constants.hospitalized_event_rate * nh;
     master_clock = s_clock + i_clock + h_clock;
 
-    % Base case for recursion: end if time limit is reached or no events can occur
-    if data.T(end) >= constants.max_t || master_clock == 0
+    % Base case for recursion: end if time limit is reached, no events can occur, or all compartments are empty
+    if data.T(end) >= constants.max_t || master_clock == 0 || (ns == 0 && ni == 0 && nh == 0 && numel(M) == 0 && numel(D) == 0)
         if data.T(end) < constants.max_t
             data.T(end+1) = constants.max_t;
             % Append last known value to the end to make interpolation flat
