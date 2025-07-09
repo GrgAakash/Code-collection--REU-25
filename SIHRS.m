@@ -1,8 +1,4 @@
-clear all;
-close all;
-
-function sihrs_multiple_populations()
-   
+function sihrs_multiple_populations()  
     params = struct(...
         'beta',2.2, ...    % infection rate (β > 0)
         'gamma', 0.6, ...   % I transition rate (γ > 0)
@@ -488,3 +484,4 @@ function plot_comparison(results, N_values, det_result, params)
     fprintf('r(∞) = %.6f\n', det_result.r_inf);
     fprintf('d(∞) = %.6f\n', det_result.d_inf);
 end
+% Run the simulation 
