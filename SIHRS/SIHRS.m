@@ -397,6 +397,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Susceptible Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
+    yticks(0:0.01:1);
     
     % Plot 2: Infected Proportion Over Time
     nexttile;
@@ -410,6 +411,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Infected Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
+    yticks(0:0.01:1);
     
     % Plot 3: Hospitalized Proportion Over Time
     nexttile;
@@ -423,6 +425,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Hospitalized Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
+    yticks(0:0.01:1);
     
     % Plot 4: Recovered Proportion Over Time
     nexttile;
@@ -436,6 +439,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Recovered Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
+    yticks(0:0.01:1);
     
     % Plot 5: Dead Proportion Over Time
     nexttile;
@@ -449,6 +453,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Dead Proportion Over Time', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
+    yticks(0:0.01:1);
     
     % Add a single legend below all plots
     lgd = legend(plot_handles, [arrayfun(@(x) sprintf('N=%d', x), N_values, 'UniformOutput', false), {'Deterministic'}], ...
@@ -487,6 +492,7 @@ function plot_comparison(results, N_values, det_result, params)
     title('Deterministic SIHRS with Death Model Dynamics', 'FontSize', 16);
     grid on;
     xlim([0, params.tmax]);
+    yticks(0:0.01:1);
     legend('Location', 'east', 'FontSize', 12);
     
     % Add R0 and parameters text
@@ -517,6 +523,7 @@ function plot_comparison(results, N_values, det_result, params)
         grid on;
         xlim([0, params.tmax]);
         ylim([0, 1]);
+        yticks(0:0.01:1);
         
         % Add parameter annotations
         param_text = sprintf('R₀=%.2f, β=%.4f, γ=%.4f, α=%.4f, λ=%.4f', ...
