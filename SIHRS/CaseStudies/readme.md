@@ -4,7 +4,7 @@
 
 We use hospitalization data from the **[HealthData.gov COVID-19 Hospital Report](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/uqq2-txqb/about_data)**. This dataset is also used by *The New York Times* to plot COVID-19 hospitalization trends.
 
-> **Note:** While the NYT uses **Health Service Areas (HSAs)** that intersect Tuscaloosa County, we focus **only on hospitals within Tuscaloosa County**. As a result, hospitalization peaks may appear slightly lower in our analysis compared to the NYT graphs.
+> **Note:** While the NYT uses **Health Service Areas (HSAs)** that intersect a particular County(say Tuscaloosa), we focus **only on hospitals within that County**. As a result, hospitalization peaks may appear slightly lower in our analysis compared to the **[NYT Interactive: Tuscaloosa, Alabama COVID‑19 Cases](https://www.nytimes.com/interactive/2021/us/tuscaloosa-alabama-covid-cases.html)**.
 
 ---
 
