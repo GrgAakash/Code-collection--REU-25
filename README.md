@@ -1,17 +1,4 @@
 ## Project Overview
-**CWang**
-
-This repository contains MATLAB codes related to the IPC model simulations and case studies presented in our summer 2025 REU project. For the IPC code, please specify whether the agents are tracked or not.
-
-I remember for example:
-- **Aakash's version (`siripc.m`)** models population-level infection dynamics without tracking individual agents.
-- **Caden's version** includes agent-tracking features, enabling analysis of individual-level behavior during simulations.
-
-It is good to have both of them here, but with some descriptions to differentiate these two. Now for the ode codes it is may be less writing for now. 
-
-Case study codes should be mentioned with specific geographic regions (e.g., city/county-level scenarios), and descriptions of each case should be included in their respective folders.
-
-As this project is in the early stages, we aim to provide detailed documentation for each file to ensure clarity and collaboration among team members.
 
 # 📁 IPC Modeling Codes
 
@@ -59,23 +46,9 @@ The `Code Results` folder contains images generated from the simulations.
 | File | Description | Related Figure |
 |------|-------------|----------------|
 | `sihmd_2d.html`|2D animation |The animation can be found at https://cfbpicks.live/reu/|
-| `sihrvsODE-model.html`| SIHR's stochastic vs ODE analysis | The simulation can be found at https://grgaakash.github.io/SIHR%20Stochastic%20vs%20ODE/index.html|
+| `sihrvsODE-model.html`| SIHRS stochastic vs ODE analysis | The simulation can be found at https://grgaakash.github.io/SIHR%20Stochastic%20vs%20ODE/index_sihrs.html|
 
 
-
-
-2D simluations, especailly the java links:
-
-here we collect the links to the java codes; I only remember Aakash's and Cadens'. Please add them all the here. 
-
-
-https://codepen.io/Swagle7/pen/KwpxRVQ  This is for the ODE bifurcations by Aakash and Shrinkhal 
-Also here
-  https://cfbpicks.live/reu/stochastic.html
-
-https://codepen.io/GrgAakash/pen/MYwGaJP  This is by Aakash for the 2D agents based simluation
-
-https://cfbpicks.live/reu  This is by Caden, the 2D agents based simulation
 
 
 ## 💡 Suggestions Welcome
