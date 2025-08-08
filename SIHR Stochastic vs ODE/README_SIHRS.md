@@ -4,6 +4,8 @@
 
 This website provides an interactive simulation of the **SIHRS epidemic model** with death and reinfection compartments. The model extends the classic SIR model by adding hospitalization and death, while allowing recovered individuals to become susceptible again.
 
+For a quick look: https://grgaakash.github.io/SIHR%20Stochastic%20vs%20ODE/index_sihrs.html
+
 ## Mathematical Model
 
 The SIHRS model defines $s, i, h, r, d : (0, \infty) \to \mathbb{R}_{\geq 0}$, with $s + i + h + r + d = 1$, by:
@@ -81,9 +83,6 @@ SIHR Stochastic vs ODE/
 ```
 
 Requires JavaScript enabled and Chart.js CDN access.
-
-## Demo
-For live demo, please visit https://grgaakash.github.io/SIHR%20Stochastic%20vs%20ODE/index_sihrs.html
 
 ## License
 
