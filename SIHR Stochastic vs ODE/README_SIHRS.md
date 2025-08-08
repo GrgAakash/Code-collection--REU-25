@@ -8,13 +8,13 @@ This website provides an interactive simulation of the **SIHRS epidemic model** 
 
 The SIHRS model defines $s, i, h, r, d : (0, \infty) \to \mathbb{R}_{\geq 0}$, with $s + i + h + r + d = 1$, by:
 
-\begin{align}
+$$
 \dot{s} &= -\beta p_{SI} , s i + p_{RS} \Lambda r, \
 \dot{i} &= \beta p_{SI} , s i - \gamma (1 - p_{II}) i, \
 \dot{h} &= p_{IH} \gamma i - \alpha (1 - p_{HH}) h, \
 \dot{r} &= p_{IR} \gamma i + p_{HR} \alpha h - p_{RS} \Lambda r, \
 \dot{d} &= p_{ID} \gamma i + p_{HD} \alpha h.
-\end{align}
+$$
 
 ### Parameters
 
