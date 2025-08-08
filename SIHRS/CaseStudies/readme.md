@@ -1,31 +1,58 @@
-First we export the csv file from here:
-https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/uqq2-txqb/about_data
+# 🏥 COVID-19 Hospitalization Data Extraction & Analysis
 
-This is also the same source that NY Times has used in order to plot the hospitalization curves.
+## 📄 Data Source
 
-The key difference in their plot is that they use Health Service Area (HSA) that intersects Tuscaloosa County but we will be just sticking with the Tuscaloosa county hospitals.
-Due to this difference, sometimes the hospitalization peak might be a bit higher in the NYTimes graphs.
+We use hospitalization data from the **[HealthData.gov COVID-19 Hospital Report](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/uqq2-txqb/about_data)**. This dataset is also used by *The New York Times* to plot COVID-19 hospitalization trends.
 
+> **Note:** While the NYT uses **Health Service Areas (HSAs)** that intersect Tuscaloosa County, we focus **only on hospitals within Tuscaloosa County**. As a result, hospitalization peaks may appear slightly lower in our analysis compared to the NYT graphs.
 
-Now, once we download the csv file, we open it using Power Query in Excel
-and then use the following query to filter out the data for hospitalization according the county we are interested is as follows:
+---
 
-Table.SelectRows(#"Changed column type", each ([collection_week] > #date(2020, 3, 11) and [collection_week] <= #date(2021, 12, 31)) and ([total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg] <> null and [total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg] <> -999999) and ([fips_code] = 1125))
+## 🧾 Data Processing (Power Query)
 
+After downloading the CSV file, we load it into **Power Query** in Excel and apply the following filter to extract relevant rows:
 
-1125 is the fips code for Tuscaloosa county which we are not interested in due to the high population.
+```powerquery
+Table.SelectRows(
+  #"Changed column type",
+  each
+    ([collection_week] > #date(2020, 3, 11) and
+     [collection_week] <= #date(2021, 12, 31)) and
+    ([total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg] <> null and
+     [total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg] <> -999999) and
+    ([fips_code] = 1125)
+)
+```
 
-Below are some of the good candidates based on the fact that they have R_0 between 1 and 1.5, Population size less than 60,000 and have enough hospitalization data.
+- `1125` is the **FIPS code** for **Tuscaloosa County**.
+- The values `null` and `-999999` represent missing or unreported data for that 7-day period.
 
-By enough hospitalization data, I mean we have actual numbers instead of null or -999999 which means no data or no hospitalization data reported for that 7 day period.
+---
 
-Good candidates along with an arbitrary/subjective rating assigned :
+## ❌ Why Not Tuscaloosa?
 
-R_0	  Population.  FIPS  Rating
-1.047	41411	  54069	  7/10
-1.167	43909	  28151	  9/10
-1.218	46963	  40113	  8/10
-1.18	39228	  28113	  9/10
-1.222	55916	  32510	  10/10
-1.399	41083	  51683	  8/10
+Due to its **high population**, we chose not to use Tuscaloosa County. Instead, we selected smaller counties with:
 
+- Population **less than 60,000**
+- Estimated **$begin:math:text$ R_0 $end:math:text$** between **1.0 and 1.5**
+- Sufficient hospitalization data (i.e., not missing or invalid)
+
+---
+
+## ✅ Selected Counties
+
+| R₀     | Population | FIPS  | Rating  |
+|--------|------------|-------|---------|
+| 1.047  | 41,411     | 54069 | 7/10    |
+| 1.167  | 43,909     | 28151 | 9/10    |
+| 1.218  | 46,963     | 40113 | 8/10    |
+| 1.180  | 39,228     | 28113 | 9/10    |
+| 1.222  | 55,916     | 32510 | 10/10   |
+| 1.399  | 41,083     | 51683 | 8/10    |
+
+---
+
+## 📌 Notes
+
+- These ratings are **subjective**, based on data quality, completeness, and how well the counties match our target criteria.
+- The selected counties can be used for simulations or comparative analysis across regions with different epidemic dynamics.
