@@ -7,8 +7,10 @@ This repository contains MATLAB codes related to the IPC model simulations and c
 ---
 ## 📌 Overview
 
-- **SIR Models** 
-- **SIHR Models** 
+- **SIR Model** 
+- **SIHR Model**
+- **SIHMD Model**
+- **SIHRS Model - Our Main Focus**
 
 
 Please refer to the descriptions below for specific information about each file.
