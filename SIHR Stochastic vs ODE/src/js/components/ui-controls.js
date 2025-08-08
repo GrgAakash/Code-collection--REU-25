@@ -35,7 +35,6 @@ function toggleAnimation() {
 function resetAnimation() {
     playGameOverSound(); // Play game over sound for reset
     // Stop any ongoing animation
-    isRunning = false;
     if (animationTimeout) {
         clearTimeout(animationTimeout);
     }
@@ -55,40 +54,104 @@ function resetAnimation() {
     // Rerun stochastic simulations with current parameters
     updateStatus('Running new simulations...', 'running');
     for (let i = 0; i < totalRuns; i++) {
-        results.push(sirAgentModel(N, params, i + 1));
+        if (typeof sihrsStochasticModel !== 'undefined') {
+            // SIHRS model
+            results.push(sihrsStochasticModel(N, params, i + 1));
+        } else if (typeof sirAgentModel !== 'undefined') {
+            // Original SIHR model
+            results.push(sirAgentModel(N, params, i + 1));
+        }
     }
 
     // Update deterministic solution
-    detResult = solveDeterministicSIR(params);
+    if (typeof solveDeterministicSIHRS !== 'undefined') {
+        // SIHRS model
+        detResult = solveDeterministicSIHRS(params);
+    } else if (typeof solveDeterministicSIR !== 'undefined') {
+        // Original SIHR model
+        detResult = solveDeterministicSIR(params);
+    }
 
-    // Update both curves in the chart
-    if (chart) {
-        chart.data.datasets[0].data = detResult.T.map((t, i) => ({ 
-            x: t, 
-            y: detResult.I_prop[i] 
-        }));
-        chart.data.datasets[1].data = results[currentRun].T.map((t, i) => ({ 
-            x: t, 
-            y: results[currentRun].I_prop[i] 
-        }));
-        chart.data.datasets[2].data = detResult.T.map((t, i) => ({ 
-            x: t, 
-            y: detResult.H_prop[i] 
-        }));
-        chart.data.datasets[3].data = results[currentRun].T.map((t, i) => ({ 
-            x: t, 
-            y: results[currentRun].H_prop[i] 
-        }));
-        chart.options.plugins.title.text = `Hospitalized Proportion Over Time - Run 1/${totalRuns} (N=${N})`;
-        chart.options.scales.x.max = params.tmax;
-        chart.update('none');
+    // Update all charts
+    if (typeof charts !== 'undefined' && charts.S && charts.I && charts.H && charts.R && charts.D) {
+        // SIHRS model with 5 compartments
+        const compartments = ['S', 'I', 'H', 'R', 'D'];
+        compartments.forEach(comp => {
+            if (charts[comp]) {
+                charts[comp].data.datasets[0].data = detResult.T.map((t, i) => ({ x: t, y: detResult[`${comp}_prop`][i] }));
+                charts[comp].data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun][`${comp}_prop`][i] }));
+                charts[comp].options.scales.x.max = params.tmax;
+                
+                // Update dynamic y-axis range (simplified to avoid recursion)
+                try {
+                    if (typeof calculateDynamicYRange === 'function') {
+                        const yRange = calculateDynamicYRange(comp, detResult, results);
+                        if (yRange && typeof yRange.min === 'number' && typeof yRange.max === 'number') {
+                            charts[comp].options.scales.y.min = yRange.min;
+                            charts[comp].options.scales.y.max = yRange.max;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Error updating y-axis range:', error);
+                }
+                
+                charts[comp].update('none');
+            }
+        });
+        
+        // Update charts with real data if available (for SIHRS model)
+        if (typeof updateChartsWithRealData === 'function') {
+            updateChartsWithRealData();
+        }
+        
+        updateStatistics();
+        updateStatus('Reset to Run 1 (new batch)', 'stopped');
+    } else if (typeof charts !== 'undefined' && charts.I && charts.H) {
+        // SIHR model with separate charts
+        const compartments = ['I', 'H'];
+        const compartmentNames = {
+            'I': 'Infected',
+            'H': 'Hospitalized'
+        };
+        
+        compartments.forEach(comp => {
+            if (charts[comp] && results[currentRun]) {
+                // Update both deterministic and stochastic data
+                charts[comp].data.datasets[0].data = detResult.T.map((t, i) => ({ x: t, y: detResult[`${comp}_prop`][i] }));
+                charts[comp].data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun][`${comp}_prop`][i] }));
+                charts[comp].options.scales.x.max = params.tmax;
+                
+                // Update chart title with current run number
+                charts[comp].options.plugins.title.text = `${compartmentNames[comp]} Proportion Over Time - Run 1/${totalRuns} (N=${N})`;
+                
+                // Update dynamic y-axis range for SIHR model (only if function exists)
+                if (typeof calculateDynamicYRange === 'function' && detResult && results && results.length > 0) {
+                    try {
+                        const yRange = calculateDynamicYRange(detResult, results);
+                        if (yRange && typeof yRange.min === 'number' && typeof yRange.max === 'number') {
+                            charts[comp].options.scales.y.min = yRange.min;
+                            charts[comp].options.scales.y.max = yRange.max;
+                        }
+                    } catch (error) {
+                        console.warn('Error updating y-axis range:', error);
+                    }
+                }
+                
+                charts[comp].update('none');
+            }
+        });
+        
         updateStatistics();
         updateStatus('Reset to Run 1 (new batch)', 'stopped');
     }
     
-    // Reset UI
+    // Reset UI and restart animation
     const playBtn = document.getElementById('playBtn');
-    playBtn.innerHTML = '<span class="btn-text">Play</span>';
+    playBtn.innerHTML = '<span class="btn-text">Pause</span>';
+    
+    // Restart animation
+    isRunning = true;
+    animate();
 }
 
 function changeSpeed() {
@@ -102,19 +165,74 @@ function changeSpeed() {
 
 // Update chart with current run
 function updateChart() {
-    if (!chart || !results[currentRun]) return;
-
-    chart.data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun].I_prop[i] }));
-    chart.data.datasets[3].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun].H_prop[i] }));
-
-    chart.options.plugins.title.text = `Infected/Hospitalized Proportion Over Time - Run ${currentRun + 1}/${totalRuns} (N=${N})`;
-    chart.update('none');
+    if (typeof charts !== 'undefined') {
+        // SIHRS model with multiple charts
+        const compartments = ['S', 'I', 'H', 'R', 'D'];
+        compartments.forEach(comp => {
+            if (charts[comp] && results[currentRun]) {
+                charts[comp].data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun][`${comp}_prop`][i] }));
+                
+                // Update dynamic y-axis range for current run (simplified)
+                try {
+                    if (typeof calculateDynamicYRange === 'function') {
+                        const yRange = calculateDynamicYRange(comp, detResult, results);
+                        if (yRange && typeof yRange.min === 'number' && typeof yRange.max === 'number') {
+                            charts[comp].options.scales.y.min = yRange.min;
+                            charts[comp].options.scales.y.max = yRange.max;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Error updating y-axis range:', error);
+                }
+                
+                charts[comp].update('none');
+            }
+        });
+    } else if (typeof charts !== 'undefined' && charts.I && charts.H && results[currentRun]) {
+        // SIHR model with separate charts
+        const compartments = ['I', 'H'];
+        const compartmentNames = {
+            'I': 'Infected',
+            'H': 'Hospitalized'
+        };
+        
+        compartments.forEach(comp => {
+            if (charts[comp]) {
+                charts[comp].data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun][`${comp}_prop`][i] }));
+                // Update chart title with current run number
+                charts[comp].options.plugins.title.text = `${compartmentNames[comp]} Proportion Over Time - Run ${currentRun + 1}/${totalRuns} (N=${N})`;
+                
+                // Update dynamic y-axis range for SIHR model (only if function exists)
+                if (typeof calculateDynamicYRange === 'function' && detResult && results && results.length > 0) {
+                    try {
+                        const yRange = calculateDynamicYRange(detResult, results);
+                        if (yRange && typeof yRange.min === 'number' && typeof yRange.max === 'number') {
+                            charts[comp].options.scales.y.min = yRange.min;
+                            charts[comp].options.scales.y.max = yRange.max;
+                        }
+                    } catch (error) {
+                        console.warn('Error updating y-axis range:', error);
+                    }
+                }
+                
+                charts[comp].update('none');
+            }
+        });
+    }
 }
 
 // Update statistics display
 function updateStatistics() {
     document.getElementById('currentRun').textContent = `${currentRun + 1}/${totalRuns}`;
     document.getElementById('populationSize').textContent = N;
+    
+    if (typeof calculateR0SIHRS !== 'undefined') {
+        // SIHRS model
+        params.R_0_value = calculateR0SIHRS(params);
+    } else {
+        // Original SIHR model
+        params.R_0_value = calculateR0(params);
+    }
     document.getElementById('R_0-value').textContent = params.R_0_value.toFixed(2);
     
     if (results[currentRun]) {
@@ -127,25 +245,56 @@ function updateStatistics() {
 function animate() {
     if (!isRunning || !results.length) return;
     
-    updateChart();
-    updateStatistics();
-    updateStatus(`Animation running - Run ${currentRun + 1}/${results.length}`, 'running');
-    
-    if (currentRun < results.length - 1) {
-        currentRun++;  // Changed from modulo operation to simple increment
-        animationTimeout = setTimeout(animate, animationSpeed);
-    } else {
-        // Stop animation when we reach the end
-        isRunning = false;
-        const playBtn = document.getElementById('playBtn');
-        playBtn.innerHTML = '<span class="btn-text">Play</span>';
-        updateStatus('Simulation completed', 'stopped');
+    // Update charts to current run (simplified to avoid recursion)
+    if (typeof charts !== 'undefined') {
+        // SIHRS model with multiple charts
+        const compartments = ['S', 'I', 'H', 'R', 'D'];
+        const compartmentNames = {
+            'S': 'Susceptible',
+            'I': 'Infected', 
+            'H': 'Hospitalized',
+            'R': 'Recovered',
+            'D': 'Death'
+        };
+        compartments.forEach(comp => {
+            if (charts[comp] && results[currentRun]) {
+                charts[comp].data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun][`${comp}_prop`][i] }));
+                // Update chart title with current run number
+                charts[comp].options.plugins.title.text = `${compartmentNames[comp]} Proportion Over Time - Run ${currentRun + 1}/${totalRuns} (N=${N})`;
+                charts[comp].update('none');
+            }
+        });
+    } else if (typeof charts !== 'undefined' && charts.I && charts.H && results[currentRun]) {
+        // SIHR model with separate charts
+        const compartments = ['I', 'H'];
+        const compartmentNames = {
+            'I': 'Infected',
+            'H': 'Hospitalized'
+        };
         
-        // Update pattern analysis if available
-        if (typeof updatePatternAnalysis === 'function') {
-            updatePatternAnalysis();
+        compartments.forEach(comp => {
+            if (charts[comp]) {
+                charts[comp].data.datasets[1].data = results[currentRun].T.map((t, i) => ({ x: t, y: results[currentRun][`${comp}_prop`][i] }));
+                // Update chart title with current run number
+                charts[comp].options.plugins.title.text = `${compartmentNames[comp]} Proportion Over Time - Run ${currentRun + 1}/${totalRuns} (N=${N})`;
+                charts[comp].update('none');
+            }
+        });
+        
+        // Update charts with real data if available (for SIHRS model)
+        if (typeof updateChartsWithRealData === 'function') {
+            updateChartsWithRealData();
         }
     }
+    
+    updateStatistics();
+    updateStatus(`Animation running - Run ${currentRun + 1}/${totalRuns}`, 'running');
+    
+    // Move to next run with modulo to loop continuously
+    currentRun = (currentRun + 1) % totalRuns;
+    
+    // Schedule next animation frame
+    animationTimeout = setTimeout(animate, animationSpeed);
 }
 
 // Function to update parameter values and display
@@ -154,18 +303,26 @@ function updateParameter(paramName, value) {
     document.getElementById(`${paramName}-value`).textContent = value;
     document.getElementById(`${paramName}`).value = value;
     document.getElementById(`${paramName}-number`).value = value;
-    params.R_0_value = calculateR0(params);
-    const sigma0 = calculate_thresholds(params)[0];
-    const sigma1 = calculate_thresholds(params)[1];
-    const tpi = compute_T(params.p2 * params.gamma / (params.p1 * params.beta));
-    const h_tpi = compute_h_tpi();
-    const sigma2 = calculate_thresholds(params)[2];
-    document.getElementById('R_0-value').textContent = params.R_0_value.toFixed(2);
-    document.getElementById('sigma0-value').textContent = sigma0.toFixed(2);
-    document.getElementById('sigma1-value').textContent = sigma1.toFixed(2);
-    document.getElementById('sigma2-value').textContent = sigma2.toFixed(2);
-    document.getElementById('tpi-value').textContent = tpi.toFixed(2);
-    document.getElementById('h_tpi-value').textContent = h_tpi.toFixed(2);
+    
+    if (typeof calculateR0SIHRS !== 'undefined') {
+        // SIHRS model
+        params.R_0_value = calculateR0SIHRS(params);
+        document.getElementById('R_0-value').textContent = params.R_0_value.toFixed(2);
+    } else {
+        // Original SIHR model
+        params.R_0_value = calculateR0(params);
+        const sigma0 = calculate_thresholds(params)[0];
+        const sigma1 = calculate_thresholds(params)[1];
+        const tpi = compute_T(params.p2 * params.gamma / (params.p1 * params.beta));
+        const h_tpi = compute_h_tpi();
+        const sigma2 = calculate_thresholds(params)[2];
+        document.getElementById('R_0-value').textContent = params.R_0_value.toFixed(2);
+        document.getElementById('sigma0-value').textContent = sigma0.toFixed(2);
+        document.getElementById('sigma1-value').textContent = sigma1.toFixed(2);
+        document.getElementById('sigma2-value').textContent = sigma2.toFixed(2);
+        document.getElementById('tpi-value').textContent = tpi.toFixed(2);
+        document.getElementById('h_tpi-value').textContent = h_tpi.toFixed(2);
+    }
 }
 
 // Matrix-style falling code background
@@ -179,8 +336,8 @@ function initMatrixBackground() {
         const column = document.createElement('div');
         column.className = 'matrix-column';
         column.style.left = (i * 20) + 'px';
-        column.style.animationDuration = (Math.random() * 3 + 2) + 's'; // 2-5 seconds
-        column.style.animationDelay = Math.random() * 2 + 's'; // Random delay
+        column.style.animationDuration = (Math.random() * 15 + 12) + 's'; // 12-27 seconds (very slow)
+        column.style.animationDelay = Math.random() * 5 + 's'; // Random delay
         
         // Generate random characters for this column
         let columnText = '';
@@ -205,11 +362,11 @@ function initMatrixBackground() {
                     columnText += characters.charAt(Math.floor(Math.random() * characters.length)) + '<br>';
                 }
                 column.innerHTML = columnText;
-                column.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                column.style.animationDuration = (Math.random() * 15 + 12) + 's';
                 column.style.animationDelay = '0s';
             }
         });
-    }, 3000); // Refresh every 3 seconds
+    }, 15000); // Refresh every 15 seconds (much less frequent)
 }
 
 // Draggable Mario Coins

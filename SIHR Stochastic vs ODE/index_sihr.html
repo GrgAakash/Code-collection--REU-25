@@ -1,0 +1,645 @@
+<!-- Quick demo at https://grgaakash.github.io/projects -->
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario's Epidemic Adventure - SIHR Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="src/css/styles.css?v=2">
+</head>
+<body>
+    <!-- Matrix-style falling code background -->
+    <div class="matrix-bg" id="matrixBg"></div>
+
+    <!-- Dragon Balls -->
+    <div class="dragon-ball dragon-ball-1" title="1-Star Ball">
+      <svg viewBox="0 0 32 32"><polygon points="16,6 18,14 26,14 19,18 21,26 16,21 11,26 13,18 6,14 14,14" fill="#e53935"/></svg>
+    </div>
+    <div class="dragon-ball dragon-ball-2" title="2-Star Ball">
+      <svg viewBox="0 0 32 32">
+        <polygon points="8,10 9,14 13,14 10,16 11,20 8,17 5,20 6,16 3,14 7,14" fill="#e53935"/>
+        <polygon points="24,10 25,14 29,14 26,16 27,20 24,17 21,20 22,16 19,14 23,14" fill="#e53935"/>
+      </svg>
+    </div>
+    <div class="dragon-ball dragon-ball-3" title="3-Star Ball">
+      <svg viewBox="0 0 32 32">
+        <polygon points="8,10 9,14 13,14 10,16 11,20 8,17 5,20 6,16 3,14 7,14" fill="#e53935"/>
+        <polygon points="24,10 25,14 29,14 26,16 27,20 24,17 21,20 22,16 19,14 23,14" fill="#e53935"/>
+        <polygon points="16,22 17,26 21,26 18,28 19,32 16,29 13,32 14,28 11,26 15,26" fill="#e53935"/>
+      </svg>
+    </div>
+
+    <!-- Mario Title -->
+    <div class="mario-title">
+        MARIO'S EPIDEMIC ADVENTURE
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>Model Parameters</h2>
+          
+            <div class="threshold-box">
+              <h3>Threshold Parameters</h3>
+              <div class="threshold-grid">
+                <div class="threshold-item">
+                  <div class="threshold-label">σ</div>
+                  <div class="threshold-value" id="sigma0-value">--</div>
+                </div>
+                <div class="threshold-item">
+                  <div class="threshold-label">σ̃</div>
+                  <div class="threshold-value" id="sigma1-value">--</div>
+                </div>
+                <div class="threshold-item">
+                  <div class="threshold-label">σ̃̃</div>
+                  <div class="threshold-value" id="sigma2-value">--</div>
+                </div>
+                <div class="threshold-item">
+                  <div class="threshold-label">tpi</div>
+                  <div class="threshold-value" id="tpi-value">--</div>
+                </div>
+                <div class="threshold-item">
+                  <div class="threshold-label">h(tpi)</div>
+                  <div class="threshold-value" id="h_tpi-value">--</div>
+                </div>
+              </div>
+            </div>
+          
+
+              <!-- Initial susceptible proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">s<sub>0</sub> (susceptible fraction)</span>
+                  <span class="parameter-value" id="s0-value">0.80</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="s0" min="0" max="1" step="0.000000001" value="0.80">
+                  <input type="number" id="s0-number" min="0" max="1" step="0.000000001" value="0.80" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial infected proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">i<sub>0</sub> (infected fraction)</span>
+                  <span class="parameter-value" id="i0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="i0" min="0" max="1" step="0.000000001" value="0.10">
+                  <input type="number" id="i0-number" min="0" max="1" step="0.000000001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial hospitalized proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">h<sub>0</sub> (hospitalized fraction)</span>
+                  <span class="parameter-value" id="h0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="h0" min="0" max="1" step="0.000000001" value="0.10">
+                  <input type="number" id="h0-number" min="0" max="1" step="0.000000001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial recovered proportion (auto-calculated) -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">r<sub>0</sub> (recovered fraction)</span>
+                  <span class="parameter-value" id="r0-value">0.00</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="number" id="r0-number" min="0" max="1" step="0.000000001" value="0.00" style="width: 80px;" readonly>
+                </div>
+              </div>
+          
+            <div class="parameter-controls">
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">β (Infection Rate)</span>
+                        <span class="parameter-value" id="beta-value">2.00</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="beta" min="0.1" max="10" step="0.000000001" value="2.00">
+                        <input type="number" id="beta-number" min="0.1" max="10" step="0.000000001" value="2.00" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">γ (I outflow rate)</span>
+                        <span class="parameter-value" id="gamma-value">1.0</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="gamma" min="0.1" max="10" step="0.000000001" value="1.0">
+                        <input type="number" id="gamma-number" min="0.1" max="10" step="0.000000001" value="1.0" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">α (H outflow rate)</span>
+                        <span class="parameter-value" id="alpha-value">1.0</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="alpha" min="0.1" max="10" step="0.000000001" value="1.0">
+                        <input type="number" id="alpha-number" min="0.1" max="10" step="0.000000001" value="1.0" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p<sub>SI</sub> (S→I probability)</span>
+                        <span class="parameter-value" id="p_SI-value">0.5</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p_SI" min="0.01" max="1" step="0.000000001" value="0.5">
+                        <input type="number" id="p_SI-number" min="0.01" max="1" step="0.000000001" value="0.5" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                  <div class="parameter-label">
+                    <span class="parameter-name mario-text">I outflow probabilities (sum = 1)</span>
+                  </div>
+                  <div class="parameter-input" style="display: flex; gap: 8px;">
+                    <div>
+                      <label for="p_II" class="mario-label">p<sub>II</sub> (I→I)</label>
+                      <input type="number" id="p_II-number" min="0" max="1" step="0.000000001" value="0.1" style="width: 60px;">
+                    </div>
+                    <div>
+                      <label for="p_IH" class="mario-label">p<sub>IH</sub> (I→H)</label>
+                      <input type="number" id="p_IH-number" min="0" max="1" step="0.000000001" value="0.5" style="width: 60px;">
+                    </div>
+                    <div>
+                      <label for="p_IR" class="mario-label">p<sub>IR</sub> (I→R)</label>
+                      <input type="number" id="p_IR-number" min="0" max="1" step="0.000000001" value="0.4" style="width: 60px;">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="parameter-group">
+                  <div class="parameter-label">
+                    <span class="parameter-name mario-text">H outflow probabilities (sum = 1)</span>
+                  </div>
+                  <div class="parameter-input" style="display: flex; gap: 8px;">
+                    <div>
+                      <label for="p_HR" class="mario-label">p<sub>HR</sub> (H→R)</label>
+                      <input type="number" id="p_HR-number" min="0" max="1" step="0.000000001" value="0.8" style="width: 60px;">
+                    </div>
+                    <div>
+                      <label for="p_HH" class="mario-label">p<sub>HH</sub> (H→H)</label>
+                      <input type="number" id="p_HH-number" min="0" max="1" step="0.000000001" value="0.2" style="width: 60px;">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Population Size</span>
+                        <span class="parameter-value" id="population-value">300</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="population" min="1" max="10000" step="1" value="300">
+                        <input type="number" id="population-number" min="1" max="10000" step="1" value="300" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Number of Runs</span>
+                        <span class="parameter-value" id="runs-value">50</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="runs" min="1" max="1000" step="1" value="50">
+                        <input type="number" id="runs-number" min="1" max="1000" step="1" value="50" style="width: 80px;">
+                    </div>
+                </div>
+
+                <button id="applyParams" class="apply-button">Apply Parameters</button>
+            </div>
+          
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Current Run</div>
+                    <div class="stat-value" id="currentRun">1/50</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Population</div>
+                    <div class="stat-value" id="populationSize">300</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">R₀</div>
+                    <div class="stat-value" id="R_0-value">1.90</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Peak Hospitalization</div>
+                    <div class="stat-value" id="peakHospitalization">0.0000</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Compartment Buttons -->
+            <div class="compartment-buttons">
+                <button class="comp-btn active" data-comp="I">Infected (I)</button>
+                <button class="comp-btn" data-comp="H">Hospitalized (H)</button>
+            </div>
+            
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <div class="chart-container" id="chartContainerI">
+                    <canvas id="chartI"></canvas>
+                </div>
+                <div class="chart-container" id="chartContainerH" style="display: none;">
+                    <canvas id="chartH"></canvas>
+                </div>
+            </div>
+            
+            <div id="errorMessage" class="error-message"></div>
+            <div id="status" class="status">Initializing...</div>
+            <div class="controls">
+                <button id="playBtn" class="btn play">
+                    <span class="btn-text">Play</span>
+                </button>
+                <button id="resetBtn" class="btn reset">
+                    <span class="btn-text">Reset</span>
+                </button>
+                <button id="speedBtn" class="btn speed">
+                    <span class="btn-text">Speed: Normal</span>
+                </button>
+                <button id="analyzeBtn" class="btn analyze">
+                    <span class="btn-text">Analyze</span>
+                </button>
+            </div>
+            
+
+
+            <!-- Modal for ODEs -->
+            <div id="odeModal" class="modal" style="display:none;">
+              <div class="modal-content">
+                <span class="close-modal" id="closeOdeModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+                <h2>SIHR-IPC Model: System of ODEs</h2>
+                <div id="odeMath" style="font-size:1.2rem; margin-top:1rem;">
+                  <p>
+                    \[
+                    \begin{align*}
+                    \frac{ds}{dt} &= -\beta p_{SI} s i \\
+                    \frac{di}{dt} &= \beta p_{SI} s i - \gamma (1-p_{II}) i \\
+                    \frac{dh}{dt} &= p_{IH} \gamma i - p_{HR} \alpha h \\
+                    \frac{dr}{dt} &= p_{IR} \gamma i + p_{HR} \alpha h
+                    \end{align*}
+                    \]
+                  </p>
+                  <ul style="margin-top:1rem;">
+                    <li><b>s</b>: Susceptible proportion</li>
+                    <li><b>i</b>: Infected proportion</li>
+                    <li><b>h</b>: Hospitalized proportion</li>
+                    <li><b>r</b>: Recovered proportion</li>
+                    <li><b>β, γ, α</b>: rates</li>
+                    <li><b>p<sub>SI</sub></b>: S→I probability</li>
+                    <li><b>p<sub>II</sub></b>: I→I probability (remains infected)</li>
+                    <li><b>p<sub>IH</sub></b>: I→H probability</li>
+                    <li><b>p<sub>IR</sub></b>: I→R probability</li>
+                    <li><b>p<sub>HR</sub></b>: H→R probability</li>
+                    <li><b>p<sub>HH</sub></b>: H→H probability (remains hospitalized)</li>
+                    <li><b>Constraints</b>: p<sub>IH</sub> + p<sub>IR</sub> + p<sub>II</sub> = 1, p<sub>HR</sub> + p<sub>HH</sub> = 1</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modal for Hospitalization Pattern Classification (2-star ball) -->
+            <div id="patternClassModal" class="modal" style="display:none;">
+              <div class="modal-content">
+                <span class="close-modal" id="closePatternClassModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+                <h2>Hospitalization Pattern Classification</h2>
+                <div style="font-size:1.1rem; margin-top:1rem;">
+                  <p>
+                    The SIHR-IPC model's hospitalized population \( h(t) \) exhibits <b>diminishing</b> (monotonically decreasing), <b>viral</b> (initially increasing, then decreasing after a peak), or <b>outbreak</b> (initially decreasing, then increasing to a peak, then decreasing) behavior, determined by:
+                  </p>
+                  <p>
+                    \[
+                    \sigma_0 = s_0 \frac{\beta p_{SI}}{\gamma (1-p_{II})}, \quad
+                    \tilde{\sigma}_0 = \frac{\gamma p_{IH} i_0}{\alpha p_{HR} h_0}, \quad
+                    \tilde{\tilde{\sigma}}_0 = \frac{\gamma p_{IH} i(t_{p,i})}{\alpha p_{HR} h(t_{p,i})}
+                    \]
+                    where \( t_{p,i} \) is the peak time of \( i \).
+                  </p>
+                  <p>Now we categorize the outcomes of \( h \) as:</p>
+                  <div style="overflow-x:auto;">
+                  \[
+                  \begin{aligned}
+                  &\boxed{h_0 = 0} \Rightarrow \text{viral} \\[5pt]
+                  &\boxed{h_0 > 0} \Rightarrow
+                    \begin{cases}
+                      \sigma_0 \leq 1 \Rightarrow
+                        \begin{cases}
+                          \tilde{\sigma}_0 > 1 \Rightarrow \text{viral} \\
+                          \tilde{\sigma}_0 \leq 1 \Rightarrow \text{diminishing}
+                        \end{cases} \\[10pt]
+                      \sigma_0 > 1 \Rightarrow
+                        \begin{cases}
+                          \tilde{\sigma}_0 \geq 1 \Rightarrow \text{viral} \\
+                          \tilde{\sigma}_0 < 1 \Rightarrow
+                            \begin{cases}
+                              \tilde{\tilde{\sigma}}_0 \leq 1 \Rightarrow \text{diminishing} \\
+                              \tilde{\tilde{\sigma}}_0 > 1 \Rightarrow \text{outbreak}
+                            \end{cases}
+                        \end{cases}
+                    \end{cases}
+                  \end{aligned}
+                  \]
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pattern Analysis Section -->
+            <div id="patternAnalysis" style="display: none;">
+                <div class="summary-stats">
+                    <h2>Pattern Analysis</h2>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-label">Total Patterns</div>
+                            <div class="summary-value" id="totalPatterns">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Most Common Pattern</div>
+                            <div class="summary-value" id="mostCommonPattern">0%</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Height</div>
+                            <div class="summary-value" id="avgPeakHeight">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Time</div>
+                            <div class="summary-value" id="avgPeakTime">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h2>Pattern Distribution</h2>
+                    <canvas id="patternChart"></canvas>
+                </div>
+
+                <div class="stats-grid" id="patternCards">
+                    <!-- Pattern cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pattern Details Modal -->
+    <div id="patternModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Pattern Details</h2>
+                <button class="close-modal" onclick="closePatternModal()">&times;</button>
+            </div>
+            <div id="modalContent">
+                <!-- Content will be dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for SIHR Flowchart (3-star ball) -->
+    <div id="sihrFlowModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <span class="close-modal" id="closeSihrFlowModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+        <h2>SIHR Model Flowchart</h2>
+        <div style="text-align:center; margin-top:1.5rem;">
+          <img src="src/assets/images/SIHR_FC.png" alt="SIHR Model Flowchart" style="max-width:100%; height:auto; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.12);">
+        </div>
+      </div>
+    </div>
+
+    <!-- Load JavaScript modules -->
+    <script src="src/js/models/sihr-model.js"></script>
+    <script src="src/js/utils/audio.js"></script>
+    <script src="src/js/components/pattern-analysis.js"></script>
+    <script src="src/js/components/ui-controls.js"></script>
+    <script src="src/js/components/download-utils.js"></script>
+
+    <script src="src/js/main.js"></script>
+
+    <!-- Add MathJax for LaTeX rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <!-- MathJax config for best LaTeX rendering -->
+    <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+    </script>
+
+    <style>
+    /* Charts Grid and Compartment Buttons */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+        margin-bottom: 20px;
+    }
+
+    .charts-grid .chart-container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border: 3px solid #000;
+        min-height: 500px;
+    }
+
+    .charts-grid .chart-container h3 {
+        text-align: center;
+        margin: 0 0 20px 0;
+        color: #000;
+        font-family: "'Press Start 2P', cursive";
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .charts-grid .chart-container canvas {
+        width: 100% !important;
+        height: 400px !important;
+    }
+
+    .compartment-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .comp-btn {
+        background: linear-gradient(145deg, #d2691e, #cd853f);
+        color: #ffffff;
+        border: 3px solid #8b4513;
+        border-radius: 8px;
+        padding: 15px 25px;
+        font-family: "'Press Start 2P', cursive";
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 
+            0 6px 12px rgba(139, 69, 19, 0.6),
+            0 3px 6px rgba(139, 69, 19, 0.4),
+            inset 0 2px 4px rgba(255, 255, 255, 0.2),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+        position: relative;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        background-image: 
+            linear-gradient(145deg, #d2691e, #cd853f),
+            repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.1) 2px,
+                rgba(255, 255, 255, 0.1) 4px
+            );
+    }
+
+    .comp-btn::before {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        right: 2px;
+        bottom: 2px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+        border-radius: 6px;
+        pointer-events: none;
+    }
+
+    .comp-btn:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 
+            0 8px 16px rgba(139, 69, 19, 0.7),
+            0 4px 8px rgba(139, 69, 19, 0.5),
+            inset 0 2px 4px rgba(255, 255, 255, 0.3),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(145deg, #daa520, #d2691e);
+        border-color: #a0522d;
+    }
+
+    .comp-btn:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 
+            0 2px 4px rgba(139, 69, 19, 0.5),
+            0 1px 2px rgba(139, 69, 19, 0.3),
+            inset 0 1px 2px rgba(0, 0, 0, 0.2),
+            inset 0 -1px 2px rgba(255, 255, 255, 0.1);
+    }
+
+    .comp-btn.active {
+        background: linear-gradient(145deg, #ff6347, #ff4500);
+        border-color: #dc143c;
+        box-shadow: 
+            0 6px 12px rgba(255, 99, 71, 0.6),
+            0 3px 6px rgba(255, 69, 0, 0.4),
+            inset 0 2px 4px rgba(255, 255, 255, 0.3),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+        background-image: 
+            linear-gradient(145deg, #ff6347, #ff4500),
+            repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.2) 2px,
+                rgba(255, 255, 255, 0.2) 4px
+            );
+    }
+
+    .comp-btn.active:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 
+            0 8px 16px rgba(255, 99, 71, 0.7),
+            0 4px 8px rgba(255, 69, 0, 0.5),
+            inset 0 2px 4px rgba(255, 255, 255, 0.4),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(145deg, #ff7f50, #ff6347);
+    }
+
+    .comp-btn.active:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 
+            0 2px 4px rgba(255, 99, 71, 0.5),
+            0 1px 2px rgba(255, 69, 0, 0.3),
+            inset 0 1px 2px rgba(0, 0, 0, 0.3),
+            inset 0 -1px 2px rgba(255, 255, 255, 0.1);
+    }
+
+    .threshold-box {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1));
+        border: 2px solid #000;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 16px 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .threshold-box h3 {
+        margin: 0 0 12px 0;
+        color: #000;
+        font-size: 1.1em;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .threshold-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .threshold-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 6px;
+        border-left: 3px solid #000;
+    }
+
+    .threshold-label {
+        font-weight: bold;
+        color: #000;
+        font-size: 0.9em;
+    }
+
+    .threshold-value {
+        color: #2d3748;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        font-size: 0.9em;
+    }
+
+    .mario-text {
+        color: #000 !important;
+        font-weight: bold;
+    }
+
+    .mario-label {
+        color: #000;
+        font-weight: bold;
+        font-size: 0.85em;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+
+    </style>
+</body>
+</html> 

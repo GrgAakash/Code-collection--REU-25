@@ -1,26 +1,29 @@
-// SIHR Model Implementation
+// SIHR-IPC Model Implementation
 // Stochastic and Deterministic epidemic models
 
-// Validate parameters
+// Validate parameters for SIHR-IPC
 function validateParameters(params) {
     if ([params.beta, params.gamma, params.alpha].some(x => x <= 0)) {
         throw new Error('All rates must be positive');
     }
-    if ([params.p1, params.p2, params.p3, params.ph].some(x => x <= 0 || x > 1)) {
+    if ([params.p_SI, params.p_II, params.p_IH, params.p_IR, params.p_HR, params.p_HH].some(x => x <= 0 || x > 1)) {
         throw new Error('All probabilities must be in (0,1]');
+    }
+    if (Math.abs(params.p_IH + params.p_IR + params.p_II - 1) > 1e-10) {
+        throw new Error('p_IH + p_IR + p_II must sum to 1');
+    }
+    if (Math.abs(params.p_HR + params.p_HH - 1) > 1e-10) {
+        throw new Error('p_HR + p_HH must sum to 1');
     }
     if (Math.abs(params.s0 + params.i0 + params.h0 + params.r0 - 1) > 1e-10) {
         throw new Error('Initial conditions must sum to 1');
     }
 }
 
-// Stochastic SIHR model using Gillespie algorithm
+// Stochastic SIHR-IPC model using Gillespie algorithm
 function sirAgentModel(N, params, runNumber) {
     console.log(`🎲 Running stochastic simulation ${runNumber}/${totalRuns}`);
-    
-    // Calculate R₀ for this run
-    const R_0 = params.p1 * params.beta / (params.p2 * params.gamma);
-    
+
     // Initial conditions
     let s = Math.round(params.s0 * N);
     let i = Math.round(params.i0 * N);
@@ -38,12 +41,14 @@ function sirAgentModel(N, params, runNumber) {
     while ((i > 0 || h > 0) && t < params.tmax)  {
         const nS = s, nI = i, nH = h;
 
-        // Calculate event rates
-        const infectionRate = params.p1 * params.beta * nS * nI / N;
-        const toHospitalRate = params.p2 * params.ph * params.gamma * nI;
-        const toRecoveredFromIRate = params.p2 * (1 - params.ph) * params.gamma * nI;
-        const toRecoveredFromHRate = params.p3 * params.alpha * nH;
-        const totalRate = infectionRate + toHospitalRate + toRecoveredFromIRate + toRecoveredFromHRate;
+        // Calculate event rates (SIHR-IPC)
+        const infectionRate = params.p_SI * params.beta * nS * nI / N;
+        const toIIRate = params.gamma * params.p_II * nI; // I -> I (remains infected)
+        const toHospitalRate = params.gamma * params.p_IH * nI; // I -> H
+        const toRecoveredFromIRate = params.gamma * params.p_IR * nI; // I -> R
+        const toRecoveredFromHRate = params.alpha * params.p_HR * nH; // H -> R
+        // H -> H (remains hospitalized) is not a state change, so not an event
+        const totalRate = infectionRate + toIIRate + toHospitalRate + toRecoveredFromIRate + toRecoveredFromHRate;
 
         if (totalRate === 0) break;
 
@@ -61,13 +66,17 @@ function sirAgentModel(N, params, runNumber) {
 
         // Determine which event occurs
         const chance = Math.random() * totalRate;
-        if (chance < infectionRate && nS > 0) {
+        let threshold = 0;
+        if (chance < (threshold += infectionRate) && nS > 0) {
             s--; i++;
-        } else if (chance < infectionRate + toHospitalRate && nI > 0) {
+        } else if (chance < (threshold += toIIRate) && nI > 0) {
+            // I -> I (remains infected), no state change
+            // skip
+        } else if (chance < (threshold += toHospitalRate) && nI > 0) {
             i--; h++;
-        } else if (chance < infectionRate + toHospitalRate + toRecoveredFromIRate && nI > 0) {
+        } else if (chance < (threshold += toRecoveredFromIRate) && nI > 0) {
             i--; r++;
-        } else if (nH > 0) {
+        } else if (chance < (threshold += toRecoveredFromHRate) && nH > 0) {
             h--; r++;
         }
 
@@ -79,9 +88,9 @@ function sirAgentModel(N, params, runNumber) {
     return { T, I_prop, H_prop, maxI: Math.max(...I_prop), maxH: Math.max(...H_prop) };
 }
 
-// Deterministic SIHR model (RK4 integration)
+// Deterministic SIHR-IPC model (Euler integration)
 function solveDeterministicSIR(params) {
-    console.log('📊 Solving deterministic model');
+    console.log('📊 Solving deterministic model (SIHR-IPC)');
     const dt = 0.1;
     const T = [];
     const Y = [[params.s0, params.i0, params.h0, params.r0]];
@@ -91,14 +100,12 @@ function solveDeterministicSIR(params) {
         if (t > 0) {
             const y = Y[Y.length - 1];
             const s = y[0], i = y[1], h = y[2];
-            
-            // ODE system
-            const dsdt = -params.p1 * params.beta * s * i;
-            const didt = params.p1 * params.beta * s * i - params.p2 * params.gamma * i;
-            const dhdt = params.p2 * params.ph * params.gamma * i - params.p3 * params.alpha * h;
-            const drdt = params.p2 * (1 - params.ph) * params.gamma * i + params.p3 * params.alpha * h;
-            
-            // Euler method (simplified for performance)
+            // ODE system (SIHR-IPC)
+            const dsdt = -params.beta * params.p_SI * s * i;
+            const didt = params.beta * params.p_SI * s * i - params.gamma * (1 - params.p_II) * i;
+            const dhdt = params.p_IH * params.gamma * i - params.p_HR * params.alpha * h;
+            const drdt = params.p_IR * params.gamma * i + params.p_HR * params.alpha * h;
+            // Euler method
             const yNext = [
                 s + dt * dsdt,
                 i + dt * didt,
@@ -128,44 +135,49 @@ function simpsonsRule(f, a, b, n) {
 
 // Function to calculate T(s): (-1/beta) * integral from s0 to s of dm/mI(m) 
 function compute_T(s) {
-  const I = m => params.s0 + params.i0 - m + (params.p2 * params.gamma/(params.p1 * params.beta)) * Math.log(m/params.s0);
-  const f = m => (-1 / (params.p1 * params.beta)) * 1 / (m * I(m) );
+  const I = m => params.s0 + params.i0 - m + (params.gamma * (1 - params.p_II)/(params.beta * params.p_SI)) * Math.log(m/params.s0);
+  const f = m => {
+    const Im = I(m);
+    if (m <= 0 || !isFinite(Im) || Im === 0) return 0; // skip invalid points
+    return (-1 / (params.beta * params.p_SI)) * 1 / (m * Im);
+  };
   const a = params.s0;
   const b = s;
   const n = 50;
-
-  return simpsonsRule(f,a,b,n);
+  // Check for valid integration range
+  if (b <= 0 || b >= a) return null;
+  return simpsonsRule(f, a, b, n);
 }
 
 function i_peak(){
-  const s_p = params.p2 * params.gamma/(params.p1 * params.beta);
-  const i_p =  params.s0 + params.i0 - s_p + (params.p2 * params.gamma/(params.p1 * params.beta)) * Math.log(s_p/params.s0);
+  const s_p = params.gamma * (1 - params.p_II)/(params.beta * params.p_SI);
+  const i_p =  params.s0 + params.i0 - s_p + (params.gamma * (1 - params.p_II)/(params.beta * params.p_SI)) * Math.log(s_p/params.s0);
   
   return i_p;
 }
 
 function compute_h_tpi(){
-  const y = params.p2 * params.gamma / (params.p1 * params.beta); // R_0 ^ -1
+  const y = params.gamma * (1 - params.p_II) / (params.beta * params.p_SI); // R_0 ^ -1
   const tpi = compute_T(y);
-  f = s => (1/s) * Math.exp(params.p3 * params.alpha * compute_T(s) );
+  f = s => (1/s) * Math.exp(params.p_HR * params.alpha * compute_T(s) );
   
-  const h_tpi = Math.exp(-params.p3 * params.alpha * tpi) * ( params.h0 + params.ph * params.p1 * params.gamma * (-1/(params.p1 * params.beta)) * simpsonsRule(f,params.s0,y,100) );
+  const h_tpi = Math.exp(-params.p_HR * params.alpha * tpi) * ( params.h0 + params.p_IH * params.gamma * (-1/(params.beta * params.p_SI)) * simpsonsRule(f,params.s0,y,100) );
   
   return h_tpi;
 }
 
 // Function to calculate R₀ based on current parameter values
 function calculateR0(params) {
-    return params.p1 * params.beta / (params.p2 * params.gamma);
+    return params.p_SI * params.beta / (params.gamma * (1 - params.p_II));
 }
 
 function calculate_thresholds(params) {
-  const sigma = params.p1 * params.beta * params.s0/ (params.p2 * params.gamma);
-  const sigma1 = params.gamma * params.ph * params.p2 * params.i0 / (params.alpha * params.p3 * params.h0);
+  const sigma = params.p_SI * params.beta * params.s0 / (params.gamma * (1 - params.p_II));
+  const sigma1 = params.gamma * params.p_IH * params.i0 / (params.alpha * params.p_HR * params.h0);
  
   const i_p = i_peak();
   const h_tpi = compute_h_tpi();
-  const sigma2 =  params.gamma * params.ph * params.p2 * i_p / (params.alpha * params.p3 * h_tpi);
+  const sigma2 = params.gamma * params.p_IH * i_p / (params.alpha * params.p_HR * h_tpi);
   
   return [sigma, sigma1, sigma2];
 }

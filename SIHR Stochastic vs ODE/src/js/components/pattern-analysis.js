@@ -1,20 +1,20 @@
 // Pattern Analysis Component
 // Functions for analyzing and grouping similar simulation runs
 
-// Function to calculate key characteristics of a run
-function calculateRunCharacteristics(run) {
-    const H_prop = run.H_prop;
+// Function to calculate key characteristics of a run for a specific compartment
+function calculateRunCharacteristics(run, compartment = 'H') {
+    const compartmentData = run[`${compartment}_prop`];
     const T = run.T;
     
     // Find peak
-    const maxH = Math.max(...H_prop);
-    const peakTime = T[H_prop.indexOf(maxH)];
+    const maxValue = Math.max(...compartmentData);
+    const peakTime = T[compartmentData.indexOf(maxValue)];
     
     // Count major fluctuations (peaks and troughs)
     let fluctuations = 0;
     let prevDiff = 0;
-    for (let i = 1; i < H_prop.length; i++) {
-        const diff = H_prop[i] - H_prop[i-1];
+    for (let i = 1; i < compartmentData.length; i++) {
+        const diff = compartmentData[i] - compartmentData[i-1];
         if (prevDiff * diff < 0) { // Sign change indicates peak or trough
             fluctuations++;
         }
@@ -22,10 +22,11 @@ function calculateRunCharacteristics(run) {
     }
     
     return {
-        maxH,
+        maxValue,
         peakTime,
         fluctuations,
-        curve: H_prop // Store the actual curve for shape comparison
+        curve: compartmentData, // Store the actual curve for shape comparison
+        compartment: compartment
     };
 }
 
@@ -110,7 +111,7 @@ function calculateShapeSimilarity(curve1, curve2) {
 }
 
 // Function to create pattern cards
-function createPatternCards(groups, results, params) {
+function createPatternCards(groups, results, params, compartment = 'H') {
     const container = document.getElementById('patternCards');
     container.innerHTML = '';
 
@@ -125,7 +126,7 @@ function createPatternCards(groups, results, params) {
             <div class="pattern-details">
                 <div class="detail-item">
                     <span class="detail-label">Peak Height</span>
-                    <span class="detail-value">${group.representative.maxH.toFixed(4)}</span>
+                    <span class="detail-value">${group.representative.maxValue.toFixed(4)}</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Peak Time</span>
@@ -138,7 +139,7 @@ function createPatternCards(groups, results, params) {
                 <div class="detail-item">
                     <span class="detail-label">View Runs</span>
                     <span class="detail-value">
-                        <a class="pattern-link" onclick="showPatternDetails(${index}, ${JSON.stringify(group.runs)})">
+                        <a class="pattern-link" onclick="showPatternDetails(${index}, ${JSON.stringify(group.runs)}, '${compartment}')">
                             View ${group.runs.length} runs →
                         </a>
                     </span>
@@ -223,8 +224,8 @@ function createPatternChart(groups) {
     });
 }
 
-// Function to update pattern analysis
-function updatePatternAnalysis(results) {
+// Function to update pattern analysis for a specific compartment
+function updatePatternAnalysis(results, compartment = 'H') {
     const patternSection = document.getElementById('patternAnalysis');
     
     if (!results.length) {
@@ -233,14 +234,14 @@ function updatePatternAnalysis(results) {
     }
 
     try {
-        // Group the runs
-        const runCharacteristics = results.map(calculateRunCharacteristics);
+        // Group the runs for the specific compartment
+        const runCharacteristics = results.map(run => calculateRunCharacteristics(run, compartment));
         window.runGroups = groupSimilarRuns(runCharacteristics);
         
         // Update summary statistics
         const totalPatterns = window.runGroups.length;
         const mostCommonPattern = Math.max(...window.runGroups.map(g => g.runs.length)) / results.length * 100;
-        const avgPeakHeight = window.runGroups.reduce((sum, g) => sum + g.representative.maxH, 0) / totalPatterns;
+        const avgPeakHeight = window.runGroups.reduce((sum, g) => sum + g.representative.maxValue, 0) / totalPatterns;
         const avgPeakTime = window.runGroups.reduce((sum, g) => sum + g.representative.peakTime, 0) / totalPatterns;
 
         document.getElementById('totalPatterns').textContent = totalPatterns;
@@ -248,8 +249,8 @@ function updatePatternAnalysis(results) {
         document.getElementById('avgPeakHeight').textContent = avgPeakHeight.toFixed(4);
         document.getElementById('avgPeakTime').textContent = avgPeakTime.toFixed(1);
 
-        // Create pattern cards
-        createPatternCards(window.runGroups, results);
+        // Create pattern cards with compartment info
+        createPatternCards(window.runGroups, results, params, compartment);
 
         // Create pattern distribution chart
         createPatternChart(window.runGroups);

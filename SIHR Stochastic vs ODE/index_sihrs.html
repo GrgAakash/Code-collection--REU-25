@@ -1,0 +1,694 @@
+<!-- Quick demo at https://grgaakash.github.io/projects -->
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario's Epidemic Adventure - SIHRS Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="src/css/styles.css?v=2">
+</head>
+<body>
+    <!-- Matrix-style falling code background -->
+    <div class="matrix-bg" id="matrixBg"></div>
+
+    <!-- Dragon Balls -->
+    <div class="dragon-ball dragon-ball-1" title="1-Star Ball">
+      <svg viewBox="0 0 32 32"><polygon points="16,6 18,14 26,14 19,18 21,26 16,21 11,26 13,18 6,14 14,14" fill="#e53935"/></svg>
+    </div>
+    <div class="dragon-ball dragon-ball-2" title="2-Star Ball">
+      <svg viewBox="0 0 32 32">
+        <polygon points="8,10 9,14 13,14 10,16 11,20 8,17 5,20 6,16 3,14 7,14" fill="#e53935"/>
+        <polygon points="24,10 25,14 29,14 26,16 27,20 24,17 21,20 22,16 19,14 23,14" fill="#e53935"/>
+      </svg>
+    </div>
+
+
+    <!-- Mario Title -->
+    <div class="mario-title">
+        MARIO'S EPIDEMIC ADVENTURE
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>Model Parameters</h2>
+          
+
+          
+
+              <!-- Initial susceptible proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">s<sub>0</sub> (susceptible fraction)</span>
+                  <span class="parameter-value" id="s0-value">0.80</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="s0" min="0" max="1" step="0.000000001" value="0.80">
+                  <input type="number" id="s0-number" min="0" max="1" step="0.000000001" value="0.80" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial infected proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">i<sub>0</sub> (infected fraction)</span>
+                  <span class="parameter-value" id="i0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="i0" min="0" max="1" step="0.000000001" value="0.10">
+                  <input type="number" id="i0-number" min="0" max="1" step="0.000000001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial hospitalized proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">h<sub>0</sub> (hospitalized fraction)</span>
+                  <span class="parameter-value" id="h0-value">0.10</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="h0" min="0" max="1" step="0.000000001" value="0.10">
+                  <input type="number" id="h0-number" min="0" max="1" step="0.000000001" value="0.10" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial recovered proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">r<sub>0</sub> (recovered fraction)</span>
+                  <span class="parameter-value" id="r0-value">0.00</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="r0" min="0" max="1" step="0.000000001" value="0.00">
+                  <input type="number" id="r0-number" min="0" max="1" step="0.000000001" value="0.00" style="width: 80px;">
+                </div>
+              </div>
+
+              <!-- Initial death proportion -->
+              <div class="parameter-group">
+                <div class="parameter-label">
+                  <span class="parameter-name">d<sub>0</sub> (death fraction)</span>
+                  <span class="parameter-value" id="d0-value">0.00</span>
+                </div>
+                <div class="parameter-input">
+                  <input type="range" id="d0" min="0" max="1" step="0.000000001" value="0.00">
+                  <input type="number" id="d0-number" min="0" max="1" step="0.000000001" value="0.00" style="width: 80px;">
+                </div>
+              </div>
+          
+            <div class="parameter-controls">
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">β (Infection Rate)</span>
+                        <span class="parameter-value" id="beta-value">0.163</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="beta" min="0.01" max="2" step="0.000000001" value="0.163">
+                        <input type="number" id="beta-number" min="0.01" max="2" step="0.000000001" value="0.163" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">γ (I outflow rate)</span>
+                        <span class="parameter-value" id="gamma-value">0.126</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="gamma" min="0.01" max="2" step="0.000000001" value="0.126">
+                        <input type="number" id="gamma-number" min="0.01" max="2" step="0.000000001" value="0.126" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">α (H outflow rate)</span>
+                        <span class="parameter-value" id="alpha-value">0.1</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="alpha" min="0.01" max="2" step="0.000000001" value="0.1">
+                        <input type="number" id="alpha-number" min="0.01" max="2" step="0.000000001" value="0.1" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">λ (Reinfection Rate)</span>
+                        <span class="parameter-value" id="lambda-value">0.0083</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="lambda" min="0.001" max="0.1" step="0.000000001" value="0.0083">
+                        <input type="number" id="lambda-number" min="0.001" max="0.1" step="0.000000001" value="0.0083" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">p<sub>SI</sub> (S→I probability)</span>
+                        <span class="parameter-value" id="p_SI-value">1.0</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="p_SI" min="0.01" max="1" step="0.000000001" value="1.0">
+                        <input type="number" id="p_SI-number" min="0.01" max="1" step="0.000000001" value="1.0" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                  <div class="parameter-label">
+                    <span class="parameter-name mario-text">I outflow probabilities (sum = 1)</span>
+                  </div>
+                  <div class="parameter-input" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                      <label for="p_II" class="mario-label">p<sub>II</sub> (I→I)</label>
+                      <input type="number" id="p_II-number" min="0" max="1" step="0.000000001" value="0.00" style="width: 100%;">
+                    </div>
+                    <div>
+                      <label for="p_IH" class="mario-label">p<sub>IH</sub> (I→H)</label>
+                      <input type="number" id="p_IH-number" min="0" max="1" step="0.000000001" value="0.04" style="width: 100%;">
+                    </div>
+                    <div>
+                      <label for="p_IR" class="mario-label">p<sub>IR</sub> (I→R)</label>
+                      <input type="number" id="p_IR-number" min="0" max="1" step="0.000000001" value="0.959" style="width: 100%;">
+                    </div>
+                    <div>
+                      <label for="p_ID" class="mario-label">p<sub>ID</sub> (I→D)</label>
+                      <input type="number" id="p_ID-number" min="0" max="1" step="0.000000001" value="0.001" style="width: 100%;">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="parameter-group">
+                  <div class="parameter-label">
+                    <span class="parameter-name mario-text">H outflow probabilities (sum = 1)</span>
+                  </div>
+                  <div class="parameter-input" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                      <label for="p_HR" class="mario-label">p<sub>HR</sub> (H→R)</label>
+                      <input type="number" id="p_HR-number" min="0" max="1" step="0.000000001" value="0.9882" style="width: 100%;">
+                    </div>
+                    <div>
+                      <label for="p_HH" class="mario-label">p<sub>HH</sub> (H→H)</label>
+                      <input type="number" id="p_HH-number" min="0" max="1" step="0.000000001" value="0.01" style="width: 100%;">
+                    </div>
+                    <div>
+                      <label for="p_HD" class="mario-label">p<sub>HD</sub> (H→D)</label>
+                      <input type="number" id="p_HD-number" min="0" max="1" step="0.000000001" value="0.0018" style="width: 100%;">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="parameter-group">
+                  <div class="parameter-label">
+                    <span class="parameter-name mario-text">R outflow probabilities (sum = 1)</span>
+                  </div>
+                  <div class="parameter-input" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                      <label for="p_RR" class="mario-label">p<sub>RR</sub> (R→R)</label>
+                      <input type="number" id="p_RR-number" min="0" max="1" step="0.000000001" value="0.02" style="width: 100%;">
+                    </div>
+                    <div>
+                      <label for="p_RS" class="mario-label">p<sub>RS</sub> (R→S)</label>
+                      <input type="number" id="p_RS-number" min="0" max="1" step="0.000000001" value="0.98" style="width: 100%;">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Population Size</span>
+                        <span class="parameter-value" id="population-value">300</span>
+                    </div>
+                    <div class="parameter-input">
+                                        <input type="range" id="population" min="1" max="100000" step="1" value="300">
+                <input type="number" id="population-number" min="1" max="100000" step="1" value="300" style="width: 80px;">
+                    </div>
+                </div>
+
+                <div class="parameter-group">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Number of Runs</span>
+                        <span class="parameter-value" id="runs-value">50</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="runs" min="1" max="1000" step="1" value="50">
+                        <input type="number" id="runs-number" min="1" max="1000" step="1" value="50" style="width: 80px;">
+                    </div>
+                </div>
+
+                <button id="applyParams" class="apply-button">Apply Parameters</button>
+            </div>
+          
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Current Run</div>
+                    <div class="stat-value" id="currentRun">1/50</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Population</div>
+                    <div class="stat-value" id="populationSize">300</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">R₀</div>
+                    <div class="stat-value" id="R_0-value">1.90</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Peak Hospitalization</div>
+                    <div class="stat-value" id="peakHospitalization">0.0000</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="compartment-buttons">
+                <button class="comp-btn active" data-comp="S">Susceptible (S)</button>
+                <button class="comp-btn" data-comp="I">Infected (I)</button>
+                <button class="comp-btn" data-comp="H">Hospitalized (H)</button>
+                <button class="comp-btn" data-comp="R">Recovered (R)</button>
+                <button class="comp-btn" data-comp="D">Death (D)</button>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container" id="chartContainerS">
+                    <canvas id="chartS"></canvas>
+                </div>
+                <div class="chart-container" id="chartContainerI" style="display: none;">
+                    <canvas id="chartI"></canvas>
+                </div>
+                <div class="chart-container" id="chartContainerH" style="display: none;">
+                    <canvas id="chartH"></canvas>
+                </div>
+                <div class="chart-container" id="chartContainerR" style="display: none;">
+                    <canvas id="chartR"></canvas>
+                </div>
+                <div class="chart-container" id="chartContainerD" style="display: none;">
+                    <canvas id="chartD"></canvas>
+                </div>
+            </div>
+            
+            <div id="errorMessage" class="error-message"></div>
+            <div id="status" class="status">Initializing...</div>
+            <div class="controls">
+                <button id="playBtn" class="btn play">
+                    <span class="btn-text">Play</span>
+                </button>
+                <button id="resetBtn" class="btn reset">
+                    <span class="btn-text">Reset</span>
+                </button>
+                <button id="speedBtn" class="btn speed">
+                    <span class="btn-text">Speed: Normal</span>
+                </button>
+                <button id="analyzeBtn" class="btn analyze">
+                    <span class="btn-text">Analyze</span>
+                </button>
+            </div>
+            
+            <!-- Real World Data Upload Section -->
+            <div class="real-data-section">
+                <h3>📊 Real World Data</h3>
+                <div class="upload-container">
+                    <input type="file" id="realDataUpload" accept=".csv" style="display: none;">
+                    <button id="uploadBtn" class="btn upload">
+                        <span class="btn-text">📁 Upload CSV Data</span>
+                    </button>
+                    <button id="toggleRealDataBtn" class="btn toggle-data" style="display: none;">
+                        <span class="btn-text">👁️ Show/Hide Real Data</span>
+                    </button>
+                    <button id="clearRealDataBtn" class="btn clear-data" style="display: none;">
+                        <span class="btn-text">🗑️ Clear Data</span>
+                    </button>
+                    <button id="updateInitialsBtn" class="btn" style="display: none; background: linear-gradient(145deg, #9C27B0, #7B1FA2); border-color: #4A148C;">
+                        <span class="btn-text">⚙️ Update Initial Conditions</span>
+                    </button>
+                </div>
+                
+                <!-- Real Data Population Input -->
+                <div class="parameter-group" style="margin-top: 15px;">
+                    <div class="parameter-label">
+                        <span class="parameter-name">Real Data Population</span>
+                        <span class="parameter-value" id="realDataPopulationValue">56000</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="range" id="realDataPopulation" min="1000" max="1000000" step="1000" value="56000">
+                        <input type="number" id="realDataPopulationNumber" min="1000" max="1000000" step="1000" value="56000" style="width: 80px;">
+                    </div>
+                </div>
+                <div id="uploadStatus" class="upload-status"></div>
+                <div id="dataInfo" class="data-info" style="display: none;">
+                    <p><strong>📈 Data Info:</strong> <span id="dataInfoText"></span></p>
+                </div>
+            </div>
+
+            <!-- Modal for ODEs -->
+            <div id="odeModal" class="modal" style="display:none;">
+              <div class="modal-content">
+                <span class="close-modal" id="closeOdeModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+                <h2>SIHRS Model: System of ODEs</h2>
+                <div id="odeMath" style="font-size:1.2rem; margin-top:1rem;">
+                  <p>
+                    \[
+                    \begin{align*}
+                    \frac{ds}{dt} &= -\beta p_{SI} s i + p_{RS} \lambda r \\
+                    \frac{di}{dt} &= \beta p_{SI} s i - \gamma (1-p_{II}) i \\
+                    \frac{dh}{dt} &= p_{IH} \gamma i - \alpha (1-p_{HH}) h \\
+                    \frac{dr}{dt} &= p_{IR} \gamma i + p_{HR} \alpha h - p_{RS} \lambda r \\
+                    \frac{dd}{dt} &= p_{ID} \gamma i + p_{HD} \alpha h
+                    \end{align*}
+                    \]
+                  </p>
+                  <ul style="margin-top:1rem;">
+                    <li><b>s</b>: Susceptible proportion</li>
+                    <li><b>i</b>: Infected proportion</li>
+                    <li><b>h</b>: Hospitalized proportion</li>
+                    <li><b>r</b>: Recovered proportion</li>
+                    <li><b>d</b>: Death proportion</li>
+                    <li><b>β, γ, α, λ</b>: rates</li>
+                    <li><b>p<sub>SI</sub></b>: S→I probability</li>
+                    <li><b>p<sub>II</sub></b>: I→I probability (remains infected)</li>
+                    <li><b>p<sub>IH</sub></b>: I→H probability</li>
+                    <li><b>p<sub>IR</sub></b>: I→R probability</li>
+                    <li><b>p<sub>ID</sub></b>: I→D probability (death)</li>
+                    <li><b>p<sub>HR</sub></b>: H→R probability</li>
+                    <li><b>p<sub>HH</sub></b>: H→H probability (remains hospitalized)</li>
+                    <li><b>p<sub>HD</sub></b>: H→D probability (death)</li>
+                    <li><b>p<sub>RR</sub></b>: R→R probability (remains recovered)</li>
+                    <li><b>p<sub>RS</sub></b>: R→S probability (reinfection)</li>
+                    <li><b>Constraints</b>: p<sub>IH</sub> + p<sub>IR</sub> + p<sub>II</sub> + p<sub>ID</sub> = 1, p<sub>HR</sub> + p<sub>HH</sub> + p<sub>HD</sub> = 1, p<sub>RR</sub> + p<sub>RS</sub> = 1</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modal for SIHRS Flowchart (2-star ball) -->
+            <div id="patternClassModal" class="modal" style="display:none;">
+              <div class="modal-content">
+                <span class="close-modal" id="closePatternClassModal" style="float:right; font-size:2rem; cursor:pointer;">&times;</span>
+                <h2>SIHRS Model Flowchart</h2>
+                <div style="text-align:center; margin-top:1.5rem;">
+                  <img src="src/assets/images/sihrs_flow.png" alt="SIHRS Model Flowchart" style="max-width:100%; height:auto; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.12);">
+                </div>
+              </div>
+            </div>
+
+            <!-- Pattern Analysis Section -->
+            <div id="patternAnalysis" style="display: none;">
+                <div class="summary-stats">
+                    <h2>Pattern Analysis</h2>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-label">Total Patterns</div>
+                            <div class="summary-value" id="totalPatterns">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Most Common Pattern</div>
+                            <div class="summary-value" id="mostCommonPattern">0%</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Height</div>
+                            <div class="summary-value" id="avgPeakHeight">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Average Peak Time</div>
+                            <div class="summary-value" id="avgPeakTime">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h2>Pattern Distribution</h2>
+                    <canvas id="patternChart"></canvas>
+                </div>
+
+                <div class="stats-grid" id="patternCards">
+                    <!-- Pattern cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pattern Details Modal -->
+    <div id="patternModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Pattern Details</h2>
+                <button class="close-modal" onclick="closePatternModal()">&times;</button>
+            </div>
+            <div id="modalContent">
+                <!-- Content will be dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Load JavaScript modules -->
+    <script src="src/js/models/sihrs-model.js"></script>
+    <script src="src/js/utils/audio.js"></script>
+    <script src="src/js/components/pattern-analysis.js"></script>
+    <script src="src/js/components/ui-controls.js"></script>
+    <script src="src/js/components/download-utils.js"></script>
+    <script src="src/js/components/real-data-handler.js"></script>
+    <script src="src/js/main-sihrs.js"></script>
+
+    <!-- Add MathJax for LaTeX rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <!-- MathJax config for best LaTeX rendering -->
+    <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+    </script>
+
+    <style>
+    /* Real World Data Section */
+    .real-data-section {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+        border: 3px solid #000;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .real-data-section h3 {
+        color: #000;
+        font-family: "'Press Start 2P', cursive";
+        font-size: 14px;
+        margin: 0 0 15px 0;
+        text-align: center;
+    }
+
+    .upload-container {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+
+    .btn.upload {
+        background: linear-gradient(145deg, #4CAF50, #45a049);
+        border-color: #2E7D32;
+    }
+
+    .btn.toggle-data {
+        background: linear-gradient(145deg, #2196F3, #1976D2);
+        border-color: #0D47A1;
+    }
+
+    .btn.clear-data {
+        background: linear-gradient(145deg, #f44336, #d32f2f);
+        border-color: #b71c1c;
+    }
+
+    .btn.help {
+        background: linear-gradient(145deg, #FF9800, #F57C00);
+        border-color: #E65100;
+    }
+
+    .upload-status {
+        text-align: center;
+        margin: 10px 0;
+        font-family: "'Press Start 2P', cursive";
+        font-size: 10px;
+        min-height: 20px;
+    }
+
+    .upload-status.success {
+        color: #4CAF50;
+    }
+
+    .upload-status.error {
+        color: #f44336;
+    }
+
+    .data-info {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 10px;
+        font-family: "'Press Start 2P', cursive";
+        font-size: 10px;
+        color: #000;
+    }
+
+    .mario-text {
+        color: #000 !important;
+        font-weight: bold;
+    }
+
+    .mario-label {
+        color: #000;
+        font-weight: bold;
+        font-size: 0.85em;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .charts-grid .chart-container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border: 3px solid #000;
+        min-height: 500px;
+    }
+
+    .charts-grid .chart-container h3 {
+        text-align: center;
+        margin: 0 0 20px 0;
+        color: #000;
+        font-family: "'Press Start 2P', cursive";
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .charts-grid .chart-container canvas {
+        width: 100% !important;
+        height: 400px !important;
+    }
+
+    .compartment-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .comp-btn {
+        background: linear-gradient(145deg, #d2691e, #cd853f);
+        color: #ffffff;
+        border: 3px solid #8b4513;
+        border-radius: 8px;
+        padding: 15px 25px;
+        font-family: "'Press Start 2P', cursive";
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 
+            0 6px 12px rgba(139, 69, 19, 0.6),
+            0 3px 6px rgba(139, 69, 19, 0.4),
+            inset 0 2px 4px rgba(255, 255, 255, 0.2),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+        position: relative;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        /* Mario brick texture effect */
+        background-image: 
+            linear-gradient(145deg, #d2691e, #cd853f),
+            repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.1) 2px,
+                rgba(255, 255, 255, 0.1) 4px
+            );
+    }
+
+    .comp-btn::before {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        right: 2px;
+        bottom: 2px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+        border-radius: 6px;
+        pointer-events: none;
+    }
+
+    .comp-btn:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 
+            0 8px 16px rgba(139, 69, 19, 0.7),
+            0 4px 8px rgba(139, 69, 19, 0.5),
+            inset 0 2px 4px rgba(255, 255, 255, 0.3),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(145deg, #daa520, #d2691e);
+        border-color: #a0522d;
+    }
+
+    .comp-btn:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 
+            0 2px 4px rgba(139, 69, 19, 0.5),
+            0 1px 2px rgba(139, 69, 19, 0.3),
+            inset 0 1px 2px rgba(0, 0, 0, 0.2),
+            inset 0 -1px 2px rgba(255, 255, 255, 0.1);
+    }
+
+    .comp-btn.active {
+        background: linear-gradient(145deg, #ff6347, #ff4500);
+        border-color: #dc143c;
+        box-shadow: 
+            0 6px 12px rgba(255, 99, 71, 0.6),
+            0 3px 6px rgba(255, 69, 0, 0.4),
+            inset 0 2px 4px rgba(255, 255, 255, 0.3),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+        /* Active brick texture */
+        background-image: 
+            linear-gradient(145deg, #ff6347, #ff4500),
+            repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.2) 2px,
+                rgba(255, 255, 255, 0.2) 4px
+            );
+    }
+
+    .comp-btn.active:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 
+            0 8px 16px rgba(255, 99, 71, 0.7),
+            0 4px 8px rgba(255, 69, 0, 0.5),
+            inset 0 2px 4px rgba(255, 255, 255, 0.4),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(145deg, #ff7f50, #ff6347);
+    }
+
+    .comp-btn.active:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 
+            0 2px 4px rgba(255, 99, 71, 0.5),
+            0 1px 2px rgba(255, 69, 0, 0.3),
+            inset 0 1px 2px rgba(0, 0, 0, 0.3),
+            inset 0 -1px 2px rgba(255, 255, 255, 0.1);
+    }
+    </style>
+</body>
+</html> 
