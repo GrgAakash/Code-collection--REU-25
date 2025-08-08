@@ -34,7 +34,7 @@ Table.SelectRows(
 Due to its **high population**, we chose not to use Tuscaloosa County. Instead, we selected smaller counties with:
 
 - Population **less than 60,000**
-- Estimated **$begin:math:text$ R_0 $end:math:text$** between **1.0 and 1.5**
+- Estimated **R_0** between **1.0 and 1.5**
 - Sufficient hospitalization data (i.e., not missing or invalid)
 
 ---
