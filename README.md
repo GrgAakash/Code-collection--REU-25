@@ -46,9 +46,7 @@ The `Code Results` folder contains images generated from the simulations.
 | File | Description | Related Figure |
 |------|-------------|----------------|
 | `sihmd_2d.html`|2D animation |The animation can be found at https://cfbpicks.live/reu/|
-| `sihrvsODE-model.html`| SIHRS stochastic vs ODE analysis | The simulation can be found at https://grgaakash.github.io/SIHR%20Stochastic%20vs%20ODE/index_sihrs.html|
-
-
+| `index_sihrs.html`| SIHRS stochastic vs ODE analysis | The simulation can be found at https://grgaakash.github.io/SIHR%20Stochastic%20vs%20ODE/index_sihrs.html|
 
 
 ## 💡 Suggestions Welcome
