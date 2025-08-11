@@ -1,30 +1,33 @@
-function sihrs_multiple_populations()
+function sihrs_I_H_analysis()
+    % SIHRS Epidemic Model - I and H Compartments Only (MATLAB Version)
+    %
+    % This script focuses specifically on plotting the Infected (I) and 
+    % Hospitalized (H) compartments from the SIHRS epidemic model with death.
+    
     % Define model parameters structure for SIHRS with death model
-  params = struct(...
-        'beta',1.11, ...    % infection rate (β > 0)
-        'gamma', 0.143, ...   % I transition rate (γ > 0)
+    params = struct(...
+        'beta', 0.212, ...    % infection rate (β > 0)
+        'gamma', 0.10, ...   % I transition rate (γ > 0)
         'alpha', 0.09, ...   % H transition rate (α > 0)
-        'lambda', 0.0083, ...  % R transition rate (Λ > 0) immunity period of 4 months is assumed
+        'lambda', 0.01, ...   % R transition rate (λ > 0) immunity period
         'pSI', 1.0, ...     % probability of S to I (p_{SI} in (0,1])
         'pII', 0.0, ...     % probability of I to I (stay infected)
-        'pIH', 0.033, ...    % probability of I to H
-        'pIR', 0.966, ...     % probability of I to R
-        'pID', 0.001, ...    % probability of I to D
+        'pIH', 0.1, ...      % probability of I to H
+        'pIR', 0.88, ...     % probability of I to R
+        'pID', 0.02, ...    % probability of I to D
         'pHH', 0.0, ...     % probability of H to H (stay hospitalized)
-        'pHR', 0.97, ...     % probability of H to R
-        'pHD', 0.03, ...     % probability of H to D
-        'pRR', 0, ...     % probability of R to R (stay recovered)
-        'pRS', 1, ...     % probability of R to S
-        'tmax', 200, ...    % simulation end time
-        's0', 0.7, ...      % initial susceptible proportion
-        'i0', 0.3, ...      % initial infected proportion
+        'pHR', 0.92, ...     % probability of H to R
+        'pHD', 0.08, ...     % probability of H to D
+        'pRR', 0.02, ...     % probability of R to R (stay recovered)
+        'pRS', 0.98, ...     % probability of R to S
+        'tmax', 1000, ...    % simulation end time
+        's0', 0.96, ...      % initial susceptible proportion
+        'i0', 0.04, ...      % initial infected proportion
         'h0', 0.0, ...      % initial hospitalized proportion
         'r0', 0.0, ...      % initial recovered proportion
         'd0', 0.0 ...       % initial dead proportion
     ); 
- 
-
-
+    
     % Validate parameters
     validateParameters(params);
     
@@ -32,10 +35,10 @@ function sihrs_multiple_populations()
     if abs((params.s0 + params.i0 + params.h0 + params.r0 + params.d0) - 1) > 1e-10
         error('Initial conditions must sum to 1');
     end
-
+    
     % Population sizes to test
     N_values = [316, 3162, 10000];
-  
+    
     % Input validation
     if any(N_values <= 0)
         error('Population sizes must be positive integers');
@@ -53,15 +56,48 @@ function sihrs_multiple_populations()
         end
         
         % Solve deterministic model
+        fprintf('Solving deterministic model...\n');
         deterministic_result = solve_deterministic_sihrs(params);
+        fprintf('Deterministic model completed\n');
         
-        % Plot comparison
-        plot_comparison(results, N_values, deterministic_result, params);
+        % Plot I and H focused analysis
+        fprintf('Generating I and H focused plots...\n');
+        plot_I_H_compartments(results, N_values, deterministic_result, params);
+        fprintf('Plots generated and saved\n');
         
     catch ME
         fprintf('Error occurred: %s\n', ME.message);
         rethrow(ME);
     end
+    
+    % Print focused summary statistics
+    fprintf('\n=== I AND H COMPARTMENT ANALYSIS ===\n');
+    fprintf('Population Size | Peak I | Peak H | Peak I Time | Peak H Time | I(∞) | H(∞)\n');
+    fprintf('----------------|---------|---------|-------------|-------------|-------|-------\n');
+    for i = 1:length(results)
+        fprintf('%15d | %7d | %7d | %11.2f | %11.2f | %5.3f | %5.3f\n', ...
+            results{i}.N, results{i}.peak_infected, results{i}.peak_hospitalized, ...
+            results{i}.peak_time, results{i}.peak_h_time, ...
+            results{i}.i_inf, results{i}.h_inf);
+    end
+    
+    fprintf('%15s | %7.4f | %7.4f | %11.2f | %11.2f | %5.3f | %5.3f\n', ...
+        'Deterministic', deterministic_result.peak_infected_prop, ...
+        deterministic_result.peak_hospitalized_prop, ...
+        deterministic_result.peak_time, deterministic_result.peak_h_time, ...
+        deterministic_result.i_inf, deterministic_result.h_inf);
+    
+    % Print key metrics
+    fprintf('\n=== KEY METRICS ===\n');
+    fprintf('R₀ = %.4f\n', deterministic_result.R0);
+    fprintf('Peak I proportion = %.4f\n', deterministic_result.peak_infected_prop);
+    fprintf('Peak H proportion = %.4f\n', deterministic_result.peak_hospitalized_prop);
+    fprintf('I peak time = %.2f days\n', deterministic_result.peak_time);
+    fprintf('H peak time = %.2f days\n', deterministic_result.peak_h_time);
+    
+    % Return results for further analysis
+    varargout{1} = results;
+    varargout{2} = deterministic_result;
 end
 
 function validateParameters(params)
@@ -124,50 +160,26 @@ function result = sihrs_agent_model(N, params)
         error('Initial conditions must sum to N');
     end
     
-    % Preallocate arrays for better performance
-    max_events = N * 10; % Estimate maximum number of events
-    T = zeros(1, max_events);
-    S_prop = zeros(1, max_events);
-    I_prop = zeros(1, max_events);
-    H_prop = zeros(1, max_events);
-    R_prop = zeros(1, max_events);
-    D_prop = zeros(1, max_events);
-    I_count = zeros(1, max_events);
+    % Initialize agent arrays
+    S = 1:s0;           % susceptible agents
+    I = (s0+1):(s0+i0); % infected agents
+    H = (s0+i0+1):(s0+i0+h0); % hospitalized agents
+    R = (s0+i0+h0+1):(s0+i0+h0+r0); % recovered agents
+    D = (s0+i0+h0+r0+1):(s0+i0+h0+r0+d0); % dead agents
     
-    % Initialize agent arrays with preallocation
-    S = zeros(1, N);
-    S(1:s0) = 1:s0;
-    S = S(1:s0);
-    
-    I = zeros(1, N);
-    I(1:i0) = (s0+1):(s0+i0);
-    I = I(1:i0);
-    
-    H = zeros(1, N);
-    H(1:h0) = (s0+i0+1):(s0+i0+h0);
-    H = H(1:h0);
-    
-    R = zeros(1, N);
-    R(1:r0) = (s0+i0+h0+1):(s0+i0+h0+r0);
-    R = R(1:r0);
-    
-    D = zeros(1, N);
-    D(1:d0) = (s0+i0+h0+r0+1):(s0+i0+h0+r0+d0);
-    D = D(1:d0);
+    % Initialize tracking arrays
+    T = 0;           % time points
+    S_prop = params.s0; % susceptible proportions
+    I_prop = params.i0; % infected proportions
+    H_prop = params.h0; % hospitalized proportions
+    R_prop = params.r0; % recovered proportions
+    D_prop = params.d0; % dead proportions
+    I_count = i0;           % infected counts
+    H_count = h0;           % hospitalized counts
     
     % Initialize time tracking
     t = 0;
-    T(1) = 0;
     event_count = 1;
-    
-    % Initialize proportion tracking
-    total_pop = s0 + i0 + h0 + r0 + d0;
-    S_prop(1) = s0 / total_pop;
-    I_prop(1) = i0 / total_pop;
-    H_prop(1) = h0 / total_pop;
-    R_prop(1) = r0 / total_pop;
-    D_prop(1) = d0 / total_pop;
-    I_count(1) = i0;
     
     % Main simulation loop
     while ~isempty(I) && t < params.tmax
@@ -208,6 +220,7 @@ function result = sihrs_agent_model(N, params)
             R_prop(event_count) = numel(R) / current_total;
             D_prop(event_count) = numel(D) / current_total;
             I_count(event_count) = numel(I);
+            H_count(event_count) = numel(H);
             break;
         end
         
@@ -282,16 +295,8 @@ function result = sihrs_agent_model(N, params)
         R_prop(event_count) = numel(R) / current_total;
         D_prop(event_count) = numel(D) / current_total;
         I_count(event_count) = numel(I);
+        H_count(event_count) = numel(H);
     end
-    
-    % Trim unused preallocated space
-    T = T(1:event_count);
-    S_prop = S_prop(1:event_count);
-    I_prop = I_prop(1:event_count);
-    H_prop = H_prop(1:event_count);
-    R_prop = R_prop(1:event_count);
-    D_prop = D_prop(1:event_count);
-    I_count = I_count(1:event_count);
     
     % Store results
     result.N = N;
@@ -302,9 +307,12 @@ function result = sihrs_agent_model(N, params)
     result.R_prop = R_prop;
     result.D_prop = D_prop;
     result.I_count = I_count;
+    result.H_count = H_count;
     result.final_time = t;
     result.peak_infected = max(I_count);
+    result.peak_hospitalized = max(H_count);
     result.peak_time = T(find(I_count == max(I_count), 1, 'first'));
+    result.peak_h_time = T(find(H_count == max(H_count), 1, 'first'));
     
     % Calculate and store asymptotic values
     result.s_inf = S_prop(end);
@@ -356,6 +364,12 @@ function det_result = solve_deterministic_sihrs(params)
     [peak_infected_prop, peak_idx] = max(det_result.I_prop);
     det_result.peak_infected_prop = peak_infected_prop;
     det_result.peak_time = T(peak_idx);
+    
+    % Find peak hospitalized and peak time
+    [peak_hospitalized_prop, peak_h_idx] = max(det_result.H_prop);
+    det_result.peak_hospitalized_prop = peak_hospitalized_prop;
+    det_result.peak_h_time = T(peak_h_idx);
+    
     det_result.final_time = T(end);
     
     % Calculate R0
@@ -369,161 +383,41 @@ function det_result = solve_deterministic_sihrs(params)
     det_result.d_inf = det_result.D_prop(end);
 end
 
-function plot_comparison(results, N_values, det_result, params)
-    % Create comparison plots including deterministic solution
+function plot_I_H_compartments(results, N_values, det_result, params)
+    % Create focused plots for I and H compartments only
     
-    % Create two figures
-    figure('Position', [100, 100, 1920, 1440]);  % Original comparison plots
-    
-    % Use tiledlayout for better spacing control
-    t = tiledlayout(3, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
-    
-    % Colors for different population sizes and deterministic
-    colors = {'#0072BD', '#77AC30', '#A2142F'}; % More distinctive colors
-    det_color = '#7E2F8E';  % Purple for deterministic
-    
-    % Plot 1: Susceptible Proportion Over Time
-    nexttile;
+    % 1. Create combined I and H ODE plot (deterministic only)
+    figure('Position', [100, 100, 1000, 700]);
+    plot(det_result.T, det_result.I_prop, 'r-', 'LineWidth', 3, 'DisplayName', 'Infected (I)');
     hold on;
-    plot_handles = [];
-    for i = 1:length(results)
-        h = plot(results{i}.T, results{i}.S_prop, 'Color', colors{i}, 'LineWidth', 1.5);
-        plot_handles = [plot_handles, h];
-    end
-    h_det = plot(det_result.T, det_result.S_prop, '--', 'Color', det_color, 'LineWidth', 2);
-    plot_handles = [plot_handles, h_det];
-    xlabel('Time', 'FontSize', 14);
-    ylabel('Proportion Susceptible', 'FontSize', 14);
-    title('Susceptible Proportion Over Time', 'FontSize', 16);
+    plot(det_result.T, det_result.H_prop, 'Color', [0, 1, 0], 'LineWidth', 3, 'DisplayName', 'Hospitalized (H)');
+    xlabel('Time');
+    ylabel('Proportion');
+    title('Deterministic I and H Compartments');
     grid on;
     xlim([0, params.tmax]);
-    yticks(0:0.01:1);
+    legend('Location', 'northeast');
+    saveas(gcf, 'SIHRS_ODE_I_H_combined.png');
     
-    % Plot 2: Infected Proportion Over Time
-    nexttile;
-    hold on;
+    % 2. Create individual plots for each population size N
     for i = 1:length(results)
-        plot(results{i}.T, results{i}.I_prop, 'Color', colors{i}, 'LineWidth', 1.5);
-    end
-    plot(det_result.T, det_result.I_prop, '--', 'Color', det_color, 'LineWidth', 2);
-    xlabel('Time', 'FontSize', 14);
-    ylabel('Proportion Infected', 'FontSize', 14);
-    title('Infected Proportion Over Time', 'FontSize', 16);
-    grid on;
-    xlim([0, params.tmax]);
-    yticks(0:0.01:1);
-    
-    % Plot 3: Hospitalized Proportion Over Time
-    nexttile;
-    hold on;
-    for i = 1:length(results)
-        plot(results{i}.T, results{i}.H_prop, 'Color', colors{i}, 'LineWidth', 1.5);
-    end
-    plot(det_result.T, det_result.H_prop, '--', 'Color', det_color, 'LineWidth', 2);
-    xlabel('Time', 'FontSize', 14);
-    ylabel('Proportion Hospitalized', 'FontSize', 14);
-    title('Hospitalized Proportion Over Time', 'FontSize', 16);
-    grid on;
-    xlim([0, params.tmax]);
-    yticks(0:0.01:1);
-    
-    % Plot 4: Recovered Proportion Over Time
-    nexttile;
-    hold on;
-    for i = 1:length(results)
-        plot(results{i}.T, results{i}.R_prop, 'Color', colors{i}, 'LineWidth', 1.5);
-    end
-    plot(det_result.T, det_result.R_prop, '--', 'Color', det_color, 'LineWidth', 2);
-    xlabel('Time', 'FontSize', 14);
-    ylabel('Proportion Recovered', 'FontSize', 14);
-    title('Recovered Proportion Over Time', 'FontSize', 16);
-    grid on;
-    xlim([0, params.tmax]);
-    yticks(0:0.01:1);
-    
-    % Plot 5: Dead Proportion Over Time
-    nexttile;
-    hold on;
-    for i = 1:length(results)
-        plot(results{i}.T, results{i}.D_prop, 'Color', colors{i}, 'LineWidth', 1.5);
-    end
-    plot(det_result.T, det_result.D_prop, '--', 'Color', det_color, 'LineWidth', 2);
-    xlabel('Time', 'FontSize', 14);
-    ylabel('Proportion Dead', 'FontSize', 14);
-    title('Dead Proportion Over Time', 'FontSize', 16);
-    grid on;
-    xlim([0, params.tmax]);
-    yticks(0:0.01:1);
-    
-    % Add a single legend below all plots
-    lgd = legend(plot_handles, [arrayfun(@(x) sprintf('N=%d', x), N_values, 'UniformOutput', false), {'Deterministic'}], ...
-        'Orientation', 'horizontal', 'Location', 'southoutside', 'FontSize', 12);
-    lgd.Layout.Tile = 'south';
-    
-    % Add parameter display including R0
-    param_text = sprintf('R₀=%.2f, β=%.2f, γ=%.2f, α=%.2f, Λ=%.2f\np_{SI}=%.2f, p_{II}=%.2f, p_{IH}=%.2f, p_{IR}=%.2f, p_{ID}=%.2f\np_{HH}=%.2f, p_{HR}=%.2f, p_{HD}=%.2f, p_{RR}=%.2f, p_{RS}=%.2f', ...
-        det_result.R0, params.beta, params.gamma, params.alpha, params.lambda, ...
-        params.pSI, params.pII, params.pIH, params.pIR, params.pID, ...
-        params.pHH, params.pHR, params.pHD, params.pRR, params.pRS);
-    annotation('textbox', [0.05, 0.02, 0.9, 0.05], ...
-        'String', param_text, ...
-        'FontSize', 14, ...
-        'EdgeColor', 'none', ...
-        'HorizontalAlignment', 'left', ...
-        'VerticalAlignment', 'middle');
-    
-    % Save the figure
-    saveas(gcf, 'SIHRS_simulation_results.png');
-    
-    % Create new figure for deterministic curves only
-    figure('Position', [100, 100, 800, 600]);
-    hold on;
-    
-    % Plot all deterministic curves together
-    plot(det_result.T, det_result.S_prop, 'LineWidth', 2, 'DisplayName', 'Susceptible');
-    plot(det_result.T, det_result.I_prop, 'LineWidth', 2, 'DisplayName', 'Infected');
-    plot(det_result.T, det_result.H_prop, 'LineWidth', 2, 'DisplayName', 'Hospitalized');
-    plot(det_result.T, det_result.R_prop, 'LineWidth', 2, 'DisplayName', 'Recovered');
-    plot(det_result.T, det_result.D_prop, 'LineWidth', 2, 'DisplayName', 'Dead');
-    
-    % Customize the plot
-    xlabel('Time', 'FontSize', 14);
-    ylabel('Population Proportion', 'FontSize', 14);
-    title('Deterministic SIHRS with Death Model Dynamics', 'FontSize', 16);
-    grid on;
-    xlim([0, params.tmax]);
-    yticks(0:0.01:1);
-    legend('Location', 'east', 'FontSize', 12);
-    
-    % Add R0 and parameters text
-    text(0.02, -0.15, sprintf('R₀=%.2f, β=%.2f, γ=%.2f, α=%.2f, Λ=%.2f', det_result.R0, params.beta, params.gamma, params.alpha, params.lambda), ...
-        'Units', 'normalized', 'FontSize', 12);
-    
-    % Save the deterministic plot
-    saveas(gcf, 'SIHRS_deterministic_only.png');
-    
-    % Create separate figures for each population size N
-    for i = 1:length(results)
-        % Create figure for this N value
+        % Create figure for this N value with I and H separately
         figure('Position', [100, 100, 1000, 700]);
         
-        % Plot all compartments for this N value
-        plot(results{i}.T, results{i}.S_prop, 'b-', 'LineWidth', 2, 'DisplayName', 'Susceptible (S)');
-        hold on;
+        % Plot I compartment for this N
         plot(results{i}.T, results{i}.I_prop, 'r-', 'LineWidth', 2, 'DisplayName', 'Infected (I)');
-        plot(results{i}.T, results{i}.H_prop, 'm-', 'LineWidth', 2, 'DisplayName', 'Hospitalized (H)');
-        plot(results{i}.T, results{i}.R_prop, 'g-', 'LineWidth', 2, 'DisplayName', 'Recovered (R)');
-        plot(results{i}.T, results{i}.D_prop, 'k-', 'LineWidth', 2, 'DisplayName', 'Dead (D)');
+        hold on;
+        
+        % Plot H compartment for this N  
+        plot(results{i}.T, results{i}.H_prop, 'Color', [0, 1, 0], 'LineWidth', 2, 'DisplayName', 'Hospitalized (H)');
         
         % Customize the plot
-        xlabel('Time (days)', 'FontSize', 12);
-        ylabel('Proportion', 'FontSize', 12);
-        title(sprintf('SIHRS Stochastic Model - N = %d', N_values(i)), 'FontSize', 14);
-        legend('Location', 'eastoutside', 'FontSize', 10);
+        xlabel('Time (days)');
+        ylabel('Proportion');
+        title(sprintf('SIHRS Stochastic Model - N = %d', N_values(i)));
+        legend('Location', 'northeast');
         grid on;
         xlim([0, params.tmax]);
-        ylim([0, 1]);
-        yticks(0:0.01:1);
         
         % Add parameter annotations
         param_text = sprintf('R₀=%.2f, β=%.4f, γ=%.4f, α=%.4f, λ=%.4f', ...
@@ -532,30 +426,12 @@ function plot_comparison(results, N_values, det_result, params)
             'VerticalAlignment', 'top', 'BackgroundColor', 'white');
         
         % Save the figure
-        saveas(gcf, sprintf('SIHRS_stochastic_N%d.png', N_values(i)));
+        saveas(gcf, sprintf('SIHRS_stochastic_N%d_I_H.png', N_values(i)));
     end
-    
-    % Print summary statistics
-    fprintf('\n=== SIMULATION SUMMARY ===\n');
-    fprintf('Population Size | Peak Infected | Peak Time | s(∞) | i(∞) | h(∞) | r(∞) | d(∞)\n');
-    fprintf('----------------|---------------|-----------|-------|-------|-------|-------|-------\n');
-    for i = 1:length(results)
-        fprintf('%15d | %13d | %9.2f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f\n', ...
-            results{i}.N, results{i}.peak_infected, results{i}.peak_time, ...
-            results{i}.s_inf, results{i}.i_inf, results{i}.h_inf, results{i}.r_inf, results{i}.d_inf);
-    end
-    fprintf('%15s | %13.4f | %9.2f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f\n', ...
-        'Deterministic', det_result.peak_infected_prop, det_result.peak_time, ...
-        det_result.s_inf, det_result.i_inf, det_result.h_inf, det_result.r_inf, det_result.d_inf);
-    
-    % Print asymptotic analysis
-    fprintf('\n=== ASYMPTOTIC ANALYSIS ===\n');
-    fprintf('R₀ = %.4f\n', det_result.R0);
-    fprintf('s(∞) = %.6f\n', det_result.s_inf);
-    fprintf('i(∞) = %.6f\n', det_result.i_inf);
-    fprintf('h(∞) = %.6f\n', det_result.h_inf);
-    fprintf('r(∞) = %.6f\n', det_result.r_inf);
-    fprintf('d(∞) = %.6f\n', det_result.d_inf);
 end
 
-% Run the simulation 
+% Run the analysis if this file is executed directly
+if ~exist('OCTAVE_VERSION', 'builtin')
+    % This is MATLAB, not Octave
+    sihrs_I_H_analysis();
+end
