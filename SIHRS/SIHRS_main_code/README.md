@@ -1,4 +1,4 @@
-# SIHRS I and H Focused Model - ODE System
+# SIHRS with Death Model - ODE System
 
 ## Mathematical Model
 
