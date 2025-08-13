@@ -20,7 +20,7 @@ function sihrs_renormalized_simulation()
     % Set random seed for reproducibility
     rng(1);
     
-    % Centralized parameters for SIHRS with death
+    % Centralized parameters for SIHRS with death - matching SIHRS.m
     params.pSI = 1.0;              % Infection probability (S to I)
     params.pII = 0.0;              % probability of I to I (stay infected)
     params.pIH = 0.04;             % probability of I to H
@@ -31,20 +31,20 @@ function sihrs_renormalized_simulation()
     params.pHD = 0.0018;           % probability of H to D
     params.pRR = 0.02;             % probability of R to R (stay recovered)
     params.pRS = 0.98;             % probability of R to S
-    params.gamma = 0.1;            % Infection transition rate
-    params.alpha = 0.1;            % Hospitalized transition rate
-    params.lambda = 0.0083;        % Recovered to susceptible rate
+    params.gamma = 0.1;            % Infection transition rate (γ > 0)
+    params.alpha = 0.1;            % Hospitalized transition rate (α > 0)
+    params.lambda = 0.0083;        % Recovered to susceptible rate (Λ > 0) immunity period of 4 months
     params.T = 1000;               % Total simulation time
     params.dt = 0.01;              % Time step for interpolation
-    params.N_values = round([10^2.5, 10^3, 10^3.5, 10^4]); % Population sizes
+    params.N_values = [316, 3162, 10000]; % Population sizes - matching SIHRS.m
     params.initial_s = 0.96;       % Initial susceptible fraction
     params.initial_i = 0.04;       % Initial infected fraction
     params.initial_h = 0;          % Initial hospitalized fraction
     params.initial_r = 0;          % Initial recovered fraction
     params.initial_d = 0;          % Initial dead fraction
     params.n_runs = 40;            % Number of stochastic runs
-    params.colors = {'#0000FF', '#FF0000', '#008000', '#FF00FF', '#FFA500'}; % Colors for plotting
-    params.R0_values = [0.95, 1.3, 2.12]; % R0 values
+    params.colors = {'#0072BD', '#77AC30', '#A2142F'}; % Colors matching SIHRS.m
+    params.R0_values = [2.12]; % R0 values
     
     % Validate parameters
     validate_params(params);
@@ -412,6 +412,7 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     title(sprintf('Renormalized Std Dev - Recovered (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('D_N^{(4)}(t)');
     grid on;
+    ylim([0, 0.05]); % Set y-axis maximum to 0.05
     
     % Plot D5 (renormalized standard deviation for dead)
     nexttile;
