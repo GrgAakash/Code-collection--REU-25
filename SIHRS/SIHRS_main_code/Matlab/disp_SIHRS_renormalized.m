@@ -369,11 +369,82 @@ function det_result = solve_deterministic_sihrs(beta, params)
 end
 
 function plot_renormalized_results(t, results, det_result, params, R0)
-    % Create figure with tiled layout for 5 compartments showing renormalized standard deviations
-    figure('Position', [100, 100, 1500, 600]);
-    tlayout = tiledlayout(2, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+    % Create 5 separate figures for each compartment showing renormalized standard deviations
     
     % Plot D1 (renormalized standard deviation for susceptible)
+    figure('Position', [100, 100, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.D1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Renormalized Std Dev - Susceptible (R_0 = %.2f)', R0));
+    xlabel('Time'); ylabel('D_N^{(1)}(t)');
+    grid on;
+    legend_labels = arrayfun(@(n) sprintf('N = %d', n), params.N_values, 'UniformOutput', false);
+    legend(legend_labels, 'Location', 'best');
+    % Save the figure
+    saveas(gcf, sprintf('SIHRS_D1_Susceptible_R0_%.2f.png', R0));
+    
+    % Plot D2 (renormalized standard deviation for infected)
+    figure('Position', [200, 200, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.D2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Renormalized Std Dev - Infected (R_0 = %.2f)', R0));
+    xlabel('Time'); ylabel('D_N^{(2)}(t)');
+    grid on;
+    legend(legend_labels, 'Location', 'best');
+    % Save the figure
+    saveas(gcf, sprintf('SIHRS_D2_Infected_R0_%.2f.png', R0));
+    
+    % Plot D3 (renormalized standard deviation for hospitalized)
+    figure('Position', [300, 300, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.D3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Renormalized Std Dev - Hospitalized (R_0 = %.2f)', R0));
+    xlabel('Time'); ylabel('D_N^{(3)}(t)');
+    grid on;
+    ylim([0, 6]); % Set y-axis maximum to 6
+    legend(legend_labels, 'Location', 'best');
+    % Save the figure
+    saveas(gcf, sprintf('SIHRS_D3_Hospitalized_R0_%.2f.png', R0));
+
+    % Plot D4 (renormalized standard deviation for recovered)
+    figure('Position', [400, 400, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.D4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Renormalized Std Dev - Recovered (R_0 = %.2f)', R0));
+    xlabel('Time'); ylabel('D_N^{(4)}(t)');
+    grid on;
+    ylim([0, 0.07]); % Set y-axis maximum to 0.07
+    legend(legend_labels, 'Location', 'best');
+    % Save the figure
+    saveas(gcf, sprintf('SIHRS_D4_Recovered_R0_%.2f.png', R0));
+    
+    % Plot D5 (renormalized standard deviation for dead)
+    figure('Position', [500, 500, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.D5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Renormalized Std Dev - Dead (R_0 = %.2f)', R0));
+    xlabel('Time'); ylabel('D_N^{(5)}(t)');
+    grid on;
+    ylim([0, 4]); % Set y-axis maximum to 4
+    legend(legend_labels, 'Location', 'best');
+    % Save the figure
+    saveas(gcf, sprintf('SIHRS_D5_Dead_R0_%.2f.png', R0));
+    
+    % Also create a combined plot for reference
+    figure('Position', [600, 600, 1500, 800]);
+    tlayout = tiledlayout(2, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+    
+    % Plot D1 in combined figure
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
@@ -383,7 +454,7 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     xlabel('Time'); ylabel('D_N^{(1)}(t)');
     grid on;
     
-    % Plot D2 (renormalized standard deviation for infected)
+    % Plot D2 in combined figure
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
@@ -393,7 +464,7 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     xlabel('Time'); ylabel('D_N^{(2)}(t)');
     grid on;
     
-    % Plot D3 (renormalized standard deviation for hospitalized)
+    % Plot D3 in combined figure
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
@@ -403,7 +474,7 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     xlabel('Time'); ylabel('D_N^{(3)}(t)');
     grid on;
 
-    % Plot D4 (renormalized standard deviation for recovered)
+    % Plot D4 in combined figure
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
@@ -412,9 +483,9 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     title(sprintf('Renormalized Std Dev - Recovered (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('D_N^{(4)}(t)');
     grid on;
-    ylim([0, 0.05]); % Set y-axis maximum to 0.05
+    ylim([0, 0.07]); % Set y-axis maximum to 0.07
     
-    % Plot D5 (renormalized standard deviation for dead)
+    % Plot D5 in combined figure
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
@@ -424,18 +495,25 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     xlabel('Time'); ylabel('D_N^{(5)}(t)');
     grid on;
     
-    % Add legend
-    legend_labels = arrayfun(@(n) sprintf('N = %d', n), params.N_values, 'UniformOutput', false);
+    % Add legend to combined figure
     lgd = legend(legend_labels, 'Orientation', 'horizontal', 'Location', 'southoutside');
     lgd.Layout.Tile = 'south';
     
-    % Add mathematical formula annotation
+    % Add mathematical formula annotation to combined figure
     annotation('textbox', [0.05, 0.02, 0.9, 0.05], ...
         'String', sprintf('D_N^{(l)}(t) = sqrt(V_N^{(l)}(t)) / |m_N^{(l)}(t)|, R_0 = %.2f', R0), ...
         'FontSize', 10, 'EdgeColor', 'none', 'HorizontalAlignment', 'center');
     
-    % Save the figure
-    saveas(gcf, sprintf('SIHRS_renormalized_std_dev_R0_%.2f.png', R0));
+    % Save the combined figure
+    saveas(gcf, sprintf('SIHRS_renormalized_std_dev_R0_%.2f_combined.png', R0));
+    
+    fprintf('Generated individual plots:\n');
+    fprintf('  - SIHRS_D1_Susceptible_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_D2_Infected_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_D3_Hospitalized_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_D4_Recovered_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_D5_Dead_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_renormalized_std_dev_R0_%.2f_combined.png\n', R0);
 end
 
 function print_renormalized_summary(results, det_result, R0)
