@@ -135,21 +135,21 @@ function sihrs_multiple_simulations_infected()
 
     # Define model parameters using struct for better performance and type safety
     params = SIHRSParams(
-        0.172,        # beta: infection rate (β > 0) 
-        0.141,        # gamma: I transition rate (γ > 0) 
+        0.255,        # beta: infection rate (β > 0) 
+        0.219,        # gamma: I transition rate (γ > 0) 
         0.1,        # alpha: H transition rate (α > 0)
-        0.007,     # lambda: R transition rate (Λ > 0)  
+        0.0083,     # lambda: R transition rate (Λ > 0) - Updated for Washington, MS
         1.0,        # pSI: probability of S to I (p_{SI} in (0,1])
         0.00,       # pII: probability of I to I (stay infected)
-        0.04,       # pIH: probability of I to H 
-        0.959,      # pIR: probability of I to R 
-        0.001,      # pID: probability of I to D
-        0.01,       # pHH: probability of H to H (stay hospitalized)
-        0.9882,     # pHR: probability of H to R
-        0.0018,     # pHD: probability of H to D
+        0.04,     # pIH: probability of I to H - Updated from P(IH) calculation
+        0.959,     # pIR: probability of I to R - Updated to sum to 1
+        0.001,     # pID: probability of I to D - Updated from P(ID) calculation
+        0.00,       # pHH: probability of H to H (stay hospitalized) - Updated
+        0.9982,      # pHR: probability of H to R - Updated
+        0.0018,      # pHD: probability of H to D - Updated
         0.02,       # pRR: probability of R to R (stay recovered)
         0.98,       # pRS: probability of R to S
-        620,        # tmax: simulation end time (extended for Washington, MS data)
+        630,        # tmax: simulation end time (extended for Washington, MS data)
         s0,         # s0: initial susceptible proportion
         i0,         # i0: initial infected proportion
         h0,         # h0: initial hospitalized proportion

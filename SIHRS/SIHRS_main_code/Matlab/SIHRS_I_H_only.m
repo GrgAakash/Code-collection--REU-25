@@ -1,28 +1,28 @@
 function sihrs_I_H_analysis()
-    % SIHRS Epidemic Model - I and H Compartments Only (MATLAB Version)
+    % SIHRS Epidemic Model - I and H Compartments 
     %
     % This script focuses specifically on plotting the Infected (I) and 
     % Hospitalized (H) compartments from the SIHRS epidemic model with death.
-    
-    % Define model parameters structure for SIHRS with death model
-    params = struct(...
-        'beta', 0.212, ...    % infection rate (β > 0)
+    % Model parameters - tweak beta, gamma,pSI,pII to get reasonable R₀ values (within 4-5% of the targeted R₀)
+    % Justification for the parameters (except for s0,i0,h0,r0,d0) are in the justification.txt file.
+params = struct(...
+        'beta',0.212, ...    % infection rate (β > 0)
         'gamma', 0.10, ...   % I transition rate (γ > 0)
-        'alpha', 0.09, ...   % H transition rate (α > 0)
-        'lambda', 0.01, ...   % R transition rate (λ > 0) immunity period
+        'alpha', 0.1, ...   % H transition rate (α > 0)
+        'lambda', 0.0083, ...  % R transition rate (Λ > 0) immunity period of 4 months is assumed
         'pSI', 1.0, ...     % probability of S to I (p_{SI} in (0,1])
         'pII', 0.0, ...     % probability of I to I (stay infected)
-        'pIH', 0.1, ...      % probability of I to H
-        'pIR', 0.88, ...     % probability of I to R
-        'pID', 0.02, ...    % probability of I to D
-        'pHH', 0.0, ...     % probability of H to H (stay hospitalized)
-        'pHR', 0.92, ...     % probability of H to R
-        'pHD', 0.08, ...     % probability of H to D
+        'pIH', 0.004, ...    % probability of I to H
+        'pIR', 0.959, ...     % probability of I to R
+        'pID', 0.001, ...    % probability of I to D
+        'pHH', 0.01, ...     % probability of H to H (stay hospitalized)
+        'pHR', 0.9882, ...     % probability of H to R
+        'pHD', 0.0018, ...     % probability of H to D
         'pRR', 0.02, ...     % probability of R to R (stay recovered)
         'pRS', 0.98, ...     % probability of R to S
         'tmax', 1000, ...    % simulation end time
-        's0', 0.96, ...      % initial susceptible proportion
-        'i0', 0.04, ...      % initial infected proportion
+        's0', 0.96, ...      % initial susceptible proportion   %For most real world data, s0 is near 0.999 or something close, but for now we will use 0.96 as it makes the plots look better
+        'i0', 0.04, ...      % initial infected proportion      %For most real world data, i0 is near 0.001 or something close, but for now we will use 0.04 as it makes the plots look better
         'h0', 0.0, ...      % initial hospitalized proportion
         'r0', 0.0, ...      % initial recovered proportion
         'd0', 0.0 ...       % initial dead proportion
@@ -31,15 +31,15 @@ function sihrs_I_H_analysis()
     % Validate parameters
     validateParameters(params);
     
-    % Validate initial conditions sum to 1
+    % Initial conditions must sum to 1 - basic sanity check
     if abs((params.s0 + params.i0 + params.h0 + params.r0 + params.d0) - 1) > 1e-10
         error('Initial conditions must sum to 1');
     end
     
-    % Population sizes to test
+    % Test different population sizes to see stochastic effects
     N_values = [316, 3162, 10000];
     
-    % Input validation
+    % Basic input validation
     if any(N_values <= 0)
         error('Population sizes must be positive integers');
     end
@@ -55,12 +55,12 @@ function sihrs_I_H_analysis()
             fprintf('Completed N = %d\n', N_values(idx));
         end
         
-        % Solve deterministic model
+        % Solve the deterministic model for comparison
         fprintf('Solving deterministic model...\n');
         deterministic_result = solve_deterministic_sihrs(params);
         fprintf('Deterministic model completed\n');
         
-        % Plot I and H focused analysis
+        % Generate the plots
         fprintf('Generating I and H focused plots...\n');
         plot_I_H_compartments(results, N_values, deterministic_result, params);
         fprintf('Plots generated and saved\n');

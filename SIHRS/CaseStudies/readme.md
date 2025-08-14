@@ -1,58 +1,109 @@
-# 🏥 COVID-19 Hospitalization Data Extraction & Analysis
+# Case Study - SIHRS Model Implementation
 
-## 📄 Data Source
+The relevant case and death data by county are obtained from the [New York Times COVID-19 Data repository](https://github.com/nytimes/covid-19-data).
 
-We use hospitalization data from the **[HealthData.gov COVID-19 Hospital Report](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/uqq2-txqb/about_data)**. This dataset is also used by *The New York Times* to plot COVID-19 hospitalization trends.
+## Overview
 
-> **Note:** While the NYT uses **Health Service Areas (HSAs)** that intersect a particular County(say Tuscaloosa), we focus **only on hospitals within that County**. As a result, hospitalization peaks may appear slightly lower in our analysis compared to the **[NYT Interactive: Tuscaloosa, Alabama COVID‑19 Cases](https://www.nytimes.com/interactive/2021/us/tuscaloosa-alabama-covid-cases.html)**.
+This directory contains the implementation of the SIHRS (Susceptible-Infected-Hospitalized-Recovered-Susceptible) epidemic model with death compartments for Carson City, Nevada. The models simulate COVID-19 dynamics from March 2020 to December 2021 using both deterministic and stochastic approaches.
 
----
+## Population & Data Context
 
-## 🧾 Data Processing (Power Query)
+- **Location**: Carson City, Nevada & Washington, MS
+- **Population**: 56,000 residents & 43,000 residents.
+- **Data Sources**: Real COVID-19 case counts, deaths, and hospitalization records
 
-After downloading the CSV file, we load it into **Power Query** in Excel and apply the following filter to extract relevant rows:
+## Code Files Overview
 
-```powerquery
-Table.SelectRows(
-  #"Changed column type",
-  each
-    ([collection_week] > #date(2020, 3, 11) and
-     [collection_week] <= #date(2021, 12, 31)) and
-    ([total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg] <> null and
-     [total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg] <> -999999) and
-    ([fips_code] = 1125)
-)
-```
+### 1. `SIHRS_multiple_simulations_infected.jl` - Main Pandemic Model
+**Purpose**: Simulates the full COVID-19 pandemic trajectory from Patient Zero
 
-- `1125` is the **FIPS code** for **Tuscaloosa County**.
-- The values `null` and `-999999` represent missing or unreported data for that 7-day period.
+**What it does**:
+- Starts simulation from **March 25, 2020** (first detected case)
+- Runs **59 stochastic simulations** for uncertainty quantification
+- Focuses on **infected cases and deaths** dynamics
+- Uses real Carson City data for initial conditions and validation
+- Generates comprehensive pandemic trajectory analysis
 
----
+**Key Features**:
+- **Typed structs** for optimal performance (`SIHRSParams`)
+- **R₀ = 1.23** (targeted reproduction number)
+- **Parameter validation** with mathematical constraints
+- **Real data integration** for initial conditions and comparison
 
-## ❌ Why Not Tuscaloosa?
+**Outputs**:
+- `SIHRS_Carson_City_Full_Pandemic_bandwidth.png` - 90% prediction intervals
+- `SIHRS_Carson_City_Full_Pandemic_trajectories.png` - All stochastic trajectories
+- `SIHRS_Carson_City_Full_Pandemic_active_deaths.png` - Active death proportions
+- `SIHRS_Carson_City_Full_Pandemic_cumulative_deaths.png` - Cumulative deaths
 
-Due to its **high population**, we chose not to use Tuscaloosa County. Instead, we selected smaller counties with:
-
-- Population **less than 60,000**
-- Estimated **R_0** between **1.0 and 1.5**
-- Sufficient hospitalization data (i.e., not missing or invalid)
-
----
-
-## ✅ Selected Counties
-
-| R₀     | Population | FIPS  | Rating  |
-|--------|------------|-------|---------|
-| 1.047  | 41,411     | 54069 | 7/10    |
-| 1.167  | 43,909     | 28151 | 9/10    |
-| 1.218  | 46,963     | 40113 | 8/10    |
-| 1.180  | 39,228     | 28113 | 9/10    |
-| 1.222  | 55,916     | 32510 | 10/10   |
-| 1.399  | 41,083     | 51683 | 8/10    |
+**Use Case**: Understanding the full pandemic trajectory and uncertainty from the beginning
 
 ---
 
-## 📌 Notes
+### 2. `SIHRS_hospitalized.jl` - Hospitalization Dynamics Model
+**Purpose**: Analyzes hospitalization patterns during the pandemic
 
-- These ratings are **subjective**, based on data quality, completeness, and how well the counties match our target criteria.
-- The selected counties can be used for simulations or comparative analysis across regions with different epidemic dynamics.
+**What it does**:
+- Simulates from **March 25, 2020** (same start as main model)
+- Runs **55 stochastic simulations** 
+- Tracks **hospitalization counts** in addition to infections/deaths
+- Compares simulation results with real hospitalization data
+- Focuses on healthcare resource planning
+
+**Key Features**:
+- **Dict-based parameters** (legacy implementation)
+- **R₀ = 1.23** (targeted reproduction number)
+- **Hospitalization data integration** from real records
+- **Active/Daily death calculation** 
+
+**Outputs**:
+- `SIHRS_Carson_City_Hospitalization_bandwidth.png` - Hospitalization prediction intervals
+- `SIHRS_Carson_City_Hospitalization_trajectories.png` - Hospitalization trajectories
+
+**Use Case**: Healthcare capacity planning and hospitalization forecasting
+
+---
+
+### 3. `SIHRS_hospitalization_cheating.jl` - Mid-Pandemic Forecasting Model
+**Purpose**: "Cheating" simulation starting from a known mid-pandemic state. "Cheating" is a tongue in check word as we are using R₀ which is for the early stage exponential growth (Around March - April) but are using active cases, deaths, hospitalized data of August 2. 
+
+**What it does**:
+- Starts simulation from **August 2, 2020** (mid-pandemic)
+- Uses **pre-calculated initial conditions** based on real data
+- Runs **55 stochastic simulations**
+- Focuses on **short-term hospitalization forecasting**
+- Demonstrates forecasting from known state vs. Patient Zero
+
+**Key Features**:
+- **Typed structs** for optimal performance
+- **R₀ = 1.23** (targeted reproduction number)
+- **Known initial conditions**: S=99.42%, I=0.12%, H=0.01%, R=0.44%, D=0.01%
+- **8-month simulation period** (240 days, August 2, 2020 - April 2021)
+
+**Outputs**:
+- `SIHRS_Carson_City_Hospitalization_August2_bandwidth.png` - August 2 start bandwidth
+- `SIHRS_Carson_City_Hospitalization_August2_trajectories.png` - August 2 start trajectories
+
+**Use Case**: Demonstrating forecasting accuracy when starting from known epidemic state
+
+---
+
+## Data Files
+
+### Input Data
+- `carson_city_combined.csv` - Combined cases and deaths data (filtered NYT county-level data for Carson City; columns: `date, county, state, fips, cases, deaths`)
+
+### Output Data
+- `carson_city_active_cases.csv` - Processed active case counts
+- `carson_city_daily_deaths.csv` - Daily deaths and 7-day moving average
+
+## How the CSVs are generated
+
+- `carson_city_active_cases.csv` (from `extract_active_cases.jl`):
+  - Active cases are computed as cumulative cases minus the value 14 days earlier: `active_cases[t] = max(cases[t] - cases[t-14], 0)`.
+  - Includes columns: `date, cumulative_cases, cumulative_deaths, active_cases`.
+
+- `carson_city_daily_deaths.csv` (from `extract_daily_deaths.jl`):
+  - Daily deaths are computed by differencing cumulative deaths: `daily[t] = deaths[t] - deaths[t-1]` (first day equals cumulative).
+  - Adds a 7-day moving average: `moving_avg_7day` for smoothing.
+  - Used by plotting code as the "active deaths" reference via the 7-day moving average.

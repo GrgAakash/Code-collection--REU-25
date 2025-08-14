@@ -74,12 +74,12 @@ function sihrs_multiple_simulations()
         "pIH" => 0.04,        # probability of I to H 
         "pIR" => 0.959,        # probability of I to R 
         "pID" => 0.001,       # probability of I to D
-        "pHH" => 0.01,        # probability of H to H (stay hospitalized)
-        "pHR" => 0.9882,      # probability of H to R
+        "pHH" => 0.00,        # probability of H to H (stay hospitalized)
+        "pHR" => 0.9982,      # probability of H to R
         "pHD" => 0.0018,      # probability of H to D
         "pRR" => 0.02,        # probability of R to R (stay recovered)
         "pRS" => 0.98,        # probability of R to S
-        "tmax" => 650,        # simulation end time (extended for Washington, MS data)
+        "tmax" => 630,        # simulation end time (extended for Washington, MS data)
         "s0" => s0,           # initial susceptible proportion
         "i0" => i0,           # initial infected proportion
         "h0" => h0,           # initial hospitalized proportion

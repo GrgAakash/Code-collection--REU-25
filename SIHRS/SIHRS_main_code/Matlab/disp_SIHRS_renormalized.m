@@ -21,6 +21,7 @@ function sihrs_renormalized_simulation()
     rng(1);
     
     % Centralized parameters for SIHRS with death - matching SIHRS.m
+    params.beta = 0.212;           % Infection rate (β > 0) - matching SIHRS.m
     params.pSI = 1.0;              % Infection probability (S to I)
     params.pII = 0.0;              % probability of I to I (stay infected)
     params.pIH = 0.04;             % probability of I to H
@@ -43,17 +44,18 @@ function sihrs_renormalized_simulation()
     params.initial_r = 0;          % Initial recovered fraction
     params.initial_d = 0;          % Initial dead fraction
     params.n_runs = 40;            % Number of stochastic runs
-    params.colors = {'#0072BD', '#77AC30', '#A2142F'}; % Colors matching SIHRS.m
-    params.R0_values = [2.12]; % R0 values
+    params.colors = {'#0072BD','#77AC30', '#A2142F'}; % Colors matching SIHRS.m
+    % R0 will be calculated from parameters instead of hardcoded
     
     % Validate parameters
     validate_params(params);
     
-    % Run simulations for each R0
-    for r_idx = 1:length(params.R0_values)
-        R0 = params.R0_values(r_idx);
-        simulate_and_analyze_renormalized(params, R0);
-    end
+    % Calculate R0 from parameters (same formula as SIHRS.m)
+    R0 = params.pSI * params.beta / (params.gamma * (1 - params.pII));
+    fprintf('Calculated R₀ = %.4f from parameters\n', R0);
+    
+    % Run simulation with calculated R0
+    simulate_and_analyze_renormalized(params, R0);
 end
 
 function validate_params(params)
@@ -90,8 +92,8 @@ function validate_params(params)
 end
 
 function simulate_and_analyze_renormalized(params, R0)
-    % Calculate beta from R0
-    beta = R0 * params.gamma / params.pSI;
+    % Use beta directly from params (no need to calculate from R0)
+    beta = params.beta;
     
     % Precompute time vector
     t = 0:params.dt:params.T;
@@ -380,6 +382,9 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     title(sprintf('Renormalized Std Dev - Susceptible (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('D_N^{(1)}(t)');
     grid on;
+    % Calculate dynamic y-axis maximum: 1.2 times the peak value across all N values
+    max_D1 = max(cellfun(@(r) max(r.D1), results));
+    ylim([0, max_D1 * 1.2]);
     legend_labels = arrayfun(@(n) sprintf('N = %d', n), params.N_values, 'UniformOutput', false);
     legend(legend_labels, 'Location', 'best');
     % Save the figure
@@ -453,6 +458,8 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     title(sprintf('Renormalized Std Dev - Susceptible (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('D_N^{(1)}(t)');
     grid on;
+    % Use the same dynamic y-axis maximum for consistency
+    ylim([0, max_D1 * 1.2]);
     
     % Plot D2 in combined figure
     nexttile;
@@ -473,6 +480,7 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     title(sprintf('Renormalized Std Dev - Hospitalized (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('D_N^{(3)}(t)');
     grid on;
+    ylim([0, 6]); % Set y-axis maximum to 6 to match individual plot
 
     % Plot D4 in combined figure
     nexttile;
@@ -494,6 +502,7 @@ function plot_renormalized_results(t, results, det_result, params, R0)
     title(sprintf('Renormalized Std Dev - Dead (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('D_N^{(5)}(t)');
     grid on;
+    ylim([0, 4]); % Set y-axis maximum to 4 to match individual plot
     
     % Add legend to combined figure
     lgd = legend(legend_labels, 'Orientation', 'horizontal', 'Location', 'southoutside');

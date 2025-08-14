@@ -134,8 +134,8 @@ function sihrs_multiple_simulations_infected()
 
     # Define model parameters using struct for better performance and type safety
     params = SIHRSParams(
-        0.160,        # beta: infection rate (β > 0) - DECREASED to maintain R₀=1.25
-        0.126,        # gamma: I transition rate (γ > 0) - DECREASED for later peak 
+        0.160,        # beta: infection rate (β > 0)
+        0.126,        # gamma: I transition rate (γ > 0) 
         0.1,        # alpha: H transition rate (α > 0)
         0.007,     # lambda: R transition rate (Λ > 0)  
         1.0,        # pSI: probability of S to I (p_{SI} in (0,1])
