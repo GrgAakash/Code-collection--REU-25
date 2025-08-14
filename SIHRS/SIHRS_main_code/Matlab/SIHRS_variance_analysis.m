@@ -32,17 +32,25 @@ function SIHRS_variance_analysis()
     
     % Test different population sizes to see stochastic effects
     N_values = [316, 3162, 10000];
-    num_trials = 15; % Number of trials for each N (increased for better statistical power)
+    num_trials = 15; % Number of trials per batch
+    num_batches = 5; % Number of batches for each N
     
     % Time grid for analysis
     t_grid = linspace(0, params.tmax, 1000);
     
-    % Pre-allocate storage for variance analysis
-    S_var_all = zeros(length(N_values), length(t_grid), num_trials);
-    I_var_all = zeros(length(N_values), length(t_grid), num_trials);
-    H_var_all = zeros(length(N_values), length(t_grid), num_trials);
-    R_var_all = zeros(length(N_values), length(t_grid), num_trials);
-    D_var_all = zeros(length(N_values), length(t_grid), num_trials);
+    % Pre-allocate storage for variance analysis (5 batches x 15 trials each)
+    S_var_all = zeros(length(N_values), length(t_grid), num_trials, num_batches);
+    I_var_all = zeros(length(N_values), length(t_grid), num_trials, num_batches);
+    H_var_all = zeros(length(N_values), length(t_grid), num_trials, num_batches);
+    R_var_all = zeros(length(N_values), length(t_grid), num_trials, num_batches);
+    D_var_all = zeros(length(N_values), length(t_grid), num_trials, num_batches);
+    
+    % Pre-allocate storage for batch-averaged expected variance
+    S_expected_var = zeros(length(N_values), length(t_grid), num_batches);
+    I_expected_var = zeros(length(N_values), length(t_grid), num_batches);
+    H_expected_var = zeros(length(N_values), length(t_grid), num_batches);
+    R_expected_var = zeros(length(N_values), length(t_grid), num_batches);
+    D_expected_var = zeros(length(N_values), length(t_grid), num_batches);
     
     % Cell arrays to store theoretical variance data
     v_s_theory = cell(length(N_values), 1);
@@ -56,19 +64,33 @@ function SIHRS_variance_analysis()
         N = N_values(idx);
         fprintf('Running variance analysis for N = %d...\n', N);
         
-        % Run multiple stochastic simulations
-        for trial = 1:num_trials
-            fprintf('  Trial %d/%d\n', trial, num_trials);
+        % Run 5 batches of 15 trials each
+        for batch = 1:num_batches
+            fprintf('  Batch %d/%d:\n', batch, num_batches);
             
-            % Run single stochastic simulation
-            result = sihrs_agent_model(N, params);
+            % Run 15 trials for this batch
+            for trial = 1:num_trials
+                fprintf('    Trial %d/%d\n', trial, num_trials);
+                
+                % Run single stochastic simulation
+                result = sihrs_agent_model(N, params);
+                
+                % Interpolate variance data onto common time grid
+                S_var_all(idx, :, trial, batch) = interp1(result.T, result.vs, t_grid, 'linear', 0);
+                I_var_all(idx, :, trial, batch) = interp1(result.T, result.vi, t_grid, 'linear', 0);
+                H_var_all(idx, :, trial, batch) = interp1(result.T, result.vh, t_grid, 'linear', 0);
+                R_var_all(idx, :, trial, batch) = interp1(result.T, result.vr, t_grid, 'linear', 0);
+                D_var_all(idx, :, trial, batch) = interp1(result.T, result.vd, t_grid, 'linear', 0);
+            end
             
-            % Interpolate variance data onto common time grid
-            S_var_all(idx, :, trial) = interp1(result.T, result.vs, t_grid, 'linear', 0);
-            I_var_all(idx, :, trial) = interp1(result.T, result.vi, t_grid, 'linear', 0);
-            H_var_all(idx, :, trial) = interp1(result.T, result.vh, t_grid, 'linear', 0);
-            R_var_all(idx, :, trial) = interp1(result.T, result.vr, t_grid, 'linear', 0);
-            D_var_all(idx, :, trial) = interp1(result.T, result.vd, t_grid, 'linear', 0);
+            % Calculate expected variance for this batch (average across 15 trials)
+            S_expected_var(idx, :, batch) = mean(S_var_all(idx, :, :, batch), 3);
+            I_expected_var(idx, :, batch) = mean(I_var_all(idx, :, :, batch), 3);
+            H_expected_var(idx, :, batch) = mean(H_var_all(idx, :, :, batch), 3);
+            R_expected_var(idx, :, batch) = mean(R_var_all(idx, :, :, batch), 3);
+            D_expected_var(idx, :, batch) = mean(D_var_all(idx, :, :, batch), 3);
+            
+            fprintf('    Batch %d expected variance calculated\n', batch);
         end
         
         %% Theoretical Variance Calculation using ODE solution
@@ -147,7 +169,7 @@ function SIHRS_variance_analysis()
     end
     
     %% Plotting Expected Variance Analysis
-    plot_variance_error_bars(N_values, t_grid, S_var_all, I_var_all, H_var_all, R_var_all, D_var_all, ...
+    plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_var, H_expected_var, R_expected_var, D_expected_var, ...
         v_s_theory, v_i_theory, v_h_theory, v_r_theory, v_d_theory);
     
     fprintf('\nExpected variance analysis completed successfully!\n');
@@ -389,14 +411,14 @@ end
 
 
 
-function plot_variance_error_bars(N_values, t_grid, S_var_all, I_var_all, H_var_all, R_var_all, D_var_all, ...
+function plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_var, H_expected_var, R_expected_var, D_expected_var, ...
                                 v_s_theory, v_i_theory, v_h_theory, v_r_theory, v_d_theory)
-    % Create error bar plots showing expected variance ranges with theoretical reference
+    % Create error bar plots showing final expected variance (average of 5 batches) vs theoretical
     % Following the new conjecture: E[V_N^(l)(t)] proportional to (1/N) x population_proportions
     dt = 2; % Half width for time intervals around each midpoint
     midpoints = 5:dt*2:95; % Time points for analysis (covering most of 100-day simulation)
     compartments = {'Susceptible', 'Infected', 'Hospitalized', 'Recovered', 'Dead'};
-    all_sim_vars = {S_var_all, I_var_all, H_var_all, R_var_all, D_var_all};
+    all_sim_vars = {S_expected_var, I_expected_var, H_expected_var, R_expected_var, D_expected_var};
     all_theory_vars = {v_s_theory, v_i_theory, v_h_theory, v_r_theory, v_d_theory};
     colors = lines(length(N_values));
     
@@ -410,7 +432,8 @@ function plot_variance_error_bars(N_values, t_grid, S_var_all, I_var_all, H_var_
             grid on;
             N = N_values(n_idx);
             
-            all_trials_data = squeeze(all_sim_vars{comp_idx}(n_idx, :, :))';
+            % Get batch data for this compartment and N
+            batch_data = squeeze(all_sim_vars{comp_idx}(n_idx, :, :)); % [time_points x 5_batches]
             theory_data = all_theory_vars{comp_idx}{n_idx};
 
             for t_idx = 1:length(midpoints)
@@ -423,19 +446,19 @@ function plot_variance_error_bars(N_values, t_grid, S_var_all, I_var_all, H_var_
                     continue;
                 end
              
-                vals_in_window = all_trials_data(:, in_window_indices);
+                % Get batch values in this time window
+                batch_vals_in_window = batch_data(in_window_indices, :);
                 
-                % Calculate expected variance following the new conjecture:
-                % For each trial, find min and max in the time window
-                trial_mins = min(vals_in_window, [], 2);  % Min of each trial
-                trial_maxs = max(vals_in_window, [], 2);  % Max of each trial
+                % Calculate min and max across batches in this time window
+                batch_mins = min(batch_vals_in_window, [], 1);  % Min of each batch
+                batch_maxs = max(batch_vals_in_window, [], 1);  % Max of each batch
 
-                % Average across trials to get expected variance bounds
-                y_min_avg = mean(trial_mins(~isnan(trial_mins)));  % E[min V_N^(l)(t)]
-                y_max_avg = mean(trial_maxs(~isnan(trial_maxs)));  % E[max V_N^(l)(t)]
+                % Calculate final expected variance bounds (average across 5 batches)
+                y_min_avg = mean(batch_mins(~isnan(batch_mins)));  % Final E[min V_N^(l)(t)]
+                y_max_avg = mean(batch_maxs(~isnan(batch_maxs)));  % Final E[max V_N^(l)(t)]
 
                 if ~isnan(y_min_avg) && ~isnan(y_max_avg)
-                    % Plot error bar showing expected variance range
+                    % Plot error bar showing final expected variance range
                     plot([t_mid, t_mid], [y_min_avg, y_max_avg], 'Color', colors(n_idx,:), 'LineWidth', 1.5);
                     
                     % Plot theoretical expected variance value
@@ -446,21 +469,21 @@ function plot_variance_error_bars(N_values, t_grid, S_var_all, I_var_all, H_var_
             end
         
             xlabel('Time');
-            ylabel('Expected Variance E[V_N^{(l)}(t)]');
-            title([compartments{comp_idx}, ' - N = ', num2str(N)]);
-            legend('Simulated Expected Range', 'Theoretical Expected Value', 'Location', 'best');
+            ylabel('Final Expected Variance E[V_N^{(l)}(t)]');
+            title([compartments{comp_idx}, ' - N = ', num2str(N), ' (5 batches x 15 runs)']);
+            legend('Simulated Final Expected Range', 'Theoretical Expected Value', 'Location', 'best');
             hold off;
         end
         
         % Add title for each compartment figure
-        sgtitle([compartments{comp_idx}, ' - Expected Variance Analysis'], 'FontSize', 16);
+        sgtitle([compartments{comp_idx}, ' - Final Expected Variance Analysis (5 Batches x 15 Runs)'], 'FontSize', 16);
         
         % Save each compartment figure separately
-        saveas(gcf, ['SIHRS_', compartments{comp_idx}, '_expected_variance.png']);
+        saveas(gcf, ['SIHRS_', compartments{comp_idx}, '_final_expected_variance.png']);
     end
     
     fprintf('Created separate figures for each compartment:\n');
     for comp_idx = 1:numel(compartments)
-        fprintf('  - %s: SIHRS_%s_expected_variance.png\n', compartments{comp_idx}, compartments{comp_idx});
+        fprintf('  - %s: SIHRS_%s_final_expected_variance.png\n', compartments{comp_idx}, compartments{comp_idx});
     end
 end
