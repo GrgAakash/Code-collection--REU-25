@@ -19,7 +19,7 @@ function SIHRS_variance_analysis()
         'pHD', 0.0018, ...           % probability of H to D
         'pRR', 0.02, ...             % probability of R to R (stay recovered)
         'pRS', 0.98, ...             % probability of R to S
-        'tmax', 100, ...            % simulation end time
+        'tmax', 1000, ...            % simulation end time
         's0', 0.96, ...              % initial susceptible proportion
         'i0', 0.04, ...              % initial infected proportion
         'h0', 0.0, ...               % initial hospitalized proportion
@@ -31,7 +31,7 @@ function SIHRS_variance_analysis()
     validateParameters(params);
     
     % Test different population sizes to see stochastic effects
-    N_values = [316, 3162, 10000];
+    N_values = [1600, 3162, 4000, 6162];
     num_trials = 15; % Number of trials per batch
     num_batches = 5; % Number of batches for each N
     
@@ -123,7 +123,7 @@ function SIHRS_variance_analysis()
     
     %% Time-Averaged Variance Analysis
     % Define time intervals for analysis [T1, T2]
-    time_intervals = {[100, 200], [300, 400], [500, 600], [700, 800]};
+    time_intervals = {[100, 200], [300, 400], [500, 600], [700, 800],[800, 900],[900, 1000]};
     
     fprintf('\n=== TIME-AVERAGED VARIANCE ANALYSIS ===\n');
     for interval_idx = 1:length(time_intervals)
@@ -214,7 +214,7 @@ function result = sihrs_agent_model(N, params)
     d0 = round(params.d0 * N);
     
     % Initialize arrays
-    max_events = N * 10;
+    max_events = N * 30;
     T = zeros(1, max_events);
     S_prop = zeros(1, max_events);
     I_prop = zeros(1, max_events);
@@ -415,19 +415,21 @@ function plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_v
                                 v_s_theory, v_i_theory, v_h_theory, v_r_theory, v_d_theory)
     % Create error bar plots showing final expected variance (average of 5 batches) vs theoretical
     % Following the new conjecture: E[V_N^(l)(t)] proportional to (1/N) x population_proportions
-    dt = 2; % Half width for time intervals around each midpoint
-    midpoints = 5:dt*2:95; % Time points for analysis (covering most of 100-day simulation)
+    dt = 2; % Half width for time intervals around each midpoint (adjusted for 700-day simulation)
+    midpoints = 5:dt*2:1000; % Time points for analysis (covering most of 700-day simulation)
     compartments = {'Susceptible', 'Infected', 'Hospitalized', 'Recovered', 'Dead'};
     all_sim_vars = {S_expected_var, I_expected_var, H_expected_var, R_expected_var, D_expected_var};
     all_theory_vars = {v_s_theory, v_i_theory, v_h_theory, v_r_theory, v_d_theory};
     colors = lines(length(N_values));
     
-    % Create separate figures for each compartment
+    % Create separate figures for each compartment and each N value
+    created_files = {};
+    file_count = 0;
+    
     for comp_idx = 1:numel(compartments)
-        figure('Position', [100 + (comp_idx-1)*50, 100 + (comp_idx-1)*50, 1600, 800]);
-        
         for n_idx = 1:numel(N_values)
-            subplot(1, length(N_values), n_idx);
+            % Create a new figure for each compartment-N combination
+            figure('Position', [100 + file_count*50, 100 + file_count*50, 800, 600]);
             hold on;
             grid on;
             N = N_values(n_idx);
@@ -436,6 +438,9 @@ function plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_v
             batch_data = squeeze(all_sim_vars{comp_idx}(n_idx, :, :)); % [time_points x 5_batches]
             theory_data = all_theory_vars{comp_idx}{n_idx};
 
+            % Plot theoretical variance curve (smooth line)
+            plot(t_grid, theory_data, '--', 'Color', 'k', 'LineWidth', 2, 'DisplayName', 'Theoretical Curve');
+            
             for t_idx = 1:length(midpoints)
                 t_mid = midpoints(t_idx);
                 t_min = t_mid - dt;
@@ -459,31 +464,29 @@ function plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_v
 
                 if ~isnan(y_min_avg) && ~isnan(y_max_avg)
                     % Plot error bar showing final expected variance range
-                    plot([t_mid, t_mid], [y_min_avg, y_max_avg], 'Color', colors(n_idx,:), 'LineWidth', 1.5);
-                    
-                    % Plot theoretical expected variance value
-                    [~, time_index] = min(abs(t_grid - t_mid));
-                    y_theory = theory_data(time_index); 
-                    plot(t_mid, y_theory, '_', 'Color', 'k', 'MarkerSize', 12, 'LineWidth', 2);
+                    plot([t_mid, t_mid], [y_min_avg, y_max_avg], 'Color', colors(n_idx,:), 'LineWidth', 1.5, 'DisplayName', 'Expected Variance Range');
                 end
             end
         
             xlabel('Time');
-            ylabel('Final Expected Variance E[V_N^{(l)}(t)]');
+            ylabel('Variance');
             title([compartments{comp_idx}, ' - N = ', num2str(N), ' (5 batches x 15 runs)']);
-            legend('Simulated Final Expected Range', 'Theoretical Expected Value', 'Location', 'best');
+            legend('Theoretical Curve', 'Expected Variance Range', 'Location', 'best');
+            
+            % Save each individual figure
+            filename = ['SIHRS_', compartments{comp_idx}, '_N', num2str(N), '_variance.png'];
+            saveas(gcf, filename);
+            
+            file_count = file_count + 1;
+            created_files{end+1} = filename;
+            
             hold off;
+            close(gcf); % Close the figure to free memory
         end
-        
-        % Add title for each compartment figure
-        sgtitle([compartments{comp_idx}, ' - Final Expected Variance Analysis (5 Batches x 15 Runs)'], 'FontSize', 16);
-        
-        % Save each compartment figure separately
-        saveas(gcf, ['SIHRS_', compartments{comp_idx}, '_final_expected_variance.png']);
     end
     
-    fprintf('Created separate figures for each compartment:\n');
-    for comp_idx = 1:numel(compartments)
-        fprintf('  - %s: SIHRS_%s_final_expected_variance.png\n', compartments{comp_idx}, compartments{comp_idx});
+    fprintf('Created %d separate figures:\n', length(created_files));
+    for i = 1:length(created_files)
+        fprintf('  - %s\n', created_files{i});
     end
 end
