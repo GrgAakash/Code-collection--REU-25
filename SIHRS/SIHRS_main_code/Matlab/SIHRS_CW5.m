@@ -130,7 +130,11 @@ function result = sihrs_agent_model(N, params)
     end
     
     % Preallocate arrays for better performance
-    max_events = N * 10; % Estimate maximum number of events
+    max_events = N * 80; % Estimate maximum number of events
+%Cwang change it to 30
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     T = zeros(1, max_events);
     S_prop = zeros(1, max_events);
     I_prop = zeros(1, max_events);
