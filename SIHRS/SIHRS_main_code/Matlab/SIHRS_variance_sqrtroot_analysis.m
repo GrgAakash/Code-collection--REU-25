@@ -416,7 +416,9 @@ function plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_v
     % Create error bar plots showing final expected sqrt(variance) (average of 5 batches) vs theoretical
     % Following the new conjecture: E[sqrt(V_N^(l)(t))] proportional to sqrt((1/N) x population_proportions)
     dt = 2; % Half width for time intervals around each midpoint (adjusted for 700-day simulation)
-    midpoints = 5:dt*2:1000; % Time points for analysis (covering most of 700-day simulation)
+    all_midpoints = 5:dt*2:1000; % All possible time points for analysis
+    error_bar_interval = 4; % Show error bar every nth window
+    midpoints = all_midpoints(1:error_bar_interval:end); % Reduced set of midpoints for error bars
     compartments = {'Susceptible', 'Infected', 'Hospitalized', 'Recovered', 'Dead'};
     all_sim_vars = {S_expected_var, I_expected_var, H_expected_var, R_expected_var, D_expected_var};
     all_theory_vars = {v_s_theory, v_i_theory, v_h_theory, v_r_theory, v_d_theory};
@@ -470,6 +472,10 @@ function plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_v
             ylabel('Sqrt(Variance)');
             title([compartments{comp_idx}, ' - N = ', num2str(N), ' (5 batches x 15 runs)']);
             legend('Theoretical Curve', 'Expected Sqrt(Variance) Range', 'Location', 'best');
+            
+            % Add inset zoom plot for interesting region
+            add_inset_zoom(gca, t_grid, theory_data, midpoints, batch_data, colors(n_idx,:), dt, N);
+            
             hold off;
         end
         
@@ -484,4 +490,93 @@ function plot_variance_error_bars(N_values, t_grid, S_expected_var, I_expected_v
     for comp_idx = 1:numel(compartments)
         fprintf('  - %s: SIHRS_%s_final_expected_sqrtvariance.png\n', compartments{comp_idx}, compartments{comp_idx});
     end
+end
+
+function add_inset_zoom(main_ax, t_grid, theory_data, midpoints, batch_data, error_color, dt, N)
+    % Add an inset zoom plot to show detailed view of an interesting region
+    
+    % Define zoom region (adjust these values based on your data)
+    zoom_start = 100;  % Start time for zoom region
+    zoom_end = 300;    % End time for zoom region
+    
+    % Find indices for zoom region
+    zoom_indices = t_grid >= zoom_start & t_grid <= zoom_end;
+    if sum(zoom_indices) == 0
+        return; % Skip if no data in zoom region
+    end
+    
+    % Get current figure and main axes position
+    main_pos = get(main_ax, 'Position');
+    
+    % Create inset axes (positioned in bottom-right corner of main plot)
+    inset_width = 0.25;  % Width as fraction of main plot
+    inset_height = 0.25; % Height as fraction of main plot
+    inset_x = main_pos(1) + main_pos(3) - inset_width - 0.05;  % Right side with margin
+    inset_y = main_pos(2) + 0.05;  % Bottom with margin
+    
+    inset_ax = axes('Position', [inset_x, inset_y, inset_width, inset_height]);
+    
+    % Plot theoretical curve in zoom region
+    plot(inset_ax, t_grid(zoom_indices), theory_data(zoom_indices), '--', ...
+         'Color', 'k', 'LineWidth', 1.5);
+    hold(inset_ax, 'on');
+    
+    % Add error bars in zoom region (only midpoints within zoom range)
+    zoom_midpoints = midpoints(midpoints >= zoom_start & midpoints <= zoom_end);
+    
+    for t_idx = 1:length(zoom_midpoints)
+        t_mid = zoom_midpoints(t_idx);
+        t_min = t_mid - dt;
+        t_max = t_mid + dt;
+        
+        % Find data points in this time window
+        in_window_indices = t_grid >= t_min & t_grid < t_max;
+        if ~any(in_window_indices)
+            continue;
+        end
+        
+        % Get batch values in this time window
+        batch_vals_in_window = batch_data(in_window_indices, :);
+        
+        % Calculate min and max across batches
+        batch_mins = min(batch_vals_in_window, [], 1);
+        batch_maxs = max(batch_vals_in_window, [], 1);
+        
+        % Calculate final expected bounds
+        y_min_avg = mean(batch_mins(~isnan(batch_mins)));
+        y_max_avg = mean(batch_maxs(~isnan(batch_maxs)));
+        
+        if ~isnan(y_min_avg) && ~isnan(y_max_avg)
+            % Plot error bar
+            plot(inset_ax, [t_mid, t_mid], [y_min_avg, y_max_avg], ...
+                 'Color', error_color, 'LineWidth', 1.2);
+        end
+    end
+    
+    % Customize inset plot
+    set(inset_ax, 'FontSize', 8);
+    xlabel(inset_ax, 'Time', 'FontSize', 8);
+    ylabel(inset_ax, 'Sqrt(Var)', 'FontSize', 8);
+    title(inset_ax, sprintf('Zoom: t=[%d,%d]', zoom_start, zoom_end), 'FontSize', 9);
+    grid(inset_ax, 'on');
+    
+    % Set limits for zoom region
+    xlim(inset_ax, [zoom_start, zoom_end]);
+    
+    % Add a box around the inset to make it stand out
+    set(inset_ax, 'Box', 'on', 'LineWidth', 1.2);
+    
+    hold(inset_ax, 'off');
+    
+    % Optional: Add connection lines from main plot to inset
+    % This creates the "magnifying glass" effect
+    main_xlim = get(main_ax, 'XLim');
+    main_ylim = get(main_ax, 'YLim');
+    
+    % Draw connection lines (commented out as they can be cluttering)
+    % You can uncomment these if you want the connection lines
+    % annotation('line', [zoom_start/main_xlim(2), inset_x], ...
+    %           [0.1, inset_y], 'Color', 'red', 'LineStyle', '--');
+    % annotation('line', [zoom_end/main_xlim(2), inset_x+inset_width], ...
+    %           [0.1, inset_y], 'Color', 'red', 'LineStyle', '--');
 end
