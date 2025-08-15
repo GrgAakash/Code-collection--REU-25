@@ -55,21 +55,21 @@ function SIHRS_hospitalized()
 
     % Define model parameters structure for SIHRS with death model
     params = struct(...
-        'beta', 0.183,      ... % infection rate (β > 0) - DECREASED for later peak
-        'gamma', 0.150,     ... % I transition rate (γ > 0) - DECREASED for later peak 
+        'beta', 0.160,      ... % infection rate (β > 0)
+        'gamma', 0.124,     ... % I transition rate (γ > 0) 
         'alpha', 0.1,       ... % H transition rate (α > 0)
-        'lambda', 0.0083,   ... % R transition rate (Λ > 0)
-        'pSI', 1.00,        ... % probability of S to I (p_{SI} in (0,1])
-        'pII', 0.0,         ... % probability of I to I (stay infected)
-        'pIH', 0.04,        ... % probability of I to H 
-        'pIR', 0.959,       ... % probability of I to R 
-        'pID', 0.001,       ... % probability of I to D
+        'lambda', 0.007,    ... % R transition rate (Λ > 0)  
+        'pSI', 1.0,         ... % probability of S to I (p_{SI} in (0,1])
+        'pII', 0.00,        ... % probability of I to I (stay infected)
+        'pIH', 0.1060,        ... % probability of I to H 
+        'pIR', 0.8921,       ... % probability of I to R 
+        'pID', 0.0019,       ... % probability of I to D
         'pHH', 0.01,        ... % probability of H to H (stay hospitalized)
-        'pHR', 0.9882,      ... % probability of H to R
-        'pHD', 0.0018,      ... % probability of H to D
+        'pHR', 0.836,      ... % probability of H to R
+        'pHD', 0.154,      ... % probability of H to D
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 620,        ... % simulation end time (long enough for all data)
+        'tmax', 620,        ... % simulation end time (matching Julia)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
@@ -401,19 +401,31 @@ function plot_multiple_simulations(all_results, N, params)
 
         % Convert collection_week to datetime with proper year handling
         hosp_data_table.collection_week = datetime(hosp_data_table.collection_week, 'InputFormat', 'M/d/yy');
+        
+        % Fix year to be 20xx instead of 00xx for dates parsed as 2000s
+        for i = 1:height(hosp_data_table)
+            if year(hosp_data_table.collection_week(i)) < 2000
+                hosp_data_table.collection_week(i) = hosp_data_table.collection_week(i) + years(2000);
+            end
+        end
 
+        % Aggregate duplicate dates by summing values (different hospitals)
+        [unique_dates, ~, idx] = unique(hosp_data_table.collection_week);
+        aggregated_data = accumarray(idx, hosp_data_table.total_adult_and_pediatric_covid_patients, [], @sum);
+        
         % Sort by date
-        hosp_data_table = sortrows(hosp_data_table, 'collection_week');
-
-        % Use the total hospitalization data
-        hospitalization_data = hosp_data_table.total_adult_and_pediatric_covid_patients;
-        hosp_dates = hosp_data_table.collection_week;
+        [hosp_dates, sort_idx] = sort(unique_dates);
+        hospitalization_data = aggregated_data(sort_idx);
 
         % Convert to days from March 25 (simulation start)
         hosp_days = days(hosp_dates - simulation_start_date);
 
-        % Interpolate hospitalization data to the simulation time grid
-        real_interp_H = interp1(hosp_days, hospitalization_data, t_grid, 'linear', 0);
+        % Interpolate hospitalization data to the simulation time grid using NaN for extrapolation
+        real_interp_H = interp1(hosp_days, hospitalization_data, t_grid, 'linear', NaN);
+        
+        % Replace NaN with 0 for areas outside data range, but keep NaN for filtering
+        real_interp_H_for_plot = real_interp_H;
+        real_interp_H(isnan(real_interp_H)) = 0;
 
         % For death data, align with March 25 simulation start
         data_table = readtable('carson_city_combined.csv');
@@ -438,7 +450,9 @@ function plot_multiple_simulations(all_results, N, params)
         end
         real_interp_D_prop = real_active_D / population;
 
-        fprintf('Successfully loaded hospitalization data with %d data points\n', length(hospitalization_data));
+        fprintf('Successfully loaded hospitalization data with %d unique dates and %d total data points\n', length(hospitalization_data), height(hosp_data_table));
+        fprintf('Hospitalization data range: %.1f to %.1f patients\n', min(hospitalization_data), max(hospitalization_data));
+        fprintf('Date range: %s to %s\n', datestr(min(hosp_dates)), datestr(max(hosp_dates)));
 
     catch ME
         fprintf('Warning: Could not load or process hospitalization data: %s\n', ME.message);
@@ -459,18 +473,29 @@ function plot_multiple_simulations(all_results, N, params)
          [0.7 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
 
-    % Only plot real hospitalization data where it exists (not zero)
-    valid_real_data = real_interp_H_prop > 0;
+    % Only plot real hospitalization data where it exists (not NaN)
+    valid_real_data = ~isnan(real_interp_H_for_plot / population);
     if any(valid_real_data)
-        plot(t_grid(valid_real_data), real_interp_H_prop(valid_real_data), ...
+        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
+        plot(t_grid(valid_real_data), valid_H_prop, ...
              'r-', 'LineWidth', 2.5);
+        fprintf('Plotting real hospitalization data: %d valid points, range %.6f to %.6f\n', ...
+                sum(valid_real_data), min(valid_H_prop), max(valid_H_prop));
+    else
+        fprintf('Warning: No valid real hospitalization data to plot\n');
     end
 
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
     title('Carson City, NV');
     xlim([0, params.tmax]);
-    ylim([0, max([upper_H_prop; real_interp_H_prop]) * 1.1]);
+    % Calculate y-limit including valid real data
+    if any(valid_real_data)
+        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
+        ylim([0, max([upper_H_prop; max_real_H]) * 1.1]);
+    else
+        ylim([0, max(upper_H_prop) * 1.1]);
+    end
 
     % Set x-ticks every 90 days to avoid overlapping
     tick_interval = 90;
@@ -495,9 +520,10 @@ function plot_multiple_simulations(all_results, N, params)
     end
 
     % Plot the real hospitalization data as a solid red line
-    valid_real_data = real_interp_H_prop > 0;
+    valid_real_data = ~isnan(real_interp_H_for_plot / population);
     if any(valid_real_data)
-        plot(t_grid(valid_real_data), real_interp_H_prop(valid_real_data), ...
+        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
+        plot(t_grid(valid_real_data), valid_H_prop, ...
              'r-', 'LineWidth', 2.5);
     end
 
@@ -505,7 +531,13 @@ function plot_multiple_simulations(all_results, N, params)
     ylabel('Hospitalized Proportion');
     title('Carson City, NV');
     xlim([0, params.tmax]);
-    ylim([0, max([max(all_interp_H_prop(:)); max(real_interp_H_prop)]) * 1.1]);
+    % Calculate y-limit for second plot
+    if any(valid_real_data)
+        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
+        ylim([0, max([max(all_interp_H_prop(:)); max_real_H]) * 1.1]);
+    else
+        ylim([0, max(all_interp_H_prop(:)) * 1.1]);
+    end
 
     % Set x-ticks
     xticks(xtick_positions);
