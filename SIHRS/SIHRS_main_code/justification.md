@@ -2,7 +2,7 @@
 
 ## EXPLANATION FOR R₀ (Basic Reproduction Number)
 
-The most important parameter to get correct is the basic reproduction number:
+The most important parameter to get correct is the basic reproduction number. For our model it is given as:
 
 ```
 R₀ = (β × pSI) / (γ × (1-pII))
@@ -27,13 +27,13 @@ From the paper [1], we have R₀ statistics for 1,151 counties:
 
 ## EXPLANATION FOR TRANSITION PROBABILITIES
 
-### pIR = 0.959
+### pIR = 0.959 (or any high value)
 **Justification:** For COVID-19, a large majority of infected people recovered without requiring hospitalization. This reflects the fact that most cases were mild to moderate.
 
-### pHR = 0.9882
+### pHR = 0.9882 (or any high value)
 **Justification:** Even among hospitalized COVID-19 patients, the majority eventually recovered. This accounts for the effectiveness of medical care and the body's natural recovery mechanisms.
 
-### pRS = 0.98
+### pRS = 0.98 (or any high value)
 **Justification:** The majority of the population loses immunity over time and becomes susceptible again. This reflects the waning immunity observed with COVID-19, where natural and vaccine-induced immunity decreases over several months.
 
 ## EXPLANATION FOR TRANSITION RATES
