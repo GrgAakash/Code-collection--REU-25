@@ -11,35 +11,55 @@ SIHRS/
 ├── CaseStudies/                    # Real-world applications and data analysis
 │   ├── Carson_City,NV/            # Nevada case study
 │   │   ├── codes/                 # Data extraction and simulation scripts
-│   │   │   ├── SIHRS_hospitalized.jl         # Hospitalization simulation (Julia)
-│   │   │   ├── SIHRS_multiple_simulations_infected.jl  # Infected cases simulation (Julia)
-│   │   │   ├── calculate_carson_pih.jl       # P(IH) parameter calculation
-│   │   │   ├── carson_city_pih_lagged_14days.csv      # P(IH) analysis results
-│   │   │   ├── PIH_Calculation_Methodology_Carson.md  # P(IH) documentation
+│   │   │   ├── Julia/             # Julia implementations
+│   │   │   │   ├── SIHRS_hospitalized.jl         # Hospitalization simulation
+│   │   │   │   ├── SIHRS_multiple_simulations_infected.jl  # Infected cases simulation
+│   │   │   │   ├── calculate_carson_pih.jl       # P(IH) parameter calculation
+│   │   │   │   ├── extract_active_cases.jl       # Data extraction script
+│   │   │   │   ├── extract_active_deaths.jl      # Active deaths calculation
+│   │   │   │   └── extract_daily_deaths.jl       # Daily deaths extraction
+│   │   │   ├── Matlab/            # MATLAB implementations
+│   │   │   │   ├── SIHRS_hospitalized.m          # Hospitalization simulation
+│   │   │   │   └── SIHRS_multiple_simulations_infected.m  # Infected cases simulation
+│   │   │   ├── Extras/            # Additional analysis and results
+│   │   │   │   ├── carson_city_pih_lagged_14days.csv      # P(IH) analysis results
+│   │   │   │   ├── PIH_Calculation_Methodology_Carson.md  # P(IH) documentation
+│   │   │   │   ├── carson_city_hospitalization_active_cases_combined.csv  # Combined dataset
+│   │   │   │   ├── calculate_pid_average.jl      # PID calculation scripts
+│   │   │   │   ├── calculate_pid_lagged.jl       # PID calculation scripts
+│   │   │   │   ├── calculate_pid_simple.jl       # PID calculation scripts
+│   │   │   │   └── combine_active_cases_hospitalization.jl # Data combination script
 │   │   │   ├── carson_city_hospitalization_active_cases_combined.csv  # Combined dataset
 │   │   │   ├── hospitalization_Carson_filtered_new.csv  # Cleaned hospitalization data
 │   │   │   ├── carson_city_active_cases.csv  # Active cases data
 │   │   │   ├── carson_city_daily_deaths.csv  # Daily deaths data
 │   │   │   ├── carson_city_combined.csv      # Combined cases and deaths
-│   │   │   ├── extract_active_cases.jl       # Data extraction script
-│   │   │   ├── extract_active_deaths.jl      # Active deaths calculation
-│   │   │   └── extract_daily_deaths.jl       # Daily deaths extraction
+│   │   │   └── SIHRS_hospitalization_cheating.jl # Additional analysis
 │   │   └── Results/               # Generated plots and visualizations
 │   ├── Washington, MS/            # Mississippi case study
 │   │   ├── codes/                 # Data extraction and simulation scripts
-│   │   │   ├── SIHRS_hospitalized.jl         # Hospitalization simulation (Julia)
-│   │   │   ├── SIHRS_multiple_simulations_infected.jl  # Infected cases simulation (Julia)
-│   │   │   ├── calculate_pih.jl              # P(IH) parameter calculation
-│   │   │   ├── washington_ms_pih_lagged_14days.csv     # P(IH) analysis results
-│   │   │   ├── PIH_Calculation_Methodology.md         # P(IH) documentation
-│   │   │   ├── washington_ms_hospitalization_active_cases_combined.csv  # Combined dataset
+│   │   │   ├── Julia/             # Julia implementations
+│   │   │   │   ├── SIHRS_hospitalized.jl         # Hospitalization simulation
+│   │   │   │   ├── SIHRS_multiple_simulations_infected.jl  # Infected cases simulation
+│   │   │   │   ├── calculate_pih.jl              # P(IH) parameter calculation
+│   │   │   │   ├── extract_washington_ms_active_cases.jl   # Data extraction script
+│   │   │   │   ├── extract_washington_ms_daily_deaths.jl   # Daily deaths extraction
+│   │   │   │   └── test_hospitalization_data.jl            # Data validation script
+│   │   │   ├── Matlab/            # MATLAB implementations
+│   │   │   │   ├── SIHRS_hospitalized.m          # Hospitalization simulation
+│   │   │   │   └── SIHRS_multiple_simulations_infected.m  # Infected cases simulation
+│   │   │   ├── Extras/            # Additional analysis and results
+│   │   │   │   ├── washington_ms_pih_lagged_14days.csv     # P(IH) analysis results
+│   │   │   │   ├── PIH_Calculation_Methodology.md         # P(IH) documentation
+│   │   │   │   ├── washington_ms_hospitalization_active_cases_combined.csv  # Combined dataset
+│   │   │   │   ├── calculate_pid_average_washington_ms.jl # PID calculation scripts
+│   │   │   │   ├── calculate_pid_lagged_washington_ms.jl # PID calculation scripts
+│   │   │   │   ├── calculate_pid_simple_washington_ms.jl # PID calculation scripts
+│   │   │   │   └── combine_active_cases_hospitalization.jl # Data combination script
 │   │   │   ├── hospitalization_MS_filtered.csv        # Cleaned hospitalization data
 │   │   │   ├── washington_mississippi_active_cases.csv # Active cases data
 │   │   │   ├── washington_mississippi_daily_deaths.csv # Daily deaths data
-│   │   │   ├── washington_mississippi_combined.csv     # Combined cases and deaths
-│   │   │   ├── extract_washington_ms_active_cases.jl   # Data extraction script
-│   │   │   ├── extract_washington_ms_daily_deaths.jl   # Daily deaths extraction
-│   │   │   └── test_hospitalization_data.jl            # Data validation script
+│   │   │   └── washington_mississippi_combined.csv     # Combined cases and deaths
 │   │   └── Results/               # Generated plots and visualizations
 │   ├── R_0/                       # R₀ calculation data and analysis
 │   │   ├── county_R0_data.csv     # R₀ statistics by county
@@ -51,17 +71,24 @@ SIHRS/
 ├── SIHRS_main_code/               # Core model implementations
 │   ├── Julia/                     # Julia implementations
 │   │   ├── Project.toml           # Julia package dependencies
+│   │   ├── Manifest.toml          # Julia package manifest
 │   │   ├── SIHRS_jl/             # Full SIHRS model (deterministic + stochastic)
 │   │   │   ├── SIHRS.jl          # Main simulation script
 │   │   │   └── Images/           # Generated plots and results
-│   │   └── SIHRS_I_H_jl/         # Simplified I-H (Infected-Hospitalized) model
-│   │       ├── SIHRS_I_H_only.jl # I-H simulation script
-│   │       └── Images/           # Generated plots and results
+│   │   ├── SIHRS_I_H_jl/         # Simplified I-H (Infected-Hospitalized) model
+│   │   │   ├── SIHRS_I_H_only.jl # I-H simulation script
+│   │   │   └── Images/           # Generated plots and results
+│   │   ├── sihr.jl               # Basic SIHR model implementation
+│   │   └── SIHRS_variance_analysis.jl # Variance analysis for stochastic simulations
 │   ├── Matlab/                    # MATLAB implementations
 │   │   ├── SIHRS.m               # Full SIHRS model
 │   │   ├── SIHRS_I_H_only.m     # I-H only model
+│   │   ├── SIHRS_variance_analysis.m # Variance analysis for stochastic simulations
+│   │   ├── SIHRS_variance_sqrtroot_analysis.m # Square root variance analysis
+│   │   ├── disp_SIHRS_renormalized.m # Renormalized SIHRS display
 │   │   ├── justification.md      # Parameter justification documentation
-│   │   └── justification.txt     # Parameter justification (text format)
+│   │   └── README_SIHRS_Variance_Analysis.md # Variance analysis documentation
+│   ├── sihr.m                    # Basic SIHR model implementation
 │   └── README.md                  # Detailed mathematical model documentation
 └── README.md                      # This file - project overview
 ```

@@ -69,7 +69,7 @@ function SIHRS_multiple_simulations_infected()
         'pHD', 0.154,         ... % pHD: probability of H to D - Updated
         'pRR', 0.02,          ... % pRR: probability of R to R (stay recovered)
         'pRS', 0.98,          ... % pRS: probability of R to S
-        'tmax', 650,          ... % tmax: simulation end time (extended for Washington, MS data)
+        'tmax', 620,          ... % tmax: simulation end time (matching Carson City)
         's0', s0,             ... % s0: initial susceptible proportion
         'i0', i0,             ... % i0: initial infected proportion
         'h0', h0,             ... % h0: initial hospitalized proportion
@@ -89,7 +89,7 @@ function SIHRS_multiple_simulations_infected()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 9;  % Matching Julia version
+    num_simulations = 9;  % Matching Carson City
     
     % Input validation
     if N <= 0
@@ -376,14 +376,14 @@ function plot_multiple_simulations_infected(all_results, N, params)
     lower_D = quantile(all_active_D, 0.05, 1)';
     upper_D = quantile(all_active_D, 0.95, 1)';
     
-    % --- 4. Load and process real-world data ---
+        % --- 4. Load and process real-world data ---
     population = N;  % Use same population as simulation
     real_interp_I = zeros(length(t_grid), 1);
     real_interp_D = zeros(length(t_grid), 1);
     real_interp_D_prop = zeros(length(t_grid), 1);
-    real_cumulative_D = zeros(length(t_grid), 1);  % Initialize cumulative deaths
+    real_cumulative_D = zeros(length(t_grid), 1);
     start_date_real = datetime('2020-03-25');  % Default start date
-    
+
     try
         % Load cases and deaths data
         data_table = readtable('washington_mississippi_combined.csv');
@@ -393,116 +393,69 @@ function plot_multiple_simulations_infected(all_results, N, params)
             date_diffs = abs(datenum(data_table.date) - datenum(start_date_real));
             [~, start_idx] = min(date_diffs);
         end
-        
+
         dates_from_start = data_table.date(start_idx:end);
         cumulative_cases_from_start = data_table.cases(start_idx:end);
         recovery_days = 14;  % Longer recovery period for rural areas (14 days)
-        
+
         % Calculate active cases (like Julia)
         cumulative_shifted = [zeros(recovery_days, 1); cumulative_cases_from_start(1:end-recovery_days)];
         active_cases_count = cumulative_cases_from_start - cumulative_shifted;
         % Ensure no negative active cases due to data corrections
         active_cases_count = max(active_cases_count, 0);
-        
+
         carson_days = days(dates_from_start - dates_from_start(1));
-        
+
         % Interpolate active cases to simulation time grid
-        itp_real_I = griddedInterpolant(carson_days, active_cases_count, 'linear', 'none');
-        for t = 1:length(t_grid)
-            if t_grid(t) >= min(carson_days) && t_grid(t) <= max(carson_days)
-                real_interp_I(t) = itp_real_I(t_grid(t));
-            end
+        real_interp_I = interp1(carson_days, active_cases_count, t_grid, 'linear', 0);
+
+        % Load daily death data from the dedicated file
+        daily_deaths_data = readtable('washington_mississippi_daily_deaths.csv');
+        daily_deaths_data.date = datetime(daily_deaths_data.date, 'InputFormat', 'yyyy-MM-dd');
+
+        % Find start index for daily deaths data
+        daily_start_idx = find(daily_deaths_data.date == start_date_real, 1);
+        if isempty(daily_start_idx)
+            date_diffs = abs(datenum(daily_deaths_data.date) - datenum(start_date_real));
+            [~, daily_start_idx] = min(date_diffs);
         end
-        
-        % --- Load daily death data from the dedicated file ---
-        % Note: For Washington, MS we'll try to load daily deaths data, but fall back gracefully if not available
-        try
-            daily_deaths_data = readtable('washington_mississippi_daily_deaths.csv');
-            daily_deaths_data.date = datetime(daily_deaths_data.date, 'InputFormat', 'yyyy-MM-dd');
-            
-            % Find start index for daily deaths data
-            daily_start_idx = find(daily_deaths_data.date == start_date_real, 1);
-            if isempty(daily_start_idx)
-                date_diffs = abs(datenum(daily_deaths_data.date) - datenum(start_date_real));
-                [~, daily_start_idx] = min(date_diffs);
-            end
-            
-            % Get daily deaths from March 25 onwards
-            daily_deaths_from_start = daily_deaths_data.daily_deaths(daily_start_idx:end);
-            daily_death_dates = daily_deaths_data.date(daily_start_idx:end);
-            
-            % Calculate days from March 25 for daily deaths
-            daily_death_days = days(daily_death_dates - start_date_real);
-            
-            % Interpolate daily deaths to simulation time grid
-            itp_real_D = griddedInterpolant(daily_death_days, daily_deaths_from_start, 'linear', 'none');
-            for t = 1:length(t_grid)
-                if t_grid(t) >= min(daily_death_days) && t_grid(t) <= max(daily_death_days)
-                    real_interp_D(t) = itp_real_D(t_grid(t));
-                end
-            end
-            
-            % Use the 7-day moving average from the CSV file for active deaths
-            moving_avg_deaths = daily_deaths_data.moving_avg_7day(daily_start_idx:end);
-            itp_moving_avg = griddedInterpolant(daily_death_days, moving_avg_deaths, 'linear', 'none');
-            for t = 1:length(t_grid)
-                if t_grid(t) >= min(daily_death_days) && t_grid(t) <= max(daily_death_days)
-                    real_active_D = itp_moving_avg(t_grid(t));
-                    real_interp_D_prop(t) = real_active_D / population;
-                end
-            end
-            
-            % Also get cumulative deaths for the cumulative death plot
-            cumulative_deaths_from_start = daily_deaths_data.cumulative_deaths(daily_start_idx:end);
-            itp_cumulative = griddedInterpolant(daily_death_days, cumulative_deaths_from_start, 'linear', 'none');
-            for t = 1:length(t_grid)
-                if t_grid(t) >= min(daily_death_days) && t_grid(t) <= max(daily_death_days)
-                    real_cumulative_D(t) = itp_cumulative(t_grid(t));
-                end
-            end
-        catch ME
-            warning('Daily deaths file not available for Washington, MS. Using cumulative data from main file: %s', ME.message);
-            % Calculate daily deaths from cumulative data
-            cumulative_deaths_from_start = data_table.deaths(start_idx:end);
-            daily_deaths_from_start = [0; diff(cumulative_deaths_from_start)];
-            daily_deaths_from_start = max(daily_deaths_from_start, 0.0);  % Ensure non-negative
-            
-            % Create 7-day moving average
-            window_size = 7;
-            moving_avg_deaths = copy(daily_deaths_from_start);  % Ensure Float64 type
-            for i = window_size:length(daily_deaths_from_start)
-                moving_avg_deaths(i) = mean(daily_deaths_from_start(max(1, i-window_size+1):i));
-            end
-            
-            % Interpolate to simulation time grid
-            carson_days = days(dates_from_start - dates_from_start(1));
-            itp_moving_avg = griddedInterpolant(carson_days, moving_avg_deaths, 'linear', 'none');
-            for t = 1:length(t_grid)
-                if t_grid(t) >= min(carson_days) && t_grid(t) <= max(carson_days)
-                    real_active_D = itp_moving_avg(t_grid(t));
-                    real_interp_D_prop(t) = real_active_D / population;
-                end
-            end
-            
-            real_cumulative_D = cumulative_deaths_from_start(end) * ones(length(t_grid), 1);
-            if length(cumulative_deaths_from_start) >= length(t_grid)
-                itp_cumulative = griddedInterpolant(carson_days, cumulative_deaths_from_start, 'linear', 'none');
-                for t = 1:length(t_grid)
-                    if t_grid(t) >= min(carson_days) && t_grid(t) <= max(carson_days)
-                        real_cumulative_D(t) = itp_cumulative(t_grid(t));
-                    end
-                end
-            end
-        end
-        
+
+        % Get daily deaths from March 25 onwards
+        daily_deaths_from_start = daily_deaths_data.daily_deaths(daily_start_idx:end);
+        daily_death_dates = daily_deaths_data.date(daily_start_idx:end);
+
+        % Calculate days from March 25 for daily deaths
+        daily_death_days = days(daily_death_dates - start_date_real);
+
+        % Interpolate daily deaths to simulation time grid
+        real_interp_D = interp1(daily_death_days, daily_deaths_from_start, t_grid, 'linear', 0);
+
+        % Use the 7-day moving average from the CSV file for active deaths
+        moving_avg_deaths = daily_deaths_data.moving_avg_7day(daily_start_idx:end);
+        real_active_D = interp1(daily_death_days, moving_avg_deaths, t_grid, 'linear', 0);
+        real_interp_D_prop = real_active_D / population;
+
+        % Also get cumulative deaths for the cumulative death plot
+        cumulative_deaths_from_start = daily_deaths_data.cumulative_deaths(daily_start_idx:end);
+        real_cumulative_D = interp1(daily_death_days, cumulative_deaths_from_start, t_grid, 'linear', 0);
+
+        % Debug: Print data ranges and sizes
         fprintf('Successfully loaded real data with %d data points\n', length(active_cases_count));
-        
+        fprintf('Active cases range: %.1f to %.1f\n', min(active_cases_count), max(active_cases_count));
+        fprintf('Daily deaths range: %.1f to %.1f\n', min(daily_deaths_from_start), max(daily_deaths_from_start));
+        fprintf('Date range: %s to %s\n', datestr(min(dates_from_start)), datestr(max(dates_from_start)));
+        fprintf('Daily death days range: %.1f to %.1f\n', min(daily_death_days), max(daily_death_days));
+        fprintf('Simulation time grid: %.1f to %.1f\n', min(t_grid), max(t_grid));
+        fprintf('Real interp I range: %.6f to %.6f\n', min(real_interp_I), max(real_interp_I));
+        fprintf('Real interp D range: %.6f to %.6f\n', min(real_interp_D), max(real_interp_D));
+        fprintf('Real active D range: %.6f to %.6f\n', min(real_active_D), max(real_active_D));
+
     catch ME
         fprintf('Warning: Could not load or process real data: %s\n', ME.message);
         real_interp_I = zeros(length(t_grid), 1);
         real_interp_D_prop = zeros(length(t_grid), 1);
     end
-    
+
     % Convert all counts to proportions for plotting
     population_factor = 1.0 / N;  % Calculate division factor once
     
@@ -516,110 +469,117 @@ function plot_multiple_simulations_infected(all_results, N, params)
     lower_D_prop = lower_D * population_factor;
     upper_D_prop = upper_D * population_factor;
     real_interp_I_prop = real_interp_I * population_factor;
-    real_interp_D_prop = real_interp_D_prop * population_factor;
+    
+    % Debug: Check the data before plotting
+    fprintf('After conversion to proportions:\n');
+    fprintf('Real interp I prop range: %.6f to %.6f\n', min(real_interp_I_prop), max(real_interp_I_prop));
+    fprintf('Real interp D prop range: %.6f to %.6f\n', min(real_interp_D_prop), max(real_interp_D_prop));
+    fprintf('Real cumulative D prop range: %.6f to %.6f\n', min(real_cumulative_D/population), max(real_cumulative_D/population));
+    
+    % Check for NaN or Inf values
+    fprintf('NaN count in real_interp_I_prop: %d\n', sum(isnan(real_interp_I_prop)));
+    fprintf('NaN count in real_interp_D_prop: %d\n', sum(isnan(real_interp_D_prop)));
+    fprintf('Zero count in real_interp_I_prop: %d\n', sum(real_interp_I_prop == 0));
+    fprintf('Zero count in real_interp_D_prop: %d\n', sum(real_interp_D_prop == 0));
 
-    % Set up date ticks once for all plots
-    xtick_positions = (0:90:params.tmax)';
+    % Set up date ticks
+    tick_interval = 90;
+    xtick_positions = 0:tick_interval:params.tmax;
     xtick_dates = start_date_real + days(xtick_positions);
-    % Format dates more clearly
-    date_labels = cell(length(xtick_dates), 1);
-    for i = 1:length(xtick_dates)
-        date_labels{i} = sprintf('%02d/%02d/%s', month(xtick_dates(i)), day(xtick_dates(i)), ...
-                                num2str(year(xtick_dates(i)), '%02d'));
-    end
+    date_labels = cellstr(datestr(xtick_dates, 'mm/dd/yy'));
 
     % --- 5. Create the final plot with the uncertainty envelope for infected cases ---
-    figure(1);
+    figure;
     fill([t_grid; flipud(t_grid)], [upper_I_prop; flipud(lower_I_prop)], ...
-         'b', 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', '90% Prediction Interval');
+         [0.7 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
-    plot(t_grid, real_interp_I_prop, 'Color', 'red', 'LineWidth', 2.5, 'DisplayName', 'Real Data');
+    
+    % Debug: Check what we're plotting
+    fprintf('Plotting infected cases:\n');
+    fprintf('t_grid size: %d, real_interp_I_prop size: %d\n', length(t_grid), length(real_interp_I_prop));
+    fprintf('t_grid range: %.1f to %.1f\n', min(t_grid), max(t_grid));
+    fprintf('real_interp_I_prop range: %.6f to %.6f\n', min(real_interp_I_prop), max(real_interp_I_prop));
+    
+    plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Time (days)');
     ylabel('Infected Proportion');
     title('Washington, Mississippi');
     xlim([0, params.tmax]);
     ylim([0, max([upper_I_prop; real_interp_I_prop]) * 1.1]);
-    
-    % Apply date ticks
+
     xticks(xtick_positions);
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
-    
-    legend('Location', 'best');
-    grid on;
+
+    legend('90% Prediction Interval', 'Real Data', 'Location', 'best');
     saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_bandwidth.png');
     
     % --- 6. Create a second figure with all stochastic sims and the real data ---
-    figure(2);
-    
+    figure;
     % Plot all stochastic simulations as semi-transparent blue lines
     for i = 1:size(all_interp_I_prop, 1)
-        plot(t_grid, all_interp_I_prop(i, :), 'Color', [0.2, 0.4, 0.8, 0.3], ...
-             'LineWidth', 1.0, 'HandleVisibility', 'off');
+        plot(t_grid, all_interp_I_prop(i, :), 'Color', [0.2, 0.4, 0.8, 0.3], 'LineWidth', 1.0);
         hold on;
     end
-    
+
     % Plot the real data as a solid red line
-    plot(t_grid, real_interp_I_prop, 'Color', 'red', 'LineWidth', 2.5, 'DisplayName', 'Real Data');
+    plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Time (days)');
     ylabel('Infected Proportion');
     title('Washington, Mississippi');
     xlim([0, params.tmax]);
-    ylim([0, max([max(max(all_interp_I_prop)), max(max(real_interp_I_prop))]) * 1.1]);
-    
-    % Custom legend
-    plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5, ...
-         'DisplayName', 'Stochastic Simulations');
-    
-    % Apply date ticks
+    ylim([0, max([max(max(all_interp_I_prop)), max(real_interp_I_prop)]) * 1.1]);
+
     xticks(xtick_positions);
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
-    
-    legend('Location', 'best');
-    grid on;
+
+    % Custom legend
+    plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
+    legend('Stochastic Simulations', 'Real Data', 'Location', 'best');
     saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_trajectories.png');
 
     % --- 7. Create a figure for death proportion (active deaths) ---
-    figure(3);
+    figure;
     fill([t_grid; flipud(t_grid)], [upper_D_prop; flipud(lower_D_prop)], ...
-         [0.8, 0.8, 0.8], 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', '90% Prediction Interval');
+         [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
-    plot(t_grid, real_interp_D_prop, 'Color', 'red', 'LineWidth', 2.5, 'DisplayName', 'Real Data');
+    
+    % Debug: Check what we're plotting for active deaths
+    fprintf('Plotting active deaths:\n');
+    fprintf('t_grid size: %d, real_interp_D_prop size: %d\n', length(t_grid), length(real_interp_D_prop));
+    fprintf('real_interp_D_prop range: %.6f to %.6f\n', min(real_interp_D_prop), max(real_interp_D_prop));
+    fprintf('Non-zero values in real_interp_D_prop: %d\n', sum(real_interp_D_prop > 0));
+    
+    plot(t_grid, real_interp_D_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Date');
     ylabel('Active Death Proportion');
     title('Washington, Mississippi');
     xlim([0, params.tmax]);
     ylim([0, max([upper_D_prop; real_interp_D_prop]) * 1.1]);
-    
-    % Apply date ticks
+
     xticks(xtick_positions);
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
-    
-    legend('Location', 'best');
-    grid on;
+
+    legend('90% Prediction Interval', 'Real Data', 'Location', 'best');
     saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_active_deaths.png');
 
     % --- 8. Create a figure for cumulative death proportion ---
-    % Use the actual cumulative deaths from the CSV file
-    real_interp_D_prop_cumulative = real_cumulative_D * population_factor;
-    figure(4);
-    plot(t_grid, real_interp_D_prop_cumulative, 'Color', 'red', 'LineWidth', 2.5, ...
-         'DisplayName', 'Real Data');
+    real_interp_D_prop_cumulative = real_cumulative_D / population;
+    figure;
+    plot(t_grid, real_interp_D_prop_cumulative, 'r-', 'LineWidth', 2.5);
     xlabel('Date');
     ylabel('Cumulative Death Proportion');
     title('Washington, Mississippi');
     xlim([0, params.tmax]);
     ylim([0, max(real_interp_D_prop_cumulative) * 1.1]);
-    
-    % Apply date ticks
+
     xticks(xtick_positions);
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
-    
-    legend('Location', 'best');
-    grid on;
+
+    legend('Real Data', 'Location', 'best');
     saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_cumulative_deaths.png');
 end
 

@@ -230,6 +230,7 @@ function [S_hist, I_hist, H_hist, R_hist, D_hist, time_pts] = gillespie_sim(N, b
     
     % Gillespie algorithm for SIHRS with death
     while current_time < params.T
+        
         % Calculate event rates
         si_rate = (beta / N) * S * I * params.pSI; % rate of S->I
         ir_rate = params.gamma * I * params.pIR; % rate of I->R
