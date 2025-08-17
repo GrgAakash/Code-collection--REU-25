@@ -55,9 +55,9 @@ function SIHRS_hospitalized()
 
     % Define model parameters structure for SIHRS with death model
     params = struct(...
-        'beta', 0.255,      ... % infection rate (β > 0) - Updated for Washington, MS
-        'gamma', 0.219,     ... % I transition rate (γ > 0) - Updated for Washington, MS
-        'alpha', 0.1,       ... % H transition rate (α > 0)
+        'beta', 0.195,      ... % infection rate (β > 0) - Updated for Washington, MS
+        'gamma', 0.165,     ... % I transition rate (γ > 0) - Updated for Washington, MS
+        'alpha', 0.111,       ... % H transition rate (α > 0)
         'lambda', 0.0083,   ... % R transition rate (Λ > 0) - Updated for Washington, MS
         'pSI', 1.00,        ... % probability of S to I (p_{SI} in (0,1])
         'pII', 0.0,         ... % probability of I to I (stay infected)
@@ -69,7 +69,7 @@ function SIHRS_hospitalized()
         'pHD', 0.154,       ... % probability of H to D - Updated
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 650,        ... % simulation end time (extended for Washington, MS data)
+        'tmax', 620,        ... % simulation end time (extended for Washington, MS data)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
@@ -89,7 +89,7 @@ function SIHRS_hospitalized()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 59;
+    num_simulations = 9;
 
     % Input validation
     if N <= 0
@@ -174,7 +174,7 @@ function result = sihrs_agent_model(N, params)
     end
 
     % Preallocate arrays for better performance
-    max_events = N * 10;  % Estimate maximum number of events
+    max_events = N * 30;  % Estimate maximum number of events
     T = zeros(max_events, 1);
     I_prop = zeros(max_events, 1);
     I_count = zeros(max_events, 1);

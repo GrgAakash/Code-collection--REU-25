@@ -55,26 +55,26 @@ function SIHRS_multiple_simulations_infected()
 
     % Define model parameters structure for SIHRS with death model
     params = struct(...
-        'beta', 0.172,        ... % beta: infection rate (β > 0) 
-        'gamma', 0.141,       ... % gamma: I transition rate (γ > 0) 
-        'alpha', 0.1,         ... % alpha: H transition rate (α > 0)
-        'lambda', 0.0083,     ... % lambda: R transition rate (Λ > 0) - Updated for Washington, MS
-        'pSI', 1.0,           ... % pSI: probability of S to I (p_{SI} in (0,1])
-        'pII', 0.00,          ... % pII: probability of I to I (stay infected)
-        'pIH', 0.1614,        ... % pIH: probability of I to H - Updated from P(IH) calculation
-        'pIR', 0.8367,        ... % pIR: probability of I to R - Updated to sum to 1
-        'pID', 0.0019,        ... % pID: probability of I to D - Updated from P(ID) calculation
-        'pHH', 0.00,          ... % pHH: probability of H to H (stay hospitalized) - Updated
-        'pHR', 0.846,         ... % pHR: probability of H to R - Updated
-        'pHD', 0.154,         ... % pHD: probability of H to D - Updated
-        'pRR', 0.02,          ... % pRR: probability of R to R (stay recovered)
-        'pRS', 0.98,          ... % pRS: probability of R to S
-        'tmax', 620,          ... % tmax: simulation end time (matching Carson City)
-        's0', s0,             ... % s0: initial susceptible proportion
-        'i0', i0,             ... % i0: initial infected proportion
-        'h0', h0,             ... % h0: initial hospitalized proportion
-        'r0', r0,             ... % r0: initial recovered proportion
-        'd0', d0              ... % d0: initial dead proportion
+        'beta', 0.195,      ... % infection rate (β > 0) - Updated for Washington, MS
+        'gamma', 0.165,     ... % I transition rate (γ > 0) - Updated for Washington, MS
+        'alpha', 0.111,       ... % H transition rate (α > 0)
+        'lambda', 0.0083,   ... % R transition rate (Λ > 0) - Updated for Washington, MS
+        'pSI', 1.00,        ... % probability of S to I (p_{SI} in (0,1])
+        'pII', 0.0,         ... % probability of I to I (stay infected)
+        'pIH', 0.1614,      ... % probability of I to H - Updated from P(IH) calculation
+        'pIR', 0.8367,      ... % probability of I to R - Updated to sum to 1
+        'pID', 0.0019,      ... % probability of I to D - Updated from P(ID) calculation
+        'pHH', 0.00,        ... % probability of H to H (stay hospitalized) - Updated
+        'pHR', 0.846,       ... % probability of H to R - Updated
+        'pHD', 0.154,       ... % probability of H to D - Updated
+        'pRR', 0.02,        ... % probability of R to R (stay recovered)
+        'pRS', 0.98,        ... % probability of R to S
+        'tmax', 620,        ... % simulation end time (extended for Washington, MS data)
+        's0', s0,           ... % initial susceptible proportion
+        'i0', i0,           ... % initial infected proportion
+        'h0', h0,           ... % initial hospitalized proportion
+        'r0', r0,           ... % initial recovered proportion
+        'd0', d0            ... % initial dead proportion
     );
     
     % Verify R0 calculation
@@ -89,7 +89,7 @@ function SIHRS_multiple_simulations_infected()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 9;  % Matching Carson City
+    num_simulations = 9;  
     
     % Input validation
     if N <= 0
