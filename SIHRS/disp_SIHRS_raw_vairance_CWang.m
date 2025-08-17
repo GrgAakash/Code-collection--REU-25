@@ -59,7 +59,7 @@ function sihrs_renormalized_simulation()
  %    params.initial_r = 0.01;          % Initial recovered fraction
   %   params.initial_d = 0.01;          % Initial dead fraction
 
-    params.n_runs = 40;            % Number of stochastic runs
+    params.n_runs = 5;            % Number of stochastic runs
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
