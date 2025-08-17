@@ -91,7 +91,7 @@ function sihrs_multiple_simulations()
         error("Initial conditions must sum to 1")
     end
 
-    num_simulations = 55
+    num_simulations = 59
     
     if N <= 0
         error("Population size must be positive integer")

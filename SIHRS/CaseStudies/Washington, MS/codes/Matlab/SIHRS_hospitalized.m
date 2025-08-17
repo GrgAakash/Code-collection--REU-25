@@ -87,7 +87,7 @@ function SIHRS_hospitalized()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 9;
+    num_simulations = 59;
 
 
     if N <= 0

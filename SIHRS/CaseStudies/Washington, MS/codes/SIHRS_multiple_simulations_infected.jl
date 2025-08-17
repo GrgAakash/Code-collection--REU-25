@@ -440,7 +440,6 @@ function plot_multiple_simulations_infected(all_results, N, params::SIHRSParams)
         real_interp_I = itp_real_I.(t_grid)
         
         # --- Load daily death data from the dedicated file ---
-        # Note: For Washington, MS we'll try to load daily deaths data, but fall back gracefully if not available
         try
             daily_deaths_data = CSV.read("washington_mississippi_daily_deaths.csv", DataFrame)
             daily_deaths_data.date = Date.(daily_deaths_data.date)
