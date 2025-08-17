@@ -43,12 +43,26 @@ function sihrs_renormalized_simulation()
   % params.N_values = [300, 1600, 10000];
 
   params.N_values = [300, 1600, 3000];
-   params.initial_s = 0.96;       % Initial susceptible fraction
-    params.initial_i = 0.04;       % Initial infected fraction
-    params.initial_h = 0;          % Initial hospitalized fraction
-    params.initial_r = 0;          % Initial recovered fraction
-    params.initial_d = 0;          % Initial dead fraction
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+ % params.initial_s = 0.96;       % Initial susceptible fraction
+    
+  params.initial_s = 0.93;
+  
+  params.initial_i = 0.04;       % Initial infected fraction
+   
+%  params.initial_h = 0;          % Initial hospitalized fraction
+  %  params.initial_r = 0;          % Initial recovered fraction
+  %  params.initial_d = 0;          % Initial dead fraction
+   
+  params.initial_h = 0.01;          % Initial hospitalized fraction
+     params.initial_r = 0.01;          % Initial recovered fraction
+     params.initial_d = 0.01;          % Initial dead fraction
+
     params.n_runs = 40;            % Number of stochastic runs
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     params.colors = {'#0072BD', '#77AC30', '#A2142F'}; % Colors matching SIHRS.m
     params.R0_values = [2.12]; % R0 values
     
