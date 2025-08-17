@@ -1,30 +1,27 @@
 function SIHRS_multiple_simulations_infected()
-% SIHRS model for Washington, Mississippi (Mar 2020-Dec 2021) 
-% starting from Patient Zero with stochastic simulations
-% Focuses on infected cases and deaths (like the Julia version)
-% MATLAB version of SIHRS_multiple_simulations_infected.jl
+% SIHRS model for Washington, Mississippi (Mar 2020-Dec 2021) starting from Patient Zero with stochastic simulations
 
     % Initialize variables at function level
     N = 43000;  % Washington County, Mississippi population (2020 Census)
     
-    % Initialize default values for initial conditions
+
     s0 = 0.0;
     i0 = 0.0;
     h0 = 0.0;
     r0 = 0.0;
     d0 = 0.0;
     
-    % --- Load and process real Washington County, MS data for initial conditions ---
+    % Load Washington County, Mississippi data for initial conditions
     try
-        % Load cases and deaths data
+
         data_table = readtable('washington_mississippi_combined.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
         start_date = datetime('2020-03-25');
         
-        % Find start index
+
         start_idx = find(data_table.date == start_date, 1);
         if isempty(start_idx)
-            % Find closest date
+
             date_diffs = abs(datenum(data_table.date) - datenum(start_date));
             [~, start_idx] = min(date_diffs);
             warning('Exact start date not found. Using closest date: %s', ...
@@ -42,7 +39,7 @@ function SIHRS_multiple_simulations_infected()
         
     catch ME
         warning('Could not load Washington County, MS real data: %s', ME.message);
-        % Fallback to hardcoded values
+
         real_initial_infected = 1;
         real_initial_dead = 0;
         
@@ -53,7 +50,7 @@ function SIHRS_multiple_simulations_infected()
         s0 = 1.0 - (i0 + h0 + r0 + d0);
     end
 
-    % Define model parameters structure for SIHRS with death model
+    % Model parameters
     params = struct(...
         'beta', 0.195,      ... % infection rate (β > 0) - Updated for Washington, MS
         'gamma', 0.165,     ... % I transition rate (γ > 0) - Updated for Washington, MS
@@ -77,29 +74,29 @@ function SIHRS_multiple_simulations_infected()
         'd0', d0            ... % initial dead proportion
     );
     
-    % Verify R0 calculation
+
     calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
     fprintf('Calculated R0 = %.6f \n', calculated_R0);
 
-    % Validate parameters
+
     validate_parameters(params);
     
-    % Validate initial conditions sum to 1
+
     if abs((params.s0 + params.i0 + params.h0 + params.r0 + params.d0) - 1.0) > 1e-10
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 9;  
+    num_simulations = 59;  
     
-    % Input validation
+
     if N <= 0
         error('Population size must be positive integer');
     end
     
-    % Store results for all simulations
+
     all_results = cell(num_simulations, 1);
     
-    % Run multiple simulations
+
     try
         fprintf('Running %d stochastic simulations for N = %d...\n', num_simulations, N);
         
@@ -110,7 +107,7 @@ function SIHRS_multiple_simulations_infected()
         
         fprintf('All simulations completed!\n');
         
-        % Plot all simulations together
+
         plot_multiple_simulations_infected(all_results, N, params);
         
     catch ME
@@ -146,18 +143,17 @@ end
 
 function result = sihrs_agent_model_infected(N, params)
     % SIHRS agent-based stochastic model with death (focusing on infected and deaths)
+    % Initial conditions
+    s0 = round(params.s0 * N);
+    i0 = round(params.i0 * N);
+    h0 = round(params.h0 * N);
+    r0 = round(params.r0 * N);
+    d0 = round(params.d0 * N);
     
-    % Initial conditions - using params values and ensuring they sum to N
-    s0 = round(params.s0 * N);  % susceptible
-    i0 = round(params.i0 * N);  % infected
-    h0 = round(params.h0 * N);  % hospitalized
-    r0 = round(params.r0 * N);  % recovered
-    d0 = round(params.d0 * N);  % dead
-    
-    % Adjust for rounding errors to ensure sum is exactly N
+
     total = s0 + i0 + h0 + r0 + d0;
     if total ~= N
-        % Add or subtract the difference from the largest compartment
+
         compartments = [s0, i0, h0, r0, d0];
         [~, largest_idx] = max(compartments);
         compartments(largest_idx) = compartments(largest_idx) + (N - total);
@@ -168,53 +164,49 @@ function result = sihrs_agent_model_infected(N, params)
         d0 = compartments(5);
     end
     
-    % Validate initial conditions sum to N
+
     if (s0 + i0 + h0 + r0 + d0) ~= N
         error('Initial conditions must sum to N');
     end
     
-    % Preallocate arrays for better performance
-    % For a 620-day simulation, people can get infected multiple times
-    % Each person might have ~10 events: S→I→H→R→S→I→R→S→I→D
-    max_events = N * 10;  % Estimate maximum number of events
+    max_events = N * 30;
     T = zeros(max_events, 1);
     I_prop = zeros(max_events, 1);
     I_count = zeros(max_events, 1);
     D_count = zeros(max_events, 1);
     
-    % Initialize agent arrays
+
     S = (1:s0)';
     I = ((s0+1):(s0+i0))';
     H = ((s0+i0+1):(s0+i0+h0))';
     R = ((s0+i0+h0+1):(s0+i0+h0+r0))';
     D = ((s0+i0+h0+r0+1):(s0+i0+h0+r0+d0))';
     
-    % Initialize time tracking
+
     t = 0.0;
     T(1) = 0.0;
     event_count = 1;
     
-    % Initialize proportion tracking
+
     total_pop = s0 + i0 + h0 + r0 + d0;
     I_prop(1) = i0 / total_pop;
     I_count(1) = i0;
     D_count(1) = d0;
     
-    % Main simulation loop
+
     while ~isempty(I) && t < params.tmax
         nS = length(S);
         nI = length(I);
         nH = length(H);
         nR = length(R);
         
-        % Calculate event rates according to the mathematical model
-        infection_rate = params.pSI * params.beta * nS * nI / N;  % S to I rate
-        to_susceptible_from_R_rate = params.pRS * params.lambda * nR;  % R to S rate
-        to_hospital_rate = params.gamma * nI * params.pIH;  % I to H rate
-        to_recovered_from_I_rate = params.gamma * nI * params.pIR;  % I to R rate
-        to_dead_from_I_rate = params.gamma * nI * params.pID;  % I to D rate
-        to_recovered_from_H_rate = params.alpha * nH * params.pHR;  % H to R rate
-        to_dead_from_H_rate = params.alpha * nH * params.pHD;  % H to D rate
+        infection_rate = params.pSI * params.beta * nS * nI / N;
+        to_susceptible_from_R_rate = params.pRS * params.lambda * nR;
+        to_hospital_rate = params.gamma * nI * params.pIH;
+        to_recovered_from_I_rate = params.gamma * nI * params.pIR;
+        to_dead_from_I_rate = params.gamma * nI * params.pID;
+        to_recovered_from_H_rate = params.alpha * nH * params.pHR;
+        to_dead_from_H_rate = params.alpha * nH * params.pHD;
         
         total_rate = infection_rate + to_susceptible_from_R_rate + to_hospital_rate + ...
                      to_recovered_from_I_rate + to_dead_from_I_rate + to_recovered_from_H_rate + ...
@@ -224,7 +216,7 @@ function result = sihrs_agent_model_infected(N, params)
             break;
         end
         
-        % Time of next event
+
         dt = exprnd(1 / total_rate);
         t = t + dt;
         
@@ -242,7 +234,7 @@ function result = sihrs_agent_model_infected(N, params)
         event_count = event_count + 1;
         T(event_count) = t;
         
-        % Determine which event occurs
+
         chance = rand() * total_rate;
         if chance < infection_rate
             % S to I transition
@@ -302,20 +294,20 @@ function result = sihrs_agent_model_infected(N, params)
             end
         end
         
-        % Update tracking arrays
+
         current_total = length(S) + length(I) + length(H) + length(R) + length(D);
         I_prop(event_count) = length(I) / current_total;
         I_count(event_count) = length(I);
         D_count(event_count) = length(D);
     end
     
-    % Trim unused preallocated space
+
     T = T(1:event_count);
     I_prop = I_prop(1:event_count);
     I_count = I_count(1:event_count);
     D_count = D_count(1:event_count);
     
-    % Store results
+
     result = struct(...
         'N', N, ...
         'T', T, ...
@@ -331,27 +323,18 @@ function result = sihrs_agent_model_infected(N, params)
 end
 
 function plot_multiple_simulations_infected(all_results, N, params)
-    % This function creates multiple figures matching the Julia version:
-    % 1. Uncertainty envelope plot for infected cases
-    % 2. All stochastic trajectories for infected cases
-    % 3. Active deaths plot
-    % 4. Cumulative deaths plot
-
-    % --- 1. Create a common time grid for comparison ---
-    t_grid = (0:params.tmax)';  % daily time steps
-    
-    % --- 2. Interpolate each simulation's results onto the grid ---
+    t_grid = (0:params.tmax)';
     all_interp_I = zeros(length(all_results), length(t_grid));
     all_interp_D = zeros(length(all_results), length(t_grid));
     
     for i = 1:length(all_results)
         res = all_results{i};
-        % Create interpolation function and vectorize the evaluation
+
         if length(res.T) > 1
             itp_I = griddedInterpolant(res.T, res.I_count, 'linear', 'none');
             itp_D = griddedInterpolant(res.T, res.D_count, 'linear', 'none');
             
-            % Vectorized interpolation - much faster than loop
+
             for j = 1:length(t_grid)
                 if t_grid(j) >= min(res.T) && t_grid(j) <= max(res.T)
                     all_interp_I(i, j) = itp_I(t_grid(j));
@@ -361,22 +344,22 @@ function plot_multiple_simulations_infected(all_results, N, params)
         end
     end
     
-    % --- Compute active deaths (rolling window) for each simulation ---
+
     window = 14;
     all_active_D = zeros(size(all_interp_D));
     for i = 1:size(all_interp_D, 1)
         all_active_D(i, :) = compute_rolling_window(all_interp_D(i, :), window);
     end
     
-    % --- 3. Calculate statistics for the bandwidth ---
+
     mean_I = mean(all_interp_I, 1)';
-    lower_I = quantile(all_interp_I, 0.05, 1)';  % 5th percentile
-    upper_I = quantile(all_interp_I, 0.95, 1)';  % 95th percentile
+    lower_I = quantile(all_interp_I, 0.05, 1)';
+    upper_I = quantile(all_interp_I, 0.95, 1)';
     mean_D = mean(all_active_D, 1)';
     lower_D = quantile(all_active_D, 0.05, 1)';
     upper_D = quantile(all_active_D, 0.95, 1)';
     
-        % --- 4. Load and process real-world data ---
+
     population = N;  % Use same population as simulation
     real_interp_I = zeros(length(t_grid), 1);
     real_interp_D = zeros(length(t_grid), 1);
@@ -385,7 +368,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
     start_date_real = datetime('2020-03-25');  % Default start date
 
     try
-        % Load cases and deaths data
+
         data_table = readtable('washington_mississippi_combined.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
         start_idx = find(data_table.date == start_date_real, 1);
@@ -398,48 +381,48 @@ function plot_multiple_simulations_infected(all_results, N, params)
         cumulative_cases_from_start = data_table.cases(start_idx:end);
         recovery_days = 14;  % Longer recovery period for rural areas (14 days)
 
-        % Calculate active cases (like Julia)
+
         cumulative_shifted = [zeros(recovery_days, 1); cumulative_cases_from_start(1:end-recovery_days)];
         active_cases_count = cumulative_cases_from_start - cumulative_shifted;
-        % Ensure no negative active cases due to data corrections
+
         active_cases_count = max(active_cases_count, 0);
 
         carson_days = days(dates_from_start - dates_from_start(1));
 
-        % Interpolate active cases to simulation time grid
+
         real_interp_I = interp1(carson_days, active_cases_count, t_grid, 'linear', 0);
 
-        % Load daily death data from the dedicated file
+
         daily_deaths_data = readtable('washington_mississippi_daily_deaths.csv');
         daily_deaths_data.date = datetime(daily_deaths_data.date, 'InputFormat', 'yyyy-MM-dd');
 
-        % Find start index for daily deaths data
+
         daily_start_idx = find(daily_deaths_data.date == start_date_real, 1);
         if isempty(daily_start_idx)
             date_diffs = abs(datenum(daily_deaths_data.date) - datenum(start_date_real));
             [~, daily_start_idx] = min(date_diffs);
         end
 
-        % Get daily deaths from March 25 onwards
+
         daily_deaths_from_start = daily_deaths_data.daily_deaths(daily_start_idx:end);
         daily_death_dates = daily_deaths_data.date(daily_start_idx:end);
 
-        % Calculate days from March 25 for daily deaths
+
         daily_death_days = days(daily_death_dates - start_date_real);
 
-        % Interpolate daily deaths to simulation time grid
+
         real_interp_D = interp1(daily_death_days, daily_deaths_from_start, t_grid, 'linear', 0);
 
-        % Use the 7-day moving average from the CSV file for active deaths
+
         moving_avg_deaths = daily_deaths_data.moving_avg_7day(daily_start_idx:end);
         real_active_D = interp1(daily_death_days, moving_avg_deaths, t_grid, 'linear', 0);
         real_interp_D_prop = real_active_D / population;
 
-        % Also get cumulative deaths for the cumulative death plot
+
         cumulative_deaths_from_start = daily_deaths_data.cumulative_deaths(daily_start_idx:end);
         real_cumulative_D = interp1(daily_death_days, cumulative_deaths_from_start, t_grid, 'linear', 0);
 
-        % Debug: Print data ranges and sizes
+
         fprintf('Successfully loaded real data with %d data points\n', length(active_cases_count));
         fprintf('Active cases range: %.1f to %.1f\n', min(active_cases_count), max(active_cases_count));
         fprintf('Daily deaths range: %.1f to %.1f\n', min(daily_deaths_from_start), max(daily_deaths_from_start));
@@ -456,10 +439,10 @@ function plot_multiple_simulations_infected(all_results, N, params)
         real_interp_D_prop = zeros(length(t_grid), 1);
     end
 
-    % Convert all counts to proportions for plotting
+
     population_factor = 1.0 / N;  % Calculate division factor once
     
-    % Convert all arrays to proportions
+
     all_interp_I_prop = all_interp_I * population_factor;
     mean_I_prop = mean_I * population_factor;
     lower_I_prop = lower_I * population_factor;
@@ -470,35 +453,31 @@ function plot_multiple_simulations_infected(all_results, N, params)
     upper_D_prop = upper_D * population_factor;
     real_interp_I_prop = real_interp_I * population_factor;
     
-    % Debug: Check the data before plotting
+
     fprintf('After conversion to proportions:\n');
     fprintf('Real interp I prop range: %.6f to %.6f\n', min(real_interp_I_prop), max(real_interp_I_prop));
     fprintf('Real interp D prop range: %.6f to %.6f\n', min(real_interp_D_prop), max(real_interp_D_prop));
     fprintf('Real cumulative D prop range: %.6f to %.6f\n', min(real_cumulative_D/population), max(real_cumulative_D/population));
     
-    % Check for NaN or Inf values
+
     fprintf('NaN count in real_interp_I_prop: %d\n', sum(isnan(real_interp_I_prop)));
     fprintf('NaN count in real_interp_D_prop: %d\n', sum(isnan(real_interp_D_prop)));
     fprintf('Zero count in real_interp_I_prop: %d\n', sum(real_interp_I_prop == 0));
     fprintf('Zero count in real_interp_D_prop: %d\n', sum(real_interp_D_prop == 0));
 
-    % Set up date ticks
+
     tick_interval = 90;
     xtick_positions = 0:tick_interval:params.tmax;
     xtick_dates = start_date_real + days(xtick_positions);
     date_labels = cellstr(datestr(xtick_dates, 'mm/dd/yy'));
 
-    % --- 5. Create the final plot with the uncertainty envelope for infected cases ---
+
     figure;
     fill([t_grid; flipud(t_grid)], [upper_I_prop; flipud(lower_I_prop)], ...
          [0.7 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
     
-    % Debug: Check what we're plotting
-    fprintf('Plotting infected cases:\n');
-    fprintf('t_grid size: %d, real_interp_I_prop size: %d\n', length(t_grid), length(real_interp_I_prop));
-    fprintf('t_grid range: %.1f to %.1f\n', min(t_grid), max(t_grid));
-    fprintf('real_interp_I_prop range: %.6f to %.6f\n', min(real_interp_I_prop), max(real_interp_I_prop));
+
     
     plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Time (days)');
@@ -514,15 +493,15 @@ function plot_multiple_simulations_infected(all_results, N, params)
     legend('90% Prediction Interval', 'Real Data', 'Location', 'best');
     saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_bandwidth.png');
     
-    % --- 6. Create a second figure with all stochastic sims and the real data ---
+
     figure;
-    % Plot all stochastic simulations as semi-transparent blue lines
+
     for i = 1:size(all_interp_I_prop, 1)
         plot(t_grid, all_interp_I_prop(i, :), 'Color', [0.2, 0.4, 0.8, 0.3], 'LineWidth', 1.0);
         hold on;
     end
 
-    % Plot the real data as a solid red line
+
     plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Time (days)');
     ylabel('Infected Proportion');
@@ -534,22 +513,18 @@ function plot_multiple_simulations_infected(all_results, N, params)
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
 
-    % Custom legend
+
     plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
     legend('Stochastic Simulations', 'Real Data', 'Location', 'best');
     saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_trajectories.png');
 
-    % --- 7. Create a figure for death proportion (active deaths) ---
+
     figure;
     fill([t_grid; flipud(t_grid)], [upper_D_prop; flipud(lower_D_prop)], ...
          [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
     
-    % Debug: Check what we're plotting for active deaths
-    fprintf('Plotting active deaths:\n');
-    fprintf('t_grid size: %d, real_interp_D_prop size: %d\n', length(t_grid), length(real_interp_D_prop));
-    fprintf('real_interp_D_prop range: %.6f to %.6f\n', min(real_interp_D_prop), max(real_interp_D_prop));
-    fprintf('Non-zero values in real_interp_D_prop: %d\n', sum(real_interp_D_prop > 0));
+
     
     plot(t_grid, real_interp_D_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Date');
@@ -565,7 +540,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
     legend('90% Prediction Interval', 'Real Data', 'Location', 'best');
     saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_active_deaths.png');
 
-    % --- 8. Create a figure for cumulative death proportion ---
+
     real_interp_D_prop_cumulative = real_cumulative_D / population;
     figure;
     plot(t_grid, real_interp_D_prop_cumulative, 'r-', 'LineWidth', 2.5);
@@ -584,7 +559,6 @@ function plot_multiple_simulations_infected(all_results, N, params)
 end
 
 function result = compute_rolling_window(data, window_size)
-    % Helper function for rolling window calculation
     result = data;  % MATLAB automatically copies arrays
     for t = (window_size + 1):length(data)
         result(t) = data(t) - data(t - window_size);

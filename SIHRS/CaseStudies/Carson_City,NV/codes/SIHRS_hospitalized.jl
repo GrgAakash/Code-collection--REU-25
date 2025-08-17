@@ -20,30 +20,29 @@ function sihrs_multiple_simulations()
     h0 = 0.0
     r0 = 0.0
     d0 = 0.0
-    
-    # --- Load and process real Carson City data for initial conditions ---
+    # Load Carson City, Nevada data for initial conditions
     try
-        # Load cases and deaths data
+
         data_table = CSV.read("carson_city_combined.csv", DataFrame)
         start_date = Date("2020-03-25")
         
-        # Find start index for March 25
+
         start_idx = findfirst(data_table.date .== start_date)
         if isnothing(start_idx)
-            # Find closest date
+
             date_diffs = abs.(data_table.date .- start_date)
             start_idx = argmin(date_diffs)
             @warn "Exact start date not found. Using closest date: $(data_table.date[start_idx])"
         end
         
-        # Use March 25 real data for initial conditions
+
         real_initial_infected = data_table.cases[start_idx]
         real_initial_dead = data_table.deaths[start_idx]
         
         i0 = real_initial_infected / N
         d0 = real_initial_dead / N
-        h0 = 0.0  # No hospitalization data in March
-        r0 = 0.0  # No recovered data in March
+        h0 = 0.0
+        r0 = 0.0
         s0 = 1.0 - (i0 + h0 + r0 + d0)
         
         @printf("March 25 initial conditions: I=%d, D=%d, H=%d, R=%d, S=%d\n", 
@@ -51,9 +50,8 @@ function sihrs_multiple_simulations()
         
     catch e
         @warn "Could not load Carson City real data: $(e)"
-        # Fallback to hardcoded values for March 25
-        real_initial_infected = 3  # March 25 had 3 cases
-        real_initial_dead = 0      # March 25 had 0 deaths
+        real_initial_infected = 3
+        real_initial_dead = 0
         
         i0 = real_initial_infected / N
         d0 = real_initial_dead / N
@@ -62,11 +60,12 @@ function sihrs_multiple_simulations()
         s0 = 1.0 - (i0 + h0 + r0 + d0)
     end
 
-    # Define model parameters structure for SIHRS with death model
+
+    # Model parameters
     params = Dict(
-        "beta" => 0.183,      # infection rate (β > 0) - DECREASED for later peak
-        "gamma" => 0.150,      # I transition rate (γ > 0) - DECREASED for later peak 
-        "alpha" => 0.1,       # H transition rate (α > 0)
+        "beta" => 0.157,      # infection rate (β > 0) - Updated for Carson City, NV
+        "gamma" => 0.127,      # I transition rate (γ > 0) - Updated for Carson City, NV
+        "alpha" => 0.111,       # H transition rate (α > 0)
         "lambda" => 0.0083,   # R transition rate (Λ > 0)
         "pSI" => 1.00,         # probability of S to I (p_{SI} in (0,1])
         "pII" => 0.0,         # probability of I to I (stay infected)
@@ -78,7 +77,7 @@ function sihrs_multiple_simulations()
         "pHD" => 0.0018,      # probability of H to D
         "pRR" => 0.02,        # probability of R to R (stay recovered)
         "pRS" => 0.98,        # probability of R to S
-        "tmax" => 620,        # simulation end time (long enough for all data)
+        "tmax" => 620,        # simulation end time (extended for Carson City, NV data)
         "s0" => s0,           # initial susceptible proportion
         "i0" => i0,           # initial infected proportion
         "h0" => h0,           # initial hospitalized proportion
@@ -86,13 +85,14 @@ function sihrs_multiple_simulations()
         "d0" => d0            # initial dead proportion
     )
     
-    # Verify R0 calculation
+
     calculated_R0 = (params["beta"] * params["pSI"]) / params["gamma"] * (1-params["pII"])
     @printf("Calculated R0 = %.6f \n", calculated_R0)
 
-    # Validate parameters
+
     validate_parameters(params)
     
+
     # Validate initial conditions sum to 1
     if abs((params["s0"] + params["i0"] + params["h0"] + params["r0"] + params["d0"]) - 1.0) > 1e-10
         error("Initial conditions must sum to 1")
@@ -100,14 +100,16 @@ function sihrs_multiple_simulations()
 
     num_simulations = 55
     
-    # Input validation
+
     if N <= 0
         error("Population size must be positive integer")
     end
     
+
     # Store results for all simulations
     all_results = Vector{Any}(undef, num_simulations)
     
+
     # Run multiple simulations
     try
         @printf("Running %d stochastic simulations for N = %d...\n", num_simulations, N)
@@ -119,6 +121,7 @@ function sihrs_multiple_simulations()
         
         @printf("All simulations completed!\n")
         
+
         # Plot all simulations together
         plot_multiple_simulations(all_results, N, params)
         
@@ -155,13 +158,13 @@ end
 
 function sihrs_agent_model(N::Int, params::Dict)
     # SIHRS agent-based stochastic model with death
+    # Initial conditions
+    s0 = round(Int, params["s0"] * N)
+    i0 = round(Int, params["i0"] * N)
+    h0 = round(Int, params["h0"] * N)
+    r0 = round(Int, params["r0"] * N)
+    d0 = round(Int, params["d0"] * N)
     
-    # Initial conditions - using params values and ensuring they sum to N
-    s0 = round(Int, params["s0"] * N)  # susceptible
-    i0 = round(Int, params["i0"] * N)  # infected
-    h0 = round(Int, params["h0"] * N)  # hospitalized
-    r0 = round(Int, params["r0"] * N)  # recovered
-    d0 = round(Int, params["d0"] * N)  # dead
     
     # Adjust for rounding errors to ensure sum is exactly N
     total = s0 + i0 + h0 + r0 + d0
@@ -173,19 +176,21 @@ function sihrs_agent_model(N::Int, params::Dict)
         s0, i0, h0, r0, d0 = compartments
     end
     
+    
     # Validate initial conditions sum to N
     if (s0 + i0 + h0 + r0 + d0) != N
         error("Initial conditions must sum to N")
     end
     
     # Preallocate arrays for better performance
-    max_events = N * 10  # Estimate maximum number of events
+    max_events = N * 30  # Estimate maximum number of events
     T = zeros(max_events)
     I_prop = zeros(max_events)
     I_count = zeros(Int, max_events)
     H_count = zeros(Int, max_events)
     D_count = zeros(Int, max_events)
     
+
     # Initialize agent arrays
     S = collect(1:s0)
     I = collect((s0+1):(s0+i0))
@@ -193,11 +198,13 @@ function sihrs_agent_model(N::Int, params::Dict)
     R = collect((s0+i0+h0+1):(s0+i0+h0+r0))
     D = collect((s0+i0+h0+r0+1):(s0+i0+h0+r0+d0))
     
+
     # Initialize time tracking
     t = 0.0
     T[1] = 0.0
     event_count = 1
     
+
     # Initialize proportion tracking
     total_pop = s0 + i0 + h0 + r0 + d0
     I_prop[1] = i0 / total_pop
@@ -205,6 +212,7 @@ function sihrs_agent_model(N::Int, params::Dict)
     H_count[1] = h0
     D_count[1] = d0
     
+
     # Main simulation loop
     while !isempty(I) && t < params["tmax"]
         nS = length(S)
@@ -212,14 +220,13 @@ function sihrs_agent_model(N::Int, params::Dict)
         nH = length(H)
         nR = length(R)
         
-        # Calculate event rates according to the mathematical model
-        infection_rate = params["pSI"] * params["beta"] * nS * nI / N  # S to I rate
-        to_susceptible_from_R_rate = params["pRS"] * params["lambda"] * nR  # R to S rate
-        to_hospital_rate = params["gamma"] * nI * params["pIH"]  # I to H rate
-        to_recovered_from_I_rate = params["gamma"] * nI * params["pIR"]  # I to R rate
-        to_dead_from_I_rate = params["gamma"] * nI * params["pID"]  # I to D rate
-        to_recovered_from_H_rate = params["alpha"] * nH * params["pHR"]  # H to R rate
-        to_dead_from_H_rate = params["alpha"] * nH * params["pHD"]  # H to D rate
+        infection_rate = params["pSI"] * params["beta"] * nS * nI / N
+        to_susceptible_from_R_rate = params["pRS"] * params["lambda"] * nR
+        to_hospital_rate = params["gamma"] * nI * params["pIH"]
+        to_recovered_from_I_rate = params["gamma"] * nI * params["pIR"]
+        to_dead_from_I_rate = params["gamma"] * nI * params["pID"]
+        to_recovered_from_H_rate = params["alpha"] * nH * params["pHR"]
+        to_dead_from_H_rate = params["alpha"] * nH * params["pHD"]
         
         total_rate = infection_rate + to_susceptible_from_R_rate + to_hospital_rate +
                      to_recovered_from_I_rate + to_dead_from_I_rate + to_recovered_from_H_rate +
@@ -229,7 +236,7 @@ function sihrs_agent_model(N::Int, params::Dict)
             break
         end
         
-        # Time of next event
+
         dt = rand(Exponential(1 / total_rate))
         t = t + dt
         
@@ -247,10 +254,11 @@ function sihrs_agent_model(N::Int, params::Dict)
         event_count = event_count + 1
         T[event_count] = t
         
-        # Determine which event occurs
+
         chance = rand() * total_rate
         if chance < infection_rate
             # S to I transition
+
             if nS > 0
                 num = rand(1:nS)
                 infected_agent = S[num]
@@ -259,6 +267,7 @@ function sihrs_agent_model(N::Int, params::Dict)
             end
         elseif chance < (infection_rate + to_susceptible_from_R_rate)
             # R to S transition
+
             if nR > 0
                 num = rand(1:nR)
                 susceptible_agent = R[num]
@@ -267,6 +276,7 @@ function sihrs_agent_model(N::Int, params::Dict)
             end
         elseif chance < (infection_rate + to_susceptible_from_R_rate + to_hospital_rate)
             # I to H transition
+
             if nI > 0
                 num = rand(1:nI)
                 hospitalized_agent = I[num]
@@ -275,6 +285,7 @@ function sihrs_agent_model(N::Int, params::Dict)
             end
         elseif chance < (infection_rate + to_susceptible_from_R_rate + to_hospital_rate + to_recovered_from_I_rate)
             # I to R transition
+
             if nI > 0
                 num = rand(1:nI)
                 recovered_agent = I[num]
@@ -283,6 +294,7 @@ function sihrs_agent_model(N::Int, params::Dict)
             end
         elseif chance < (infection_rate + to_susceptible_from_R_rate + to_hospital_rate + to_recovered_from_I_rate + to_dead_from_I_rate)
             # I to D transition
+
             if nI > 0
                 num = rand(1:nI)
                 dead_agent = I[num]
@@ -291,6 +303,7 @@ function sihrs_agent_model(N::Int, params::Dict)
             end
         elseif chance < (infection_rate + to_susceptible_from_R_rate + to_hospital_rate + to_recovered_from_I_rate + to_dead_from_I_rate + to_recovered_from_H_rate)
             # H to R transition
+
             if nH > 0
                 num = rand(1:nH)
                 recovered_agent = H[num]
@@ -307,7 +320,7 @@ function sihrs_agent_model(N::Int, params::Dict)
             end
         end
         
-        # Update tracking arrays
+
         current_total = length(S) + length(I) + length(H) + length(R) + length(D)
         I_prop[event_count] = length(I) / current_total
         I_count[event_count] = length(I)
@@ -315,6 +328,7 @@ function sihrs_agent_model(N::Int, params::Dict)
         D_count[event_count] = length(D)
     end
     
+
     # Trim unused preallocated space
     T = T[1:event_count]
     I_prop = I_prop[1:event_count]
@@ -322,6 +336,7 @@ function sihrs_agent_model(N::Int, params::Dict)
     H_count = H_count[1:event_count]
     D_count = D_count[1:event_count]
     
+
     # Store results
     result = Dict(
         "N" => N,
@@ -341,20 +356,13 @@ function sihrs_agent_model(N::Int, params::Dict)
 end
 
 function plot_multiple_simulations(all_results, N, params)
-    # This function creates two figures:
-    # 1. The uncertainty envelope plot (and shaded prediction interval).
-    # 2. The histogram of peak infection values (like Figure 4B).
-
-    # --- 1. Create a common time grid for comparison ---
-    t_grid = collect(0:params["tmax"])  # daily time steps
-    
-    # --- 2. Interpolate each simulation's results onto the grid ---
+    t_grid = collect(0:params["tmax"])
     all_interp_H = zeros(length(all_results), length(t_grid))
     all_interp_D = zeros(length(all_results), length(t_grid))
     
     for i in 1:length(all_results)
         res = all_results[i]
-        # Create interpolation function
+
         if length(res["T"]) > 1
             itp_H = linear_interpolation(res["T"], res["H_count"], extrapolation_bc=0)
             itp_D = linear_interpolation(res["T"], res["D_count"], extrapolation_bc=0)
@@ -366,7 +374,7 @@ function plot_multiple_simulations(all_results, N, params)
         end
     end
     
-    # --- Compute active deaths (rolling window) for each simulation ---
+
     window = 14
     all_active_D = zeros(size(all_interp_D))
     for i in 1:size(all_interp_D, 1)
@@ -379,13 +387,12 @@ function plot_multiple_simulations(all_results, N, params)
         end
     end
     
-    # --- 3. Calculate statistics for the bandwidth (using all simulations) ---
-    # Use all simulations without filtering
+
     valid_sims = 1:size(all_interp_H, 1)
     
     @printf("Using all %d simulations for prediction interval calculation\n", length(valid_sims))
     
-    # Calculate statistics using all simulations
+
     mean_H = mean(all_interp_H[valid_sims, :], dims=1)[1, :]
     lower_H = [quantile(all_interp_H[valid_sims, t], 0.05) for t in 1:size(all_interp_H, 2)]  # 5th percentile
     upper_H = [quantile(all_interp_H[valid_sims, t], 0.95) for t in 1:size(all_interp_H, 2)]  # 95th percentile
@@ -393,46 +400,43 @@ function plot_multiple_simulations(all_results, N, params)
     lower_D = [quantile(all_active_D[:, t], 0.05) for t in 1:size(all_active_D, 2)]
     upper_D = [quantile(all_active_D[:, t], 0.95) for t in 1:size(all_active_D, 2)]
     
-    # --- 4. Load and process real-world hospitalization data ---
-    population = N  # Use same population as simulation
+    population = N
     real_interp_H = zeros(length(t_grid))
     real_interp_D_prop = zeros(length(t_grid))
-    simulation_start_date = Date("2020-03-25")  # Simulation start date
+    simulation_start_date = Date("2020-03-25")
     
     try
-        # Load hospitalization data
+
         hosp_data_table = CSV.read("hospitalization_Carson_filtered_new.csv", DataFrame)
         
-        # Remove duplicate entries by summing values for each date (different hospitals)
+
         hosp_data_table = combine(groupby(hosp_data_table, :collection_week), 
                                  :total_adult_and_pediatric_covid_patients => sum => :total_adult_and_pediatric_covid_patients)
         
-        # Convert collection_week to Date with proper year handling
+
         hosp_data_table.collection_week = Date.(hosp_data_table.collection_week, "m/d/yy")
-        # Fix the year to be 20xx instead of 00xx
+
         for i in 1:length(hosp_data_table.collection_week)
             d = hosp_data_table.collection_week[i]
             hosp_data_table.collection_week[i] = Date(2000 + year(d), month(d), day(d))
         end
         
-        # Sort by date
+
         sort!(hosp_data_table, :collection_week)
         
-        # Use the total hospitalization data (7-day average of active cases)
+
         hospitalization_data = hosp_data_table.total_adult_and_pediatric_covid_patients
         hosp_dates = hosp_data_table.collection_week
         
-        # Convert to days from March 25 (simulation start)
+
         simulation_start_date = Date("2020-03-25")
         hosp_days = [Dates.value(Day(d - simulation_start_date)) for d in hosp_dates]
         
-        # Interpolate hospitalization data to the simulation time grid
-        # This is already 7-day average of active hospitalizations
-        # Use NaN for extrapolation to avoid artificial extension
+
         itp_real_H = linear_interpolation(hosp_days, hospitalization_data, extrapolation_bc=NaN)
         real_interp_H = [itp_real_H(t) for t in t_grid]
         
-        # For death data, align with March 25 simulation start
+
         data_table = CSV.read("carson_city_combined.csv", DataFrame)
         start_idx = findfirst(data_table.date .== simulation_start_date)
         if isnothing(start_idx)
@@ -443,7 +447,7 @@ function plot_multiple_simulations(all_results, N, params)
         real_interp_D = interp1([Dates.value(Day(d - simulation_start_date)) for d in dates_from_start], 
                                data_table.deaths[start_idx:end], t_grid)
         
-        # Compute active deaths for real data
+
         real_active_D = zeros(length(real_interp_D))
         for t in 1:length(real_interp_D)
             if t <= window
@@ -462,7 +466,7 @@ function plot_multiple_simulations(all_results, N, params)
         real_interp_D_prop = zeros(length(t_grid))
     end
     
-    # Convert all counts to proportions for plotting
+
     all_interp_H_prop = all_interp_H / N
     mean_H_prop = mean_H / N
     lower_H_prop = lower_H / N
@@ -473,20 +477,18 @@ function plot_multiple_simulations(all_results, N, params)
     upper_D_prop = upper_D / N
     real_interp_H_prop = real_interp_H / population
     
-    # Filter out straight lines (extinct simulations) for plotting
-    # Use multiple criteria to identify constant lines
+
     plot_sims = Int[]
     for i in 1:size(all_interp_H_prop, 1)
         sim_data = all_interp_H_prop[i, :]
         
-        # Calculate multiple metrics to detect straight lines
+
         std_val = std(sim_data)
         max_val = maximum(sim_data)
         min_val = minimum(sim_data)
         range_val = max_val - min_val
         
-        # Check if the line has meaningful variation
-        # Criteria: std > threshold OR range > threshold OR max > initial_value * 2
+
         initial_val = sim_data[1]
         if std_val > 1e-5 || range_val > 1e-4 || max_val > initial_val * 2
             push!(plot_sims, i)
@@ -496,19 +498,19 @@ function plot_multiple_simulations(all_results, N, params)
     @printf("Plotting %d out of %d simulations (filtered out %d straight lines)\n",
             length(plot_sims), size(all_interp_H_prop, 1), size(all_interp_H_prop, 1) - length(plot_sims))
     
-    # Debug: Show some statistics about the filtered vs unfiltered simulations
+
     if !isempty(plot_sims)
         filtered_max = maximum(maximum(all_interp_H_prop[plot_sims, :]))
         all_max = maximum(maximum(all_interp_H_prop))
         @printf("Filtered simulations max: %.6f, All simulations max: %.6f\n", filtered_max, all_max)
     end
 
-    # --- 5. Create the final plot with the uncertainty envelope ---
+
     p1 = plot(t_grid, upper_H_prop, fillrange=lower_H_prop, 
               fillalpha=0.5, fillcolor=:lightblue, linealpha=0,
               label="90% Prediction Interval", linewidth=0)
     
-    # Only plot real hospitalization data where it exists (not NaN)
+
     valid_real_data = .!isnan.(real_interp_H_prop)
     if any(valid_real_data)
         plot!(t_grid[valid_real_data], real_interp_H_prop[valid_real_data], 
@@ -519,8 +521,6 @@ function plot_multiple_simulations(all_results, N, params)
     title!("Carson City, NV")
     xlims!(0, params["tmax"])
     ylims!(0, maximum([upper_H_prop; real_interp_H_prop]) * 1.1)
-    
-    # Set x-ticks every 90 days to avoid overlapping
     tick_interval = 90
     xtick_positions = collect(0:tick_interval:params["tmax"])
     xtick_dates = [simulation_start_date + Day(x) for x in xtick_positions]
@@ -530,15 +530,13 @@ function plot_multiple_simulations(all_results, N, params)
     xlabel!("Date (mm/dd/yy)")
     
     savefig(p1, "SIHRS_Carson_City_Hospitalization_bandwidth.png")
-    
-    # --- 6. Create a second figure with all stochastic sims and the real data ---
     p2 = plot()
-    # Plot only non-constant stochastic simulations as semi-transparent blue lines
+
     for i in plot_sims
         plot!(t_grid, all_interp_H_prop[i, :], color=RGBA(0.2, 0.4, 0.8, 0.3), 
               linewidth=1.0, label="")
     end
-    # Plot the real hospitalization data as a solid red line (only where it exists)
+
     valid_real_data = .!isnan.(real_interp_H_prop)
     if any(valid_real_data)
         plot!(t_grid[valid_real_data], real_interp_H_prop[valid_real_data], 
@@ -550,12 +548,11 @@ function plot_multiple_simulations(all_results, N, params)
     xlims!(0, params["tmax"])
     ylims!(0, maximum([maximum(all_interp_H_prop[plot_sims, :]); maximum(real_interp_H_prop)]) * 1.1)
     
-    # Custom legend
+
     plot!([NaN], [NaN], color=RGBA(0.2, 0.4, 0.8), linewidth=2.5, 
           label="Stochastic Simulations")
     
-    # Set x-ticks every 90 days to avoid overlapping
-    # Format dates more clearly
+
     date_labels = [Dates.format(d, "mm/dd") * "/" * string(year(d))[3:4] for d in xtick_dates]
     xticks!(xtick_positions, date_labels)
     xlabel!("Date (mm/dd/yy)")
