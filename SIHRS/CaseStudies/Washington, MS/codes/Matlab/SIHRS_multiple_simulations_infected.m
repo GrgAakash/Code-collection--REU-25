@@ -2,9 +2,7 @@ function SIHRS_multiple_simulations_infected()
 % SIHRS model for Washington, Mississippi (Mar 2020-Dec 2021) starting from Patient Zero with stochastic simulations
 
     % Initialize variables at function level
-    N = 43000;  % Washington County, Mississippi population (2020 Census)
-    
-
+    N = 44922;  % Washington County, Mississippi population (2020 Census)
     s0 = 0.0;
     i0 = 0.0;
     h0 = 0.0;
@@ -52,7 +50,7 @@ function SIHRS_multiple_simulations_infected()
 
     % Model parameters
     params = struct(...
-        'beta', 0.195,      ... % infection rate (β > 0) - Updated for Washington, MS
+        'beta', 0.194,      ... % infection rate (β > 0) - Updated for Washington, MS
         'gamma', 0.165,     ... % I transition rate (γ > 0) - Updated for Washington, MS
         'alpha', 0.111,       ... % H transition rate (α > 0)
         'lambda', 0.0083,   ... % R transition rate (Λ > 0) - Updated for Washington, MS
@@ -74,7 +72,7 @@ function SIHRS_multiple_simulations_infected()
         'd0', d0            ... % initial dead proportion
     );
     
-
+    %R0 target is 1.17
     calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
     fprintf('Calculated R0 = %.6f \n', calculated_R0);
 

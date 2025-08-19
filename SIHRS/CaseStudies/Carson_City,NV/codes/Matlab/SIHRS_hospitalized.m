@@ -2,7 +2,7 @@ function SIHRS_hospitalized()
 % SIHRS model for Carson City (Mar 2020-Dec 2021) starting from Patient Zero with stochastic simulations
 
     % Initialize variables
-    N = 56000;  % Carson City, Nevada population
+    N = 58639;  % Carson City, Nevada population
     s0 = 0.0;
     i0 = 0.0;
     h0 = 0.0;
@@ -54,8 +54,8 @@ function SIHRS_hospitalized()
 
     % Model parameters
    params = struct(...
-        'beta', 0.157,      ... % infection rate (β > 0) - Updated for Carson City, NV
-        'gamma', 0.127,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
+        'beta', 0.1511,      ... % infection rate (β > 0) - Updated for Carson City, NV
+        'gamma', 0.123,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
         'alpha', 0.111,       ... % H transition rate (α > 0)
         'lambda', 0.0083,    ... % R transition rate (Λ > 0)
         'pSI', 1.0,         ... % probability of S to I (p_{SI} in (0,1])
@@ -75,6 +75,7 @@ function SIHRS_hospitalized()
         'r0', r0,           ... % initial recovered proportion
         'd0', d0            ... % initial dead proportion
     );
+
 
 
 

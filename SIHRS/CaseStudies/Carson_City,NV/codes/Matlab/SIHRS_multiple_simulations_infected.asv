@@ -2,7 +2,7 @@ function SIHRS_multiple_simulations_infected()
 % SIHRS model for Carson City (Mar 2020-Dec 2021) starting from Patient Zero with stochastic simulations
 
     % Initialize variables at function level
-    N = 58639;  % Carson City, Nevada population
+    N = 56000;  % Carson City, Nevada population
     s0 = 0.0;
     i0 = 0.0;
     h0 = 0.0;
@@ -52,15 +52,15 @@ function SIHRS_multiple_simulations_infected()
     end
 
     % Model parameters
-   params = struct(...
-        'beta', 0.1511,      ... % infection rate (β > 0) - Updated for Carson City, NV
-        'gamma', 0.123,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
+    params = struct(...
+        'beta', 0.164,      ... % infection rate (β > 0)
+        'gamma', 0.1281,     ... % I transition rate (γ > 0) 
         'alpha', 0.111,       ... % H transition rate (α > 0)
-        'lambda', 0.0083,    ... % R transition rate (Λ > 0)
+        'lambda', 0.0083,    ... % R transition rate (Λ > 0)  
         'pSI', 1.0,         ... % probability of S to I (p_{SI} in (0,1])
         'pII', 0.00,        ... % probability of I to I (stay infected)
-        'pIH', 0.1060,        ... % probability of I to H
-        'pIR', 0.8921,       ... % probability of I to R
+        'pIH', 0.1060,        ... % probability of I to H 
+        'pIR', 0.8921,       ... % probability of I to R 
         'pID', 0.0019,       ... % probability of I to D
         'pHH', 0.01,        ... % probability of H to H (stay hospitalized)
         'pHR', 0.836,      ... % probability of H to R
@@ -77,7 +77,7 @@ function SIHRS_multiple_simulations_infected()
 
 
 
-    %R0 target is 1.22
+
     calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
     fprintf('Calculated R0 = %.6f \n', calculated_R0);
 
@@ -89,7 +89,7 @@ function SIHRS_multiple_simulations_infected()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 59;
+    num_simulations = 9;
 
 
     if N <= 0
