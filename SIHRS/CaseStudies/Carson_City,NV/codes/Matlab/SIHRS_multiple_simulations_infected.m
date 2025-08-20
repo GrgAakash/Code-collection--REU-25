@@ -490,9 +490,10 @@ function plot_multiple_simulations_infected(all_results, N, params)
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
 
-    % Custom legend
-    plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
-    legend('Stochastic Simulations', 'Real Data', 'Location', 'best');
+    % Create legend handles in correct order
+    h1 = plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
+    h2 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
+    legend([h1, h2], {'Stochastic Simulations', 'Real Data'}, 'Location', 'best');
     saveas(gcf, 'SIHRS_Carson_City_Full_Pandemic_trajectories.png');
 
     % --- 7. Create a figure for death proportion (active deaths) ---

@@ -1,5 +1,5 @@
-function SIHRS_multiple_simulations_infected()
-% SIHRS model for Washington, Mississippi (Mar 2020-Dec 2021) starting from Patient Zero with stochastic simulations
+function SIHRS_multiple_simulations_infected_aug30()
+% SIHRS model for Washington, Mississippi (Aug 2020-Dec 2021) starting from Aug 30, 2020 with stochastic simulations
 
     % Initialize variables at function level
     N = 44922;  % Washington County, Mississippi population (2020 Census)
@@ -12,9 +12,9 @@ function SIHRS_multiple_simulations_infected()
     % Load Washington County, Mississippi data for initial conditions
     try
 
-        data_table = readtable('washington_mississippi_combined.csv');
+        data_table = readtable('washington_mississippi_active_cases_aug30.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
-        start_date = datetime('2020-03-25');
+        start_date = datetime('2020-08-30');
         
 
         start_idx = find(data_table.date == start_date, 1);
@@ -26,14 +26,25 @@ function SIHRS_multiple_simulations_infected()
                     datestr(data_table.date(start_idx)));
         end
         
-        real_initial_infected = data_table.cases(start_idx);
-        real_initial_dead = data_table.deaths(start_idx);
+        real_initial_infected = data_table.active_cases(start_idx);
+        real_initial_dead = data_table.cumulative_deaths(start_idx);
         
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
         h0 = 0.0;  
         r0 = 0.0;
         s0 = 1.0 - (i0 + h0 + r0 + d0);
+        
+        % Debug output
+        fprintf('=== INITIAL CONDITIONS DEBUG ===\n');
+        fprintf('Date: %s\n', datestr(start_date));
+        fprintf('Real initial infected (active cases): %d\n', real_initial_infected);
+        fprintf('Real initial dead: %d\n', real_initial_dead);
+        fprintf('Population N: %d\n', N);
+        fprintf('Initial infected proportion i0: %.6f\n', i0);
+        fprintf('Initial dead proportion d0: %.6f\n', d0);
+        fprintf('Initial susceptible proportion s0: %.6f\n', s0);
+        fprintf('================================\n');
         
     catch ME
         warning('Could not load Washington County, MS real data: %s', ME.message);
@@ -64,7 +75,7 @@ function SIHRS_multiple_simulations_infected()
         'pHD', 0.154,       ... % probability of H to D - Updated
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 620,        ... % simulation end time (extended for Washington, MS data)
+        'tmax', 480,        ... % simulation end time (reduced from Aug 30, 2020 to Dec 31, 2021)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
@@ -84,7 +95,7 @@ function SIHRS_multiple_simulations_infected()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 3;  
+    num_simulations = 55;  
     
 
     if N <= 0
@@ -96,11 +107,17 @@ function SIHRS_multiple_simulations_infected()
     
 
     try
-        fprintf('Running %d stochastic simulations for N = %d...\n', num_simulations, N);
+        fprintf('Running %d stochastic simulations for N = %d starting from Aug 30, 2020...\n', num_simulations, N);
         
         for sim_idx = 1:num_simulations
             fprintf('Running simulation %d/%d...\n', sim_idx, num_simulations);
-            all_results{sim_idx} = sihrs_agent_model_infected(N, params);
+            
+            % Add parameter uncertainty to create wider prediction intervals
+            params_varied = params;
+            params_varied.beta = params.beta * (0.8 + 0.4*rand()); % ±20% variation
+            params_varied.gamma = params.gamma * (0.8 + 0.4*rand()); % ±20% variation
+            
+            all_results{sim_idx} = sihrs_agent_model_infected(N, params_varied);
         end
         
         fprintf('All simulations completed!\n');
@@ -363,11 +380,11 @@ function plot_multiple_simulations_infected(all_results, N, params)
     real_interp_D = zeros(length(t_grid), 1);
     real_interp_D_prop = zeros(length(t_grid), 1);
     real_cumulative_D = zeros(length(t_grid), 1);
-    start_date_real = datetime('2020-03-25');  % Default start date
+    start_date_real = datetime('2020-08-30');  % Updated start date
 
     try
 
-        data_table = readtable('washington_mississippi_combined.csv');
+        data_table = readtable('washington_mississippi_active_cases_aug30.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
         start_idx = find(data_table.date == start_date_real, 1);
         if isempty(start_idx)
@@ -376,12 +393,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
         end
 
         dates_from_start = data_table.date(start_idx:end);
-        cumulative_cases_from_start = data_table.cases(start_idx:end);
-        recovery_days = 14;  % Longer recovery period for rural areas (14 days)
-
-
-        cumulative_shifted = [zeros(recovery_days, 1); cumulative_cases_from_start(1:end-recovery_days)];
-        active_cases_count = cumulative_cases_from_start - cumulative_shifted;
+        active_cases_count = data_table.active_cases(start_idx:end);
 
         active_cases_count = max(active_cases_count, 0);
 
@@ -390,8 +402,15 @@ function plot_multiple_simulations_infected(all_results, N, params)
 
         real_interp_I = interp1(carson_days, active_cases_count, t_grid, 'linear', 0);
 
+        % Debug real data interpolation
+        fprintf('=== REAL DATA DEBUG ===\n');
+        fprintf('First 5 active cases: [%.1f, %.1f, %.1f, %.1f, %.1f]\n', active_cases_count(1:5));
+        fprintf('First 5 days from start: [%.1f, %.1f, %.1f, %.1f, %.1f]\n', carson_days(1:5));
+        fprintf('First 5 interpolated values: [%.6f, %.6f, %.6f, %.6f, %.6f]\n', real_interp_I(1:5));
+        fprintf('Real interp I at t=0: %.6f (should be %.6f)\n', real_interp_I(1), active_cases_count(1)/N);
+        fprintf('=======================\n');
 
-        daily_deaths_data = readtable('washington_mississippi_daily_deaths.csv');
+        daily_deaths_data = readtable('washington_mississippi_daily_deaths_aug30.csv');
         daily_deaths_data.date = datetime(daily_deaths_data.date, 'InputFormat', 'yyyy-MM-dd');
 
 
@@ -475,12 +494,12 @@ function plot_multiple_simulations_infected(all_results, N, params)
          [0.7 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
     
-
+    
     
     plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Time (days)');
     ylabel('Infected Proportion');
-    title('Washington, Mississippi');
+    title('Washington, Mississippi (Starting Aug 30, 2020)');
     xlim([0, params.tmax]);
     ylim([0, max([upper_I_prop; real_interp_I_prop]) * 1.1]);
 
@@ -489,7 +508,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
     xlabel('Date (mm/dd/yy)');
 
     legend('90% Prediction Interval', 'Real Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_bandwidth.png');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Pandemic_bandwidth.png');
     
 
     figure;
@@ -503,7 +522,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
     plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Time (days)');
     ylabel('Infected Proportion');
-    title('Washington, Mississippi');
+    title('Washington, Mississippi (Starting Aug 30, 2020)');
     xlim([0, params.tmax]);
     ylim([0, max([max(max(all_interp_I_prop)), max(real_interp_I_prop)]) * 1.1]);
 
@@ -512,11 +531,9 @@ function plot_multiple_simulations_infected(all_results, N, params)
     xlabel('Date (mm/dd/yy)');
 
 
-    % Create legend handles in correct order
-    h1 = plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
-    h2 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
-    legend([h1, h2], {'Stochastic Simulations', 'Real Data'}, 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_trajectories.png');
+    plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
+    legend('Stochastic Simulations', 'Real Data', 'Location', 'best');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Pandemic_trajectories.png');
 
 
     figure;
@@ -524,12 +541,12 @@ function plot_multiple_simulations_infected(all_results, N, params)
          [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
     
-
+    
     
     plot(t_grid, real_interp_D_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Date');
     ylabel('Active Death Proportion');
-    title('Washington, Mississippi');
+    title('Washington, Mississippi (Starting Aug 30, 2020)');
     xlim([0, params.tmax]);
     ylim([0, max([upper_D_prop; real_interp_D_prop]) * 1.1]);
 
@@ -538,7 +555,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
     xlabel('Date (mm/dd/yy)');
 
     legend('90% Prediction Interval', 'Real Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_active_deaths.png');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Pandemic_active_deaths.png');
 
 
     real_interp_D_prop_cumulative = real_cumulative_D / population;
@@ -546,7 +563,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
     plot(t_grid, real_interp_D_prop_cumulative, 'r-', 'LineWidth', 2.5);
     xlabel('Date');
     ylabel('Cumulative Death Proportion');
-    title('Washington, Mississippi');
+    title('Washington, Mississippi (Starting Aug 30, 2020)');
     xlim([0, params.tmax]);
     ylim([0, max(real_interp_D_prop_cumulative) * 1.1]);
 
@@ -555,7 +572,7 @@ function plot_multiple_simulations_infected(all_results, N, params)
     xlabel('Date (mm/dd/yy)');
 
     legend('Real Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Full_Pandemic_cumulative_deaths.png');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Pandemic_cumulative_deaths.png');
 end
 
 function result = compute_rolling_window(data, window_size)

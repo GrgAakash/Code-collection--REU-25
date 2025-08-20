@@ -1,5 +1,5 @@
-function SIHRS_hospitalized()
-% SIHRS model for Washington, Mississippi (Mar 2020-Dec 2021) starting from Patient Zero with stochastic simulations
+function SIHRS_hospitalized_aug30()
+% SIHRS model for Washington, Mississippi (Aug 2020-Dec 2021) starting from August 30, 2020 with stochastic simulations
 
     % Initialize variables at function level
     N = 44922;  % Washington County, Mississippi population (2020 Census)
@@ -12,9 +12,9 @@ function SIHRS_hospitalized()
     % Load Washington County, Mississippi data for initial conditions
     try
 
-        data_table = readtable('washington_mississippi_combined.csv');
+        data_table = readtable('washington_mississippi_active_cases_aug30.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
-        start_date = datetime('2020-03-25');
+        start_date = datetime('2020-08-30');
 
 
         start_idx = find(data_table.date == start_date, 1);
@@ -27,26 +27,30 @@ function SIHRS_hospitalized()
         end
 
 
-        real_initial_infected = data_table.cases(start_idx);
-        real_initial_dead = data_table.deaths(start_idx);
+        real_initial_infected = data_table.active_cases(start_idx);
+        real_initial_dead = data_table.cumulative_deaths(start_idx);
+        
+        % Get initial hospitalization data for Aug 30, 2020
+        real_initial_hospitalized = 40.2;  % From hospitalization_MS_filtered.csv
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
-        h0 = 0.0;
+        h0 = real_initial_hospitalized / N;
         r0 = 0.0;
         s0 = 1.0 - (i0 + h0 + r0 + d0);
 
-        fprintf('March 25 initial conditions: I=%d, D=%d, H=%d, R=%d, S=%d\n', ...
-                real_initial_infected, real_initial_dead, 0, 0, round(s0 * N));
+        fprintf('August 30 initial conditions: I=%d, D=%d, H=%.1f, R=%d, S=%d\n', ...
+                real_initial_infected, real_initial_dead, real_initial_hospitalized, 0, round(s0 * N));
 
     catch ME
         warning('Could not load Washington County, MS real data: %s', ME.message);
         real_initial_infected = 5;
         real_initial_dead = 0;
+        real_initial_hospitalized = 40.2;  % Default from hospitalization data
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
-        h0 = 0.0;
+        h0 = real_initial_hospitalized / N;
         r0 = 0.0;
         s0 = 1.0 - (i0 + h0 + r0 + d0);
     end
@@ -67,7 +71,7 @@ function SIHRS_hospitalized()
         'pHD', 0.154,       ... % probability of H to D - Updated
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 620,        ... % simulation end time (extended for Washington, MS data)
+        'tmax', 480,        ... % simulation end time (Aug 30, 2020 to Dec 31, 2021)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
@@ -87,7 +91,7 @@ function SIHRS_hospitalized()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 1;
+    num_simulations = 3;
 
 
     if N <= 0
@@ -109,7 +113,7 @@ function SIHRS_hospitalized()
         fprintf('All simulations completed!\n');
 
 
-        plot_multiple_simulations(all_results, N, params);
+        plot_multiple_simulations_aug30(all_results, N, params);
 
     catch ME
         fprintf('Error occurred: %s\n', ME.message);
@@ -329,7 +333,7 @@ function result = sihrs_agent_model(N, params)
     );
 end
 
-function plot_multiple_simulations(all_results, N, params)
+function plot_multiple_simulations_aug30(all_results, N, params)
     t_grid = (0:params.tmax)';
     all_interp_H = zeros(length(all_results), length(t_grid));
     all_interp_D = zeros(length(all_results), length(t_grid));
@@ -379,7 +383,7 @@ function plot_multiple_simulations(all_results, N, params)
     population = N;
     real_interp_H = zeros(length(t_grid), 1);
     real_interp_D_prop = zeros(length(t_grid), 1);
-    simulation_start_date = datetime('2020-03-25');
+    simulation_start_date = datetime('2020-08-30');
 
     try
 
@@ -414,7 +418,7 @@ function plot_multiple_simulations(all_results, N, params)
         real_interp_H(isnan(real_interp_H)) = 0;
 
 
-        data_table = readtable('washington_mississippi_combined.csv');
+        data_table = readtable('washington_mississippi_combined_aug30.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
         start_idx = find(data_table.date == simulation_start_date, 1);
         if isempty(start_idx)
@@ -473,7 +477,7 @@ function plot_multiple_simulations(all_results, N, params)
 
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Washington, Mississippi');
+    title('Washington, Mississippi - Aug 30 Start');
     xlim([0, params.tmax]);
 
     if any(valid_real_data)
@@ -493,7 +497,7 @@ function plot_multiple_simulations(all_results, N, params)
     xlabel('Date (mm/dd/yy)');
 
     legend('90% Prediction Interval', 'Real Hospitalization Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Hospitalization_bandwidth.png');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Hospitalization_bandwidth.png');
 
 
     figure;
@@ -515,7 +519,7 @@ function plot_multiple_simulations(all_results, N, params)
 
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Washington, Mississippi');
+    title('Washington, Mississippi - Aug 30 Start');
     xlim([0, params.tmax]);
 
     if any(valid_real_data)
@@ -531,7 +535,104 @@ function plot_multiple_simulations(all_results, N, params)
     xlabel('Date (mm/dd/yy)');
 
     legend('Stochastic Simulations', 'Real Hospitalization Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Hospitalization_trajectories.png');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Hospitalization_trajectories.png');
+
+    % Third figure: ODE + Real World + Stochastic Simulations Combined
+    figure;
+    
+    % Plot stochastic simulations (lighter blue)
+    for i = 1:size(all_interp_H_prop, 1)
+        if max(all_interp_H_prop(i, :)) > min(all_interp_H_prop(i, :)) * 1.1
+            plot(t_grid, all_interp_H_prop(i, :), 'Color', [0.2, 0.4, 0.8, 0.2], 'LineWidth', 0.8);
+            hold on;
+        end
+    end
+    
+    % Compute and plot ODE solution
+    ode_H = solve_ode_hospitalization_aug30(params, N);
+    ode_H_prop = ode_H / N;
+    plot(t_grid, ode_H_prop, 'g-', 'LineWidth', 3.0);
+    
+    % Plot real world data
+    if any(valid_real_data)
+        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
+        plot(t_grid(valid_real_data), valid_H_prop, ...
+             'r-', 'LineWidth', 2.5);
+    end
+
+    xlabel('Time (days)');
+    ylabel('Hospitalized Proportion');
+    title('Washington, MS - Aug 30 Start: ODE vs Stochastic vs Real Data');
+    xlim([0, params.tmax]);
+
+    if any(valid_real_data)
+        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
+        ylim([0, max([max(all_interp_H_prop(:)); max(ode_H_prop); max_real_H]) * 1.1]);
+    else
+        ylim([0, max([max(all_interp_H_prop(:)); max(ode_H_prop)]) * 1.1]);
+    end
+
+    xticks(xtick_positions);
+    xticklabels(date_labels);
+    xlabel('Date (mm/dd/yy)');
+
+    % Create legend handles in correct order
+    h1 = plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
+    h2 = plot(NaN, NaN, 'g-', 'LineWidth', 3.0);
+    h3 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
+    legend([h1, h2, h3], {'Stochastic Simulations', 'ODE Solution', 'Real Hospitalization Data'}, 'Location', 'best');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Hospitalization_combined.png');
+end
+
+function ode_H = solve_ode_hospitalization_aug30(params, N)
+    % Solve the deterministic ODE system for hospitalization
+    tspan = [0, params.tmax];
+    
+    % Initial conditions
+    S0 = params.s0 * N;
+    I0 = params.i0 * N;
+    H0 = params.h0 * N;
+    R0 = params.r0 * N;
+    D0 = params.d0 * N;
+    
+    y0 = [S0; I0; H0; R0; D0];
+    
+    % Solve ODE
+    [t, y] = ode45(@(t, y) sihrs_ode_aug30(t, y, params, N), tspan, y0);
+    
+    % Interpolate H compartment to match time grid
+    t_grid = (0:params.tmax)';
+    ode_H = interp1(t, y(:, 3), t_grid, 'linear', 'extrap');
+    
+    % Ensure non-negative values
+    ode_H = max(ode_H, 0);
+end
+
+function dydt = sihrs_ode_aug30(t, y, params, N)
+    % SIHRS ODE system
+    S = y(1);
+    I = y(2);
+    H = y(3);
+    R = y(4);
+    D = y(5);
+    
+    % Rates
+    infection_rate = params.beta * params.pSI * S * I / N;
+    to_susceptible_from_R_rate = params.lambda * params.pRS * R;
+    to_hospital_rate = params.gamma * params.pIH * I;
+    to_recovered_from_I_rate = params.gamma * params.pIR * I;
+    to_dead_from_I_rate = params.gamma * params.pID * I;
+    to_recovered_from_H_rate = params.alpha * params.pHR * H;
+    to_dead_from_H_rate = params.alpha * params.pHD * H;
+    
+    % Differential equations
+    dSdt = -infection_rate + to_susceptible_from_R_rate;
+    dIdt = infection_rate - to_hospital_rate - to_recovered_from_I_rate - to_dead_from_I_rate;
+    dHdt = to_hospital_rate - to_recovered_from_H_rate - to_dead_from_H_rate;
+    dRdt = to_recovered_from_I_rate + to_recovered_from_H_rate - to_susceptible_from_R_rate;
+    dDdt = to_dead_from_I_rate + to_dead_from_H_rate;
+    
+    dydt = [dSdt; dIdt; dHdt; dRdt; dDdt];
 end
 
 function idx = argmax(x)

@@ -1,5 +1,5 @@
-function SIHRS_hospitalized()
-% SIHRS model for Washington, Mississippi (Mar 2020-Dec 2021) starting from Patient Zero with stochastic simulations
+function SIHRS_multiple_simulations_infected_aug30()
+% SIHRS model for Washington, Mississippi (Aug 2020-Dec 2021) starting from Aug 30, 2020 with stochastic simulations
 
     % Initialize variables at function level
     N = 44922;  % Washington County, Mississippi population (2020 Census)
@@ -8,14 +8,14 @@ function SIHRS_hospitalized()
     h0 = 0.0;
     r0 = 0.0;
     d0 = 0.0;
-
+    
     % Load Washington County, Mississippi data for initial conditions
     try
 
-        data_table = readtable('washington_mississippi_combined.csv');
+        data_table = readtable('washington_mississippi_active_cases_aug30.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
-        start_date = datetime('2020-03-25');
-
+        start_date = datetime('2020-08-30');
+        
 
         start_idx = find(data_table.date == start_date, 1);
         if isempty(start_idx)
@@ -25,25 +25,33 @@ function SIHRS_hospitalized()
             warning('Exact start date not found. Using closest date: %s', ...
                     datestr(data_table.date(start_idx)));
         end
-
-
-        real_initial_infected = data_table.cases(start_idx);
-        real_initial_dead = data_table.deaths(start_idx);
-
+        
+        real_initial_infected = data_table.active_cases(start_idx);
+        real_initial_dead = data_table.cumulative_deaths(start_idx);
+        
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
-        h0 = 0.0;
+        h0 = 0.0;  
         r0 = 0.0;
         s0 = 1.0 - (i0 + h0 + r0 + d0);
-
-        fprintf('March 25 initial conditions: I=%d, D=%d, H=%d, R=%d, S=%d\n', ...
-                real_initial_infected, real_initial_dead, 0, 0, round(s0 * N));
-
+        
+        % Debug output
+        fprintf('=== INITIAL CONDITIONS DEBUG ===\n');
+        fprintf('Date: %s\n', datestr(start_date));
+        fprintf('Real initial infected (active cases): %d\n', real_initial_infected);
+        fprintf('Real initial dead: %d\n', real_initial_dead);
+        fprintf('Population N: %d\n', N);
+        fprintf('Initial infected proportion i0: %.6f\n', i0);
+        fprintf('Initial dead proportion d0: %.6f\n', d0);
+        fprintf('Initial susceptible proportion s0: %.6f\n', s0);
+        fprintf('================================\n');
+        
     catch ME
         warning('Could not load Washington County, MS real data: %s', ME.message);
-        real_initial_infected = 5;
-        real_initial_dead = 0;
 
+        real_initial_infected = 1;
+        real_initial_dead = 0;
+        
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
         h0 = 0.0;
@@ -67,50 +75,50 @@ function SIHRS_hospitalized()
         'pHD', 0.154,       ... % probability of H to D - Updated
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 620,        ... % simulation end time (extended for Washington, MS data)
+        'tmax', 480,        ... % simulation end time (reduced from Aug 30, 2020 to Dec 31, 2021)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
         'r0', r0,           ... % initial recovered proportion
         'd0', d0            ... % initial dead proportion
     );
-
-
+    
+    %R0 target is 1.17
     calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
     fprintf('Calculated R0 = %.6f \n', calculated_R0);
 
 
     validate_parameters(params);
-
+    
 
     if abs((params.s0 + params.i0 + params.h0 + params.r0 + params.d0) - 1.0) > 1e-10
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 1;
-
+    num_simulations = 3;  
+    
 
     if N <= 0
         error('Population size must be positive integer');
     end
-
+    
 
     all_results = cell(num_simulations, 1);
-
+    
 
     try
-        fprintf('Running %d stochastic simulations for N = %d...\n', num_simulations, N);
-
+        fprintf('Running %d stochastic simulations for N = %d starting from Aug 30, 2020...\n', num_simulations, N);
+        
         for sim_idx = 1:num_simulations
             fprintf('Running simulation %d/%d...\n', sim_idx, num_simulations);
-            all_results{sim_idx} = sihrs_agent_model(N, params);
+            all_results{sim_idx} = sihrs_agent_model_infected(N, params);
         end
-
+        
         fprintf('All simulations completed!\n');
+        
 
-
-        plot_multiple_simulations(all_results, N, params);
-
+        plot_multiple_simulations_infected(all_results, N, params);
+        
     catch ME
         fprintf('Error occurred: %s\n', ME.message);
         rethrow(ME);
@@ -122,14 +130,14 @@ function validate_parameters(params)
     if any([params.beta, params.gamma, params.alpha, params.lambda] <= 0)
         error('All rates (beta, gamma, alpha, lambda) must be positive');
     end
-
+    
     % Validate probabilities are in [0,1]
     probs = [params.pSI, params.pII, params.pIH, params.pIR, params.pID, ...
              params.pHH, params.pHR, params.pHD, params.pRR, params.pRS];
     if any(probs < 0 | probs > 1)
         error('All probabilities must be in [0,1]');
     end
-
+    
     % Validate probability sums
     if abs((params.pII + params.pIH + params.pIR + params.pID) - 1.0) > 1e-10
         error('I transition probabilities must sum to 1');
@@ -142,15 +150,15 @@ function validate_parameters(params)
     end
 end
 
-function result = sihrs_agent_model(N, params)
-    % SIHRS agent-based stochastic model with death
+function result = sihrs_agent_model_infected(N, params)
+    % SIHRS agent-based stochastic model with death (focusing on infected and deaths)
     % Initial conditions
     s0 = round(params.s0 * N);
     i0 = round(params.i0 * N);
     h0 = round(params.h0 * N);
     r0 = round(params.r0 * N);
     d0 = round(params.d0 * N);
-
+    
 
     total = s0 + i0 + h0 + r0 + d0;
     if total ~= N
@@ -164,45 +172,43 @@ function result = sihrs_agent_model(N, params)
         r0 = compartments(4);
         d0 = compartments(5);
     end
-
+    
 
     if (s0 + i0 + h0 + r0 + d0) ~= N
         error('Initial conditions must sum to N');
     end
-
+    
     max_events = N * 30;
     T = zeros(max_events, 1);
     I_prop = zeros(max_events, 1);
     I_count = zeros(max_events, 1);
-    H_count = zeros(max_events, 1);
     D_count = zeros(max_events, 1);
-
+    
 
     S = (1:s0)';
     I = ((s0+1):(s0+i0))';
     H = ((s0+i0+1):(s0+i0+h0))';
     R = ((s0+i0+h0+1):(s0+i0+h0+r0))';
     D = ((s0+i0+h0+r0+1):(s0+i0+h0+r0+d0))';
-
+    
 
     t = 0.0;
     T(1) = 0.0;
     event_count = 1;
-
+    
 
     total_pop = s0 + i0 + h0 + r0 + d0;
     I_prop(1) = i0 / total_pop;
     I_count(1) = i0;
-    H_count(1) = h0;
     D_count(1) = d0;
-
+    
 
     while ~isempty(I) && t < params.tmax
         nS = length(S);
         nI = length(I);
         nH = length(H);
         nR = length(R);
-
+        
         infection_rate = params.pSI * params.beta * nS * nI / N;
         to_susceptible_from_R_rate = params.pRS * params.lambda * nR;
         to_hospital_rate = params.gamma * nI * params.pIH;
@@ -210,19 +216,19 @@ function result = sihrs_agent_model(N, params)
         to_dead_from_I_rate = params.gamma * nI * params.pID;
         to_recovered_from_H_rate = params.alpha * nH * params.pHR;
         to_dead_from_H_rate = params.alpha * nH * params.pHD;
-
+        
         total_rate = infection_rate + to_susceptible_from_R_rate + to_hospital_rate + ...
                      to_recovered_from_I_rate + to_dead_from_I_rate + to_recovered_from_H_rate + ...
                      to_dead_from_H_rate;
-
+        
         if total_rate == 0
             break;
         end
-
+        
 
         dt = exprnd(1 / total_rate);
         t = t + dt;
-
+        
         if t > params.tmax
             t = params.tmax;
             event_count = event_count + 1;
@@ -230,14 +236,13 @@ function result = sihrs_agent_model(N, params)
             current_total = length(S) + length(I) + length(H) + length(R) + length(D);
             I_prop(event_count) = length(I) / current_total;
             I_count(event_count) = length(I);
-            H_count(event_count) = length(H);
             D_count(event_count) = length(D);
             break;
         end
-
+        
         event_count = event_count + 1;
         T(event_count) = t;
-
+        
 
         chance = rand() * total_rate;
         if chance < infection_rate
@@ -297,243 +302,258 @@ function result = sihrs_agent_model(N, params)
                 D = [D; dead_agent];
             end
         end
-
+        
 
         current_total = length(S) + length(I) + length(H) + length(R) + length(D);
         I_prop(event_count) = length(I) / current_total;
         I_count(event_count) = length(I);
-        H_count(event_count) = length(H);
         D_count(event_count) = length(D);
     end
-
+    
 
     T = T(1:event_count);
     I_prop = I_prop(1:event_count);
     I_count = I_count(1:event_count);
-    H_count = H_count(1:event_count);
     D_count = D_count(1:event_count);
-
+    
 
     result = struct(...
         'N', N, ...
         'T', T, ...
         'I_count', I_count, ...
-        'H_count', H_count, ...
         'D_count', D_count, ...
         'final_time', t, ...
         'peak_infected', max(I_count), ...
-        'peak_time', T(argmax(I_count)), ...
+        'peak_time', T(find(I_count == max(I_count), 1)), ...
         'peak_infected_prop', max(I_prop), ...
-        'peak_time_prop', T(argmax(I_prop)), ...
+        'peak_time_prop', T(find(I_prop == max(I_prop), 1)), ...
         'i_inf', I_prop(end) ...
     );
 end
 
-function plot_multiple_simulations(all_results, N, params)
+function plot_multiple_simulations_infected(all_results, N, params)
     t_grid = (0:params.tmax)';
-    all_interp_H = zeros(length(all_results), length(t_grid));
+    all_interp_I = zeros(length(all_results), length(t_grid));
     all_interp_D = zeros(length(all_results), length(t_grid));
-
+    
     for i = 1:length(all_results)
         res = all_results{i};
 
         if length(res.T) > 1
-            itp_H = griddedInterpolant(res.T, res.H_count, 'linear', 'none');
+            itp_I = griddedInterpolant(res.T, res.I_count, 'linear', 'none');
             itp_D = griddedInterpolant(res.T, res.D_count, 'linear', 'none');
+            
 
             for j = 1:length(t_grid)
                 if t_grid(j) >= min(res.T) && t_grid(j) <= max(res.T)
-                    all_interp_H(i, j) = itp_H(t_grid(j));
+                    all_interp_I(i, j) = itp_I(t_grid(j));
                     all_interp_D(i, j) = itp_D(t_grid(j));
                 end
             end
         end
     end
-
+    
 
     window = 14;
     all_active_D = zeros(size(all_interp_D));
     for i = 1:size(all_interp_D, 1)
-        for t = 1:length(t_grid)
-            if t <= window
-                all_active_D(i, t) = all_interp_D(i, t);
-            else
-                all_active_D(i, t) = all_interp_D(i, t) - all_interp_D(i, t-window);
-            end
-        end
+        all_active_D(i, :) = compute_rolling_window(all_interp_D(i, :), window);
     end
+    
 
-
-    valid_sims = 1:size(all_interp_H, 1);
-
-    fprintf('Using all %d simulations for prediction interval calculation\n', length(valid_sims));
-
-
-    mean_H = mean(all_interp_H(valid_sims, :), 1)';
-    lower_H = quantile(all_interp_H(valid_sims, :), 0.05, 1)';
-    upper_H = quantile(all_interp_H(valid_sims, :), 0.95, 1)';
+    mean_I = mean(all_interp_I, 1)';
+    lower_I = quantile(all_interp_I, 0.05, 1)';
+    upper_I = quantile(all_interp_I, 0.95, 1)';
     mean_D = mean(all_active_D, 1)';
     lower_D = quantile(all_active_D, 0.05, 1)';
     upper_D = quantile(all_active_D, 0.95, 1)';
+    
 
-    population = N;
-    real_interp_H = zeros(length(t_grid), 1);
+    population = N;  % Use same population as simulation
+    real_interp_I = zeros(length(t_grid), 1);
+    real_interp_D = zeros(length(t_grid), 1);
     real_interp_D_prop = zeros(length(t_grid), 1);
-    simulation_start_date = datetime('2020-03-25');
+    real_cumulative_D = zeros(length(t_grid), 1);
+    start_date_real = datetime('2020-08-30');  % Updated start date
 
     try
 
-        hosp_data_table = readtable('hospitalization_MS_filtered.csv');
-
-
-        hosp_data_table.collection_week = datetime(hosp_data_table.collection_week, 'InputFormat', 'M/d/yy');
-        
-
-        for i = 1:height(hosp_data_table)
-            if year(hosp_data_table.collection_week(i)) < 2000
-                hosp_data_table.collection_week(i) = hosp_data_table.collection_week(i) + years(2000);
-            end
-        end
-
-
-        [unique_dates, ~, idx] = unique(hosp_data_table.collection_week);
-        aggregated_data = accumarray(idx, hosp_data_table.total_adult_and_pediatric_covid_patients, [], @sum);
-        
-
-        [hosp_dates, sort_idx] = sort(unique_dates);
-        hospitalization_data = aggregated_data(sort_idx);
-
-
-        hosp_days = days(hosp_dates - simulation_start_date);
-
-
-        real_interp_H = interp1(hosp_days, hospitalization_data, t_grid, 'linear', NaN);
-        
-
-        real_interp_H_for_plot = real_interp_H;
-        real_interp_H(isnan(real_interp_H)) = 0;
-
-
-        data_table = readtable('washington_mississippi_combined.csv');
+        data_table = readtable('washington_mississippi_active_cases_aug30.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
-        start_idx = find(data_table.date == simulation_start_date, 1);
+        start_idx = find(data_table.date == start_date_real, 1);
         if isempty(start_idx)
-            date_diffs = abs(datenum(data_table.date) - datenum(simulation_start_date));
+            date_diffs = abs(datenum(data_table.date) - datenum(start_date_real));
             [~, start_idx] = min(date_diffs);
         end
+
         dates_from_start = data_table.date(start_idx:end);
-        real_interp_D = interp1(days(dates_from_start - simulation_start_date), ...
-                               data_table.deaths(start_idx:end), t_grid, 'linear', 0);
+        active_cases_count = data_table.active_cases(start_idx:end);
+
+        active_cases_count = max(active_cases_count, 0);
+
+        carson_days = days(dates_from_start - dates_from_start(1));
 
 
-        real_active_D = zeros(length(real_interp_D), 1);
-        for t = 1:length(real_interp_D)
-            if t <= window
-                real_active_D(t) = real_interp_D(t);
-            else
-                real_active_D(t) = real_interp_D(t) - real_interp_D(t-window);
-            end
+        real_interp_I = interp1(carson_days, active_cases_count, t_grid, 'linear', 0);
+
+        % Debug real data interpolation
+        fprintf('=== REAL DATA DEBUG ===\n');
+        fprintf('First 5 active cases: [%.1f, %.1f, %.1f, %.1f, %.1f]\n', active_cases_count(1:5));
+        fprintf('First 5 days from start: [%.1f, %.1f, %.1f, %.1f, %.1f]\n', carson_days(1:5));
+        fprintf('First 5 interpolated values: [%.6f, %.6f, %.6f, %.6f, %.6f]\n', real_interp_I(1:5));
+        fprintf('Real interp I at t=0: %.6f (should be %.6f)\n', real_interp_I(1), active_cases_count(1)/N);
+        fprintf('=======================\n');
+
+        daily_deaths_data = readtable('washington_mississippi_daily_deaths_aug30.csv');
+        daily_deaths_data.date = datetime(daily_deaths_data.date, 'InputFormat', 'yyyy-MM-dd');
+
+
+        daily_start_idx = find(daily_deaths_data.date == start_date_real, 1);
+        if isempty(daily_start_idx)
+            date_diffs = abs(datenum(daily_deaths_data.date) - datenum(start_date_real));
+            [~, daily_start_idx] = min(date_diffs);
         end
+
+
+        daily_deaths_from_start = daily_deaths_data.daily_deaths(daily_start_idx:end);
+        daily_death_dates = daily_deaths_data.date(daily_start_idx:end);
+
+
+        daily_death_days = days(daily_death_dates - start_date_real);
+
+
+        real_interp_D = interp1(daily_death_days, daily_deaths_from_start, t_grid, 'linear', 0);
+
+
+        moving_avg_deaths = daily_deaths_data.moving_avg_7day(daily_start_idx:end);
+        real_active_D = interp1(daily_death_days, moving_avg_deaths, t_grid, 'linear', 0);
         real_interp_D_prop = real_active_D / population;
 
-        fprintf('Successfully loaded hospitalization data with %d unique dates and %d total data points\n', length(hospitalization_data), height(hosp_data_table));
-        fprintf('Hospitalization data range: %.1f to %.1f patients\n', min(hospitalization_data), max(hospitalization_data));
-        fprintf('Date range: %s to %s\n', datestr(min(hosp_dates)), datestr(max(hosp_dates)));
+
+        cumulative_deaths_from_start = daily_deaths_data.cumulative_deaths(daily_start_idx:end);
+        real_cumulative_D = interp1(daily_death_days, cumulative_deaths_from_start, t_grid, 'linear', 0);
+
+
+        fprintf('Successfully loaded real data with %d data points\n', length(active_cases_count));
+        fprintf('Active cases range: %.1f to %.1f\n', min(active_cases_count), max(active_cases_count));
+        fprintf('Daily deaths range: %.1f to %.1f\n', min(daily_deaths_from_start), max(daily_deaths_from_start));
+        fprintf('Date range: %s to %s\n', datestr(min(dates_from_start)), datestr(max(dates_from_start)));
+        fprintf('Daily death days range: %.1f to %.1f\n', min(daily_death_days), max(daily_death_days));
+        fprintf('Simulation time grid: %.1f to %.1f\n', min(t_grid), max(t_grid));
+        fprintf('Real interp I range: %.6f to %.6f\n', min(real_interp_I), max(real_interp_I));
+        fprintf('Real interp D range: %.6f to %.6f\n', min(real_interp_D), max(real_interp_D));
+        fprintf('Real active D range: %.6f to %.6f\n', min(real_active_D), max(real_active_D));
 
     catch ME
-        fprintf('Warning: Could not load or process hospitalization data: %s\n', ME.message);
-        real_interp_H = zeros(length(t_grid), 1);
+        fprintf('Warning: Could not load or process real data: %s\n', ME.message);
+        real_interp_I = zeros(length(t_grid), 1);
         real_interp_D_prop = zeros(length(t_grid), 1);
     end
 
 
-    all_interp_H_prop = all_interp_H / N;
-    mean_H_prop = mean_H / N;
-    lower_H_prop = lower_H / N;
-    upper_H_prop = upper_H / N;
-    real_interp_H_prop = real_interp_H / population;
+    population_factor = 1.0 / N;  % Calculate division factor once
+    
 
+    all_interp_I_prop = all_interp_I * population_factor;
+    mean_I_prop = mean_I * population_factor;
+    lower_I_prop = lower_I * population_factor;
+    upper_I_prop = upper_I * population_factor;
+    all_active_D_prop = all_active_D * population_factor;
+    mean_D_prop = mean_D * population_factor;
+    lower_D_prop = lower_D * population_factor;
+    upper_D_prop = upper_D * population_factor;
+    real_interp_I_prop = real_interp_I * population_factor;
+    
 
-    figure;
-    fill([t_grid; flipud(t_grid)], [upper_H_prop; flipud(lower_H_prop)], ...
-         [0.7 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
-    hold on;
+    fprintf('After conversion to proportions:\n');
+    fprintf('Real interp I prop range: %.6f to %.6f\n', min(real_interp_I_prop), max(real_interp_I_prop));
+    fprintf('Real interp D prop range: %.6f to %.6f\n', min(real_interp_D_prop), max(real_interp_D_prop));
+    fprintf('Real cumulative D prop range: %.6f to %.6f\n', min(real_cumulative_D/population), max(real_cumulative_D/population));
+    
 
-
-    valid_real_data = ~isnan(real_interp_H_for_plot / population);
-    if any(valid_real_data)
-        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
-        plot(t_grid(valid_real_data), valid_H_prop, ...
-             'r-', 'LineWidth', 2.5);
-        fprintf('Plotting real hospitalization data: %d valid points, range %.6f to %.6f\n', ...
-                sum(valid_real_data), min(valid_H_prop), max(valid_H_prop));
-    else
-        fprintf('Warning: No valid real hospitalization data to plot\n');
-    end
-
-    xlabel('Time (days)');
-    ylabel('Hospitalized Proportion');
-    title('Washington, Mississippi');
-    xlim([0, params.tmax]);
-
-    if any(valid_real_data)
-        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
-        ylim([0, max([upper_H_prop; max_real_H]) * 1.1]);
-    else
-        ylim([0, max(upper_H_prop) * 1.1]);
-    end
+    fprintf('NaN count in real_interp_I_prop: %d\n', sum(isnan(real_interp_I_prop)));
+    fprintf('NaN count in real_interp_D_prop: %d\n', sum(isnan(real_interp_D_prop)));
+    fprintf('Zero count in real_interp_I_prop: %d\n', sum(real_interp_I_prop == 0));
+    fprintf('Zero count in real_interp_D_prop: %d\n', sum(real_interp_D_prop == 0));
 
 
     tick_interval = 90;
     xtick_positions = 0:tick_interval:params.tmax;
-    xtick_dates = simulation_start_date + days(xtick_positions);
+    xtick_dates = start_date_real + days(xtick_positions);
     date_labels = cellstr(datestr(xtick_dates, 'mm/dd/yy'));
-    xticks(xtick_positions);
-    xticklabels(date_labels);
-    xlabel('Date (mm/dd/yy)');
-
-    legend('90% Prediction Interval', 'Real Hospitalization Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Hospitalization_bandwidth.png');
 
 
     figure;
-
-    for i = 1:size(all_interp_H_prop, 1)
-        if max(all_interp_H_prop(i, :)) > min(all_interp_H_prop(i, :)) * 1.1
-            plot(t_grid, all_interp_H_prop(i, :), 'Color', [0.2, 0.4, 0.8, 0.3], 'LineWidth', 1.0);
-            hold on;
-        end
-    end
-
-
-    valid_real_data = ~isnan(real_interp_H_for_plot / population);
-    if any(valid_real_data)
-        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
-        plot(t_grid(valid_real_data), valid_H_prop, ...
-             'r-', 'LineWidth', 2.5);
-    end
-
+    fill([t_grid; flipud(t_grid)], [upper_I_prop; flipud(lower_I_prop)], ...
+         [0.7 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
+    hold on;
+    
+    
+    
+    plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
     xlabel('Time (days)');
-    ylabel('Hospitalized Proportion');
-    title('Washington, Mississippi');
+    ylabel('Infected Proportion');
+    title('Washington, Mississippi (Starting Aug 30, 2020)');
     xlim([0, params.tmax]);
-
-    if any(valid_real_data)
-        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
-        ylim([0, max([max(all_interp_H_prop(:)); max_real_H]) * 1.1]);
-    else
-        ylim([0, max(all_interp_H_prop(:)) * 1.1]);
-    end
-
+    ylim([0, max([upper_I_prop; real_interp_I_prop]) * 1.1]);
 
     xticks(xtick_positions);
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
 
-    legend('Stochastic Simulations', 'Real Hospitalization Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Washington_MS_Hospitalization_trajectories.png');
+    legend('90% Prediction Interval', 'Real Data', 'Location', 'best');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Pandemic_bandwidth.png');
+    
+
+    figure;
+
+    for i = 1:size(all_interp_I_prop, 1)
+        plot(t_grid, all_interp_I_prop(i, :), 'Color', [0.2, 0.4, 0.8, 0.3], 'LineWidth', 1.0);
+        hold on;
+    end
+
+
+    plot(t_grid, real_interp_I_prop, 'r-', 'LineWidth', 2.5);
+    xlabel('Time (days)');
+    ylabel('Infected Proportion');
+    title('Washington, Mississippi (Starting Aug 30, 2020)');
+    xlim([0, params.tmax]);
+    ylim([0, max([max(max(all_interp_I_prop)), max(real_interp_I_prop)]) * 1.1]);
+
+    xticks(xtick_positions);
+    xticklabels(date_labels);
+    xlabel('Date (mm/dd/yy)');
+
+
+    % Create legend handles in correct order
+    h1 = plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
+    h2 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
+    legend([h1, h2], {'Stochastic Simulations', 'Real Data'}, 'Location', 'best');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Pandemic_trajectories.png');
+
+
+
+
+    real_interp_D_prop_cumulative = real_cumulative_D / population;
+    figure;
+    plot(t_grid, real_interp_D_prop_cumulative, 'r-', 'LineWidth', 2.5);
+    xlabel('Date');
+    ylabel('Cumulative Death Proportion');
+    title('Washington, Mississippi (Starting Aug 30, 2020)');
+    xlim([0, params.tmax]);
+    ylim([0, max(real_interp_D_prop_cumulative) * 1.1]);
+
+    xticks(xtick_positions);
+    xticklabels(date_labels);
+    xlabel('Date (mm/dd/yy)');
+
+    legend('Real Data', 'Location', 'best');
+    saveas(gcf, 'SIHRS_Washington_MS_Aug30_Pandemic_cumulative_deaths.png');
 end
 
-function idx = argmax(x)
-    [~, idx] = max(x);
+function result = compute_rolling_window(data, window_size)
+    result = data;  % MATLAB automatically copies arrays
+    for t = (window_size + 1):length(data)
+        result(t) = data(t) - data(t - window_size);
+    end
 end
