@@ -22,7 +22,7 @@ function SIHRS_hospitalized_washingtonparamsBUT_smallN()
 
     
     % Run simulations
-    num_simulations = 9;
+    num_simulations = 9; %Increase to 100 for final results, currently 9 sims is for testing to see the nature of the curve
     fprintf('Running %d simulations for N = %d (Washington MS params)...\n', num_simulations, N);
     
     all_results = cell(num_simulations, 1);

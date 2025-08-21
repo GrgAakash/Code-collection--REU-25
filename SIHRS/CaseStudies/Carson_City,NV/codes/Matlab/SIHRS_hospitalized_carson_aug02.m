@@ -45,9 +45,9 @@ function SIHRS_hospitalized_carson_aug02()
 
     catch ME
         warning('Could not load Carson City real data: %s', ME.message);
-        real_initial_infected = 68;  % From ratio analysis
-        real_initial_dead = 0;
-        real_initial_hospitalized = 7.9;  % Default from hospitalization data
+        real_initial_infected = 68;  % From Aug 2, 2020 data 
+        real_initial_dead = 7;  % From Aug 2, 2020 data
+        real_initial_hospitalized = 7.9;  % From Aug 2, 2020 data
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
@@ -72,7 +72,7 @@ function SIHRS_hospitalized_carson_aug02()
         'pHD', 0.154,      ... % probability of H to D
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 505,        ... % simulation end time (Aug 2, 2020 to Dec 31, 2021)
+        'tmax', 515,        ... % simulation end time (Aug 2, 2020 to Dec 31, 2021)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
@@ -92,7 +92,7 @@ function SIHRS_hospitalized_carson_aug02()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 3;
+    num_simulations = 9; %Increase to 100 for final results, currently 9 sims is for testing to see the nature of the curve
 
 
     if N <= 0

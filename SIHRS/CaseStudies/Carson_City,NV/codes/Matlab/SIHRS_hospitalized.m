@@ -90,7 +90,7 @@ function SIHRS_hospitalized()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 59;
+    num_simulations = 9; %Increase to 100 for final results, currently 9 sims is for testing to see the nature of the curve
 
 
     if N <= 0
