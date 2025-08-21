@@ -38,11 +38,11 @@ function SIHRS_multiple_simulations_infected()
         fprintf('March 25 initial conditions: I=%d, D=%d, H=%d, R=%d, S=%d\n', ...
                 real_initial_infected, real_initial_dead, 0, 0, round(s0 * N));
 
-    catch ME
+   catch ME
         warning('Could not load Carson City real data: %s', ME.message);
-
-        real_initial_infected = 1;
-        real_initial_dead = 0;
+        % Fallback to hardcoded values for March 25
+        real_initial_infected = 3;  % March 25 had 3 cases
+        real_initial_dead = 0;      % March 25 had 0 deaths
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
