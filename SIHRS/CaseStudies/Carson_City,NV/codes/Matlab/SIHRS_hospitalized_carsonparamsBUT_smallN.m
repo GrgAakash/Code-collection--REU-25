@@ -1,151 +1,39 @@
-function SIHRS_hospitalized_carson_aug02()
-% SIHRS model for Carson City, Nevada (Aug 2020-Dec 2021) starting from August 2, 2020 with stochastic simulations
+function SIHRS_hospitalized_carsonparamsBUT_smallN()
+% Simple SIHRS model with Carson City parameters
 
-    % Initialize variables at function level
-    N = 58639;  % Carson City, Nevada population (2020 Census)
-    s0 = 0.0;
-    i0 = 0.0;
-    h0 = 0.0;
+    % Population and initial conditions
+    N = 5591;
+    
+    % Initial proportions based on real Carson City data
+    i0 = 0.001160;
+    h0 = 0.000135;
     r0 = 0.0;
-    d0 = 0.0;
-
-    % Load Carson City, Nevada data for initial conditions
-    try
-
-        data_table = readtable('carson_city_active_cases_aug02.csv');
-        data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
-        start_date = datetime('2020-08-02');
-
-
-        start_idx = find(data_table.date == start_date, 1);
-        if isempty(start_idx)
-
-            date_diffs = abs(datenum(data_table.date) - datenum(start_date));
-            [~, start_idx] = min(date_diffs);
-            warning('Exact start date not found. Using closest date: %s', ...
-                    datestr(data_table.date(start_idx)));
-        end
-
-
-        real_initial_infected = data_table.active_cases(start_idx);
-        real_initial_dead = data_table.cumulative_deaths(start_idx);
-        
-        % Get initial hospitalization data for Aug 2, 2020
-        % From ratio analysis: 68 active cases → 7.9 hospitalized → Ratio: 8.61
-        real_initial_hospitalized = 7.9;  % From hospitalization_Carson_filtered_new.csv
-
-        i0 = real_initial_infected / N;
-        d0 = real_initial_dead / N;
-        h0 = real_initial_hospitalized / N;
-        r0 = 0.0;
-        s0 = 1.0 - (i0 + h0 + r0 + d0);
-
-        fprintf('August 2 initial conditions: I=%d, D=%d, H=%.1f, R=%d, S=%d\n', ...
-                real_initial_infected, real_initial_dead, real_initial_hospitalized, 0, round(s0 * N));
-
-    catch ME
-        warning('Could not load Carson City real data: %s', ME.message);
-        real_initial_infected = 68;  % From ratio analysis
-        real_initial_dead = 0;
-        real_initial_hospitalized = 7.9;  % Default from hospitalization data
-
-        i0 = real_initial_infected / N;
-        d0 = real_initial_dead / N;
-        h0 = real_initial_hospitalized / N;
-        r0 = 0.0;
-        s0 = 1.0 - (i0 + h0 + r0 + d0);
-    end
-
-    % Model parameters (Carson City specific)
+    d0 = 0.000119;
+    s0 = 1.0 - (i0 + h0 + r0 + d0);  
+    
+    % Model parameters - all in one place
     params = struct(...
-        'beta', 0.1511,      ... % infection rate (β > 0) - Updated for Carson City, NV
-        'gamma', 0.123,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
-        'alpha', 0.111,       ... % H transition rate (α > 0)
-        'lambda', 0.0083,    ... % R transition rate (Λ > 0)
-        'pSI', 1.0,         ... % probability of S to I (p_{SI} in (0,1])
-        'pII', 0.00,        ... % probability of I to I (stay infected)
-        'pIH', 0.1060,        ... % probability of I to H
-        'pIR', 0.8921,       ... % probability of I to R
-        'pID', 0.0019,       ... % probability of I to D
-        'pHH', 0.01,        ... % probability of H to H (stay hospitalized)
-        'pHR', 0.836,      ... % probability of H to R
-        'pHD', 0.154,      ... % probability of H to D
-        'pRR', 0.02,        ... % probability of R to R (stay recovered)
-        'pRS', 0.98,        ... % probability of R to S
-        'tmax', 505,        ... % simulation end time (Aug 2, 2020 to Dec 31, 2021)
-        's0', s0,           ... % initial susceptible proportion
-        'i0', i0,           ... % initial infected proportion
-        'h0', h0,           ... % initial hospitalized proportion
-        'r0', r0,           ... % initial recovered proportion
-        'd0', d0            ... % initial dead proportion
+        'beta', 0.1511, 'gamma', 0.123, 'alpha', 0.111, 'lambda', 0.0083, ...
+        'pSI', 1.0, 'pII', 0.00, 'pIH', 0.1060, 'pIR', 0.8921, 'pID', 0.0019, ...
+        'pHH', 0.01, 'pHR', 0.836, 'pHD', 0.154, 'pRR', 0.02, 'pRS', 0.98, ...
+        'tmax', 505, ...
+        's0', s0, 'i0', i0, 'h0', h0, 'r0', r0, 'd0', d0 ...
     );
 
-
-    calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
-    fprintf('Calculated R0 = %.6f \n', calculated_R0);
-
-
-    validate_parameters(params);
-
-
-    if abs((params.s0 + params.i0 + params.h0 + params.r0 + params.d0) - 1.0) > 1e-10
-        error('Initial conditions must sum to 1');
-    end
-
-    num_simulations = 3;
-
-
-    if N <= 0
-        error('Population size must be positive integer');
-    end
-
-
+    
+    % Run simulations
+    num_simulations = 9;
+    fprintf('Running %d simulations for N = %d...\n', num_simulations, N);
+    
     all_results = cell(num_simulations, 1);
-
-
-    try
-        fprintf('Running %d stochastic simulations for N = %d...\n', num_simulations, N);
-
-        for sim_idx = 1:num_simulations
-            fprintf('Running simulation %d/%d...\n', sim_idx, num_simulations);
-            all_results{sim_idx} = sihrs_agent_model(N, params);
-        end
-
-        fprintf('All simulations completed!\n');
-
-
-        plot_multiple_simulations_carson_aug02(all_results, N, params);
-
-    catch ME
-        fprintf('Error occurred: %s\n', ME.message);
-        rethrow(ME);
+    for sim_idx = 1:num_simulations
+        all_results{sim_idx} = sihrs_agent_model(N, params);
     end
+    
+    % Plot results
+    plot_multiple_simulations_carson_aug02(all_results, N, params);
 end
 
-function validate_parameters(params)
-    % Validate rates are positive
-    if any([params.beta, params.gamma, params.alpha, params.lambda] <= 0)
-        error('All rates (beta, gamma, alpha, lambda) must be positive');
-    end
-
-    % Validate probabilities are in [0,1]
-    probs = [params.pSI, params.pII, params.pIH, params.pIR, params.pID, ...
-             params.pHH, params.pHR, params.pHD, params.pRR, params.pRS];
-    if any(probs < 0 | probs > 1)
-        error('All probabilities must be in [0,1]');
-    end
-
-    % Validate probability sums
-    if abs((params.pII + params.pIH + params.pIR + params.pID) - 1.0) > 1e-10
-        error('I transition probabilities must sum to 1');
-    end
-    if abs((params.pHH + params.pHR + params.pHD) - 1.0) > 1e-10
-        error('H transition probabilities must sum to 1');
-    end
-    if abs((params.pRR + params.pRS) - 1.0) > 1e-10
-        error('R transition probabilities must sum to 1');
-    end
-end
 
 function result = sihrs_agent_model(N, params)
     % SIHRS agent-based stochastic model with death
@@ -382,81 +270,13 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     upper_D = quantile(all_active_D, 0.95, 1)';
 
     population = N;
-    real_interp_H = zeros(length(t_grid), 1);
-    real_interp_D_prop = zeros(length(t_grid), 1);
     simulation_start_date = datetime('2020-08-02');
-
-    try
-
-        hosp_data_table = readtable('hospitalization_Carson_filtered_new.csv');
-
-
-        hosp_data_table.collection_week = datetime(hosp_data_table.collection_week, 'InputFormat', 'M/d/yy');
-        
-
-        for i = 1:height(hosp_data_table)
-            if year(hosp_data_table.collection_week(i)) < 2000
-                hosp_data_table.collection_week(i) = hosp_data_table.collection_week(i) + years(2000);
-            end
-        end
-
-
-        [unique_dates, ~, idx] = unique(hosp_data_table.collection_week);
-        aggregated_data = accumarray(idx, hosp_data_table.total_adult_and_pediatric_covid_patients, [], @sum);
-        
-
-        [hosp_dates, sort_idx] = sort(unique_dates);
-        hospitalization_data = aggregated_data(sort_idx);
-
-
-        hosp_days = days(hosp_dates - simulation_start_date);
-
-
-        real_interp_H = interp1(hosp_days, hospitalization_data, t_grid, 'linear', NaN);
-        
-
-        real_interp_H_for_plot = real_interp_H;
-        real_interp_H(isnan(real_interp_H)) = 0;
-
-
-        data_table = readtable('carson_city_combined.csv');
-        data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
-        start_idx = find(data_table.date == simulation_start_date, 1);
-        if isempty(start_idx)
-            date_diffs = abs(datenum(data_table.date) - datenum(simulation_start_date));
-            [~, start_idx] = min(date_diffs);
-        end
-        dates_from_start = data_table.date(start_idx:end);
-        real_interp_D = interp1(days(dates_from_start - simulation_start_date), ...
-                               data_table.deaths(start_idx:end), t_grid, 'linear', 0);
-
-
-        real_active_D = zeros(length(real_interp_D), 1);
-        for t = 1:length(real_interp_D)
-            if t <= window
-                real_active_D(t) = real_interp_D(t);
-            else
-                real_active_D(t) = real_interp_D(t) - real_interp_D(t-window);
-            end
-        end
-        real_interp_D_prop = real_active_D / population;
-
-        fprintf('Successfully loaded hospitalization data with %d unique dates and %d total data points\n', length(hospitalization_data), height(hosp_data_table));
-        fprintf('Hospitalization data range: %.1f to %.1f patients\n', min(hospitalization_data), max(hospitalization_data));
-        fprintf('Date range: %s to %s\n', datestr(min(hosp_dates)), datestr(max(hosp_dates)));
-
-    catch ME
-        fprintf('Warning: Could not load or process hospitalization data: %s\n', ME.message);
-        real_interp_H = zeros(length(t_grid), 1);
-        real_interp_D_prop = zeros(length(t_grid), 1);
-    end
 
 
     all_interp_H_prop = all_interp_H / N;
     mean_H_prop = mean_H / N;
     lower_H_prop = lower_H / N;
     upper_H_prop = upper_H / N;
-    real_interp_H_prop = real_interp_H / population;
 
 
     figure;
@@ -464,29 +284,11 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
          [0.7 0.9 1], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
     hold on;
 
-
-    valid_real_data = ~isnan(real_interp_H_for_plot / population);
-    if any(valid_real_data)
-        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
-        plot(t_grid(valid_real_data), valid_H_prop, ...
-             'r-', 'LineWidth', 2.5);
-        fprintf('Plotting real hospitalization data: %d valid points, range %.6f to %.6f\n', ...
-                sum(valid_real_data), min(valid_H_prop), max(valid_H_prop));
-    else
-        fprintf('Warning: No valid real hospitalization data to plot\n');
-    end
-
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Carson City, NV - Aug 2 Start');
+    title('Carson City Parameters - Small N Simulation');
     xlim([0, params.tmax]);
-
-    if any(valid_real_data)
-        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
-        ylim([0, max([upper_H_prop; max_real_H]) * 1.1]);
-    else
-        ylim([0, max(upper_H_prop) * 1.1]);
-    end
+    ylim([0, max(upper_H_prop) * 1.1]);
 
 
     tick_interval = 90;
@@ -497,8 +299,8 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
 
-    legend('90% Prediction Interval', 'Real Hospitalization Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Carson_City_Aug02_Hospitalization_bandwidth.png');
+    legend('90% Prediction Interval', 'Location', 'best');
+    saveas(gcf, 'SIHRS_Carson_SmallN_Hospitalization_bandwidth.png');
 
 
     figure;
@@ -510,26 +312,11 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
         end
     end
 
-
-    valid_real_data = ~isnan(real_interp_H_for_plot / population);
-    if any(valid_real_data)
-        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
-        plot(t_grid(valid_real_data), valid_H_prop, ...
-             'r-', 'LineWidth', 2.5);
-    end
-
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Carson City, NV - Aug 2 Start');
+    title('Carson City Parameters - Small N Simulation');
     xlim([0, params.tmax]);
-
-    if any(valid_real_data)
-        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
-        ylim([0, max([max(all_interp_H_prop(:)); max_real_H]) * 1.1]);
-    else
-        ylim([0, max(all_interp_H_prop(:)) * 1.1]);
-    end
-
+    ylim([0, max(all_interp_H_prop(:)) * 1.1]);
 
     xticks(xtick_positions);
     xticklabels(date_labels);
@@ -537,11 +324,10 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
 
     % Create legend handles in correct order to fix colors
     h1 = plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
-    h2 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
-    legend([h1, h2], {'Stochastic Simulations', 'Real Hospitalization Data'}, 'Location', 'best');
-    saveas(gcf, 'SIHRS_Carson_City_Aug02_Hospitalization_trajectories.png');
+    legend(h1, {'Stochastic Simulations'}, 'Location', 'best');
+    saveas(gcf, 'SIHRS_Carson_SmallN_Hospitalization_trajectories.png');
 
-    % Third figure: ODE + Real World + Stochastic Simulations Combined
+    % Third figure: ODE vs Stochastic Comparison
     figure;
     
     % Plot stochastic simulations (lighter blue)
@@ -556,25 +342,12 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     ode_H = solve_ode_hospitalization(params, N);
     ode_H_prop = ode_H / N;
     plot(t_grid, ode_H_prop, 'g-', 'LineWidth', 3.0);
-    
-    % Plot real world data
-    if any(valid_real_data)
-        valid_H_prop = real_interp_H_for_plot(valid_real_data) / population;
-        plot(t_grid(valid_real_data), valid_H_prop, ...
-             'r-', 'LineWidth', 2.5);
-    end
 
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Carson City, NV - Aug 2 Start: ODE vs Stochastic vs Real Data');
+    title('Carson City Parameters - Small N: ODE vs Stochastic');
     xlim([0, params.tmax]);
-
-    if any(valid_real_data)
-        max_real_H = max(real_interp_H_for_plot(valid_real_data) / population);
-        ylim([0, max([max(all_interp_H_prop(:)); max(ode_H_prop); max_real_H]) * 1.1]);
-    else
-        ylim([0, max([max(all_interp_H_prop(:)); max(ode_H_prop)]) * 1.1]);
-    end
+    ylim([0, max([max(all_interp_H_prop(:)); max(ode_H_prop)]) * 1.1]);
 
     xticks(xtick_positions);
     xticklabels(date_labels);
@@ -583,9 +356,8 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     % Create legend handles in correct order
     h1 = plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
     h2 = plot(NaN, NaN, 'g-', 'LineWidth', 3.0);
-    h3 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
-    legend([h1, h2, h3], {'Stochastic Simulations', 'ODE Solution', 'Real Hospitalization Data'}, 'Location', 'best');
-    saveas(gcf, 'SIHRS_Carson_City_Aug02_Hospitalization_combined.png');
+    legend([h1, h2], {'Stochastic Simulations', 'ODE Solution'}, 'Location', 'best');
+    saveas(gcf, 'SIHRS_Carson_SmallN_Hospitalization_combined.png');
 end
 
 function ode_H = solve_ode_hospitalization(params, N)
