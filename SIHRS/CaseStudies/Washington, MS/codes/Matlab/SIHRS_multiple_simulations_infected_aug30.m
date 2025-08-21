@@ -48,13 +48,13 @@ function SIHRS_multiple_simulations_infected_aug30()
         
     catch ME
         warning('Could not load Washington County, MS real data: %s', ME.message);
-
-        real_initial_infected = 1;
+        real_initial_infected = 5;
         real_initial_dead = 0;
-        
+        real_initial_hospitalized = 40.2;  % Default from hospitalization data
+
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
-        h0 = 0.0;
+        h0 = real_initial_hospitalized / N;
         r0 = 0.0;
         s0 = 1.0 - (i0 + h0 + r0 + d0);
     end

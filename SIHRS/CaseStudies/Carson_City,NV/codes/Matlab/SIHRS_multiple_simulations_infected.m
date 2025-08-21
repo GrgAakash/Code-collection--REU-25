@@ -89,7 +89,7 @@ function SIHRS_multiple_simulations_infected()
         error('Initial conditions must sum to 1');
     end
 
-    num_simulations = 59;
+    num_simulations = 9;
 
 
     if N <= 0
