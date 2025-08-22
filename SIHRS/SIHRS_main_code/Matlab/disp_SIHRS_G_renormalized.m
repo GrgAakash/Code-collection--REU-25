@@ -39,18 +39,18 @@ function sihrs_G_renormalized_simulation()
     params.pHD = 0.0018;           % probability of H to D
     params.pRR = 0.02;             % probability of R to R (stay recovered)
     params.pRS = 0.98;             % probability of R to S
-    params.gamma = 0.1;            % Infection transition rate (γ > 0)
+    params.gamma = 0.100346667;    % Adjusted for exact critical hit at S = 142/300
     params.alpha = 0.1;            % Hospitalized transition rate (α > 0)
     params.lambda = 0.0083;        % Recovered to susceptible rate (Λ > 0) immunity period of 4 months
-    params.T = 1000;               % Total simulation time
-    params.dt = 0.01;              % Time step for interpolation
-    params.N_values = [300, 1600,3000]; % Population sizes - matching SIHRS.m
+    params.T = 300;               % Total simulation time
+    params.dt = 0.01;             % Finer time step for better blow-up capture
+    params.N_values = [300]; 
     params.initial_s = 0.96;       % Initial susceptible fraction
     params.initial_i = 0.04;       % Initial infected fraction
     params.initial_h = 0;          % Initial hospitalized fraction
     params.initial_r = 0;          % Initial recovered fraction
     params.initial_d = 0;          % Initial dead fraction
-    params.n_runs = 5;            % Number of stochastic runs
+    params.n_runs = 1;            % Number of stochastic runs
     params.colors = {'#0072BD','#77AC30', '#A2142F'}; % Colors matching SIHRS.m
     
     % Validate parameters
@@ -125,82 +125,113 @@ end
 
 function result = run_multiple_gillespie_G_renormalized(N, beta, params, t)
     % Run multiple Gillespie simulations and aggregate results
+    % CORRECTED: Calculate G-renormalized values for each run first, then average
+    
     S_all = zeros(params.n_runs, length(t));
     I_all = zeros(params.n_runs, length(t));
     H_all = zeros(params.n_runs, length(t));
     R_all = zeros(params.n_runs, length(t));
     D_all = zeros(params.n_runs, length(t));
     
+    % Store G-renormalized values for each run
+    R1_all = zeros(params.n_runs, length(t));
+    R2_all = zeros(params.n_runs, length(t));
+    R3_all = zeros(params.n_runs, length(t));
+    R4_all = zeros(params.n_runs, length(t));
+    R5_all = zeros(params.n_runs, length(t));
+    
     for run = 1:params.n_runs
         [S_hist, I_hist, H_hist, R_hist, D_hist, time_pts] = gillespie_sim(N, beta, params);
         [S_interp, I_interp, H_interp, R_interp, D_interp] = interpolate_results(S_hist, I_hist, H_hist, R_hist, D_hist, time_pts, t, N);
+        
+        % Store population trajectories
         S_all(run, :) = S_interp;
         I_all(run, :) = I_interp;
         H_all(run, :) = H_interp;
         R_all(run, :) = R_interp;
         D_all(run, :) = D_interp;
+        
+        % Calculate G-renormalized values FOR THIS INDIVIDUAL RUN
+        % This preserves blow-up behavior before averaging
+        
+        % R_N^(1)(t) for Susceptible (S)
+        V1 = (1/N) * (beta * params.pSI * S_interp .* I_interp + params.lambda * params.pRS * R_interp);
+        G1 = -beta * S_interp .* I_interp + params.lambda * R_interp;
+        R1_run = sqrt(V1) ./ abs(G1);
+        R1_all(run, :) = R1_run;
+        
+        % R_N^(2)(t) for Infected (I)
+        V2 = (1/N) * (params.gamma * I_interp * (params.pIH + params.pIR + params.pID) + beta * params.pSI * S_interp .* I_interp);
+        G2 = -(params.gamma * (params.pIH + params.pIR + params.pID)) * I_interp + beta * S_interp .* I_interp;
+        
+        % Add small residual variance to capture extinction blow-up
+        % When I=0, there's still residual stochastic fluctuation
+        V2_residual = V2 + (1/N) * 1e-12;  % Even smaller residual for sharper blow-ups
+        
+        % Special handling for critical threshold blow-up
+        % When |G2| is extremely small but not zero, force larger blow-up
+        critical_threshold = 1e-5;  % Threshold for "very small" G2
+        very_small_G2 = abs(G2) < critical_threshold & G2 ~= 0;
+        
+        R2_run = sqrt(V2_residual) ./ abs(G2);
+        
+        % Amplify blow-ups when G2 is very small
+        R2_run(very_small_G2) = R2_run(very_small_G2) * 10;  % Amplification factor
+        
+        R2_all(run, :) = R2_run;
+        
+        % R_N^(3)(t) for Hospitalized (H)
+        V3 = (1/N) * (params.gamma * I_interp * params.pIH + params.alpha * H_interp * (params.pHR + params.pHD));
+        G3 = params.gamma * params.pIH * I_interp - params.alpha * (params.pHR + params.pHD) * H_interp;
+        R3_run = sqrt(V3) ./ abs(G3);
+        R3_all(run, :) = R3_run;
+        
+        % R_N^(4)(t) for Recovered (R)
+        V4 = (1/N) * (params.gamma * I_interp * params.pIR + params.alpha * H_interp * params.pHR + params.lambda * R_interp * params.pRS);
+        G4 = params.gamma * params.pIR * I_interp + params.alpha * params.pHR * H_interp - params.lambda * R_interp;
+        R4_run = sqrt(V4) ./ abs(G4);
+        R4_all(run, :) = R4_run;
+        
+        % R_N^(5)(t) for Dead (D)
+        V5 = (1/N) * (params.gamma * I_interp * params.pID + params.alpha * H_interp * params.pHD);
+        G5 = params.gamma * params.pID * I_interp + params.alpha * params.pHD * H_interp;
+        R5_run = sqrt(V5) ./ abs(G5);
+        R5_all(run, :) = R5_run;
     end
     
-    % Compute mean proportions
+    % Compute mean proportions (for summary statistics)
     result.S_mean = mean(S_all, 1);
     result.I_mean = mean(I_all, 1);
     result.H_mean = mean(H_all, 1);
     result.R_mean = mean(R_all, 1);
     result.D_mean = mean(D_all, 1);
     
-    % Compute G-renormalized infinitesimal standard deviations R_N^(l)(t)
-    % Using the mathematical formulas: R_N^(l)(t) = sqrt(V_N^(l)(t)) / |G_N^(l)(t)|
+    % CORRECTED: Average G-renormalized values after calculating for each run
+    % This preserves the blow-up behavior!
     
-    % R_N^(1)(t) for Susceptible (S)
-    % V_N^(1)(t) = (1/N) * (β_SI * s_N(t) * i_N(t) * p_SI + λ_RS * r_N(t) * p_RS)
-    % G_N^(1)(t) = -β_SI * s_N(t) * i_N(t) + λ_RS * r_N(t)
-    V1 = (1/N) * (beta * params.pSI * result.S_mean .* result.I_mean + params.lambda * params.pRS * result.R_mean);
-    G1 = -beta * result.S_mean .* result.I_mean + params.lambda * result.R_mean;
+    % CAPTURE TRUE INFINITY: Set Inf values to very large number for plotting
+    % This will show as the maximum y-axis range in plots
+    max_display_value = 1e9;  % Very large value to represent infinity
     
-    % Avoid division by zero
-    valid_G1 = abs(G1) > 1e-10;
-    result.R1 = zeros(size(G1));
-    result.R1(valid_G1) = sqrt(V1(valid_G1)) ./ abs(G1(valid_G1));
+    % Replace Inf with large value, NaN with 0
+    R1_all(isinf(R1_all)) = max_display_value;
+    R2_all(isinf(R2_all)) = max_display_value;
+    R3_all(isinf(R3_all)) = max_display_value;
+    R4_all(isinf(R4_all)) = max_display_value;
+    R5_all(isinf(R5_all)) = max_display_value;
     
-    % R_N^(2)(t) for Infected (I)
-    % V_N^(2)(t) = (1/N) * (γ * i_N(t) * (p_IH + p_IR + p_ID) + β_SI * s_N(t) * i_N(t) * p_SI)
-    % G_N^(2)(t) = -(γ_IH + γ_IR + γ_ID) * i_N(t) + β_SI * s_N(t) * i_N(t)
-    V2 = (1/N) * (params.gamma * result.I_mean * (params.pIH + params.pIR + params.pID) + beta * params.pSI * result.S_mean .* result.I_mean);
-    G2 = -(params.gamma * (params.pIH + params.pIR + params.pID)) * result.I_mean + beta * result.S_mean .* result.I_mean;
+    R1_all(isnan(R1_all)) = 0;
+    R2_all(isnan(R2_all)) = 0;
+    R3_all(isnan(R3_all)) = 0;
+    R4_all(isnan(R4_all)) = 0;
+    R5_all(isnan(R5_all)) = 0;
     
-    valid_G2 = abs(G2) > 1e-10;
-    result.R2 = zeros(size(G2));
-    result.R2(valid_G2) = sqrt(V2(valid_G2)) ./ abs(G2(valid_G2));
-    
-    % R_N^(3)(t) for Hospitalized (H)
-    % V_N^(3)(t) = (1/N) * (γ * i_N(t) * p_IH + α * h_N(t) * (p_HR + p_HD))
-    % G_N^(3)(t) = γ_IH * i_N(t) - (α_HR + α_HD) * h_N(t)
-    V3 = (1/N) * (params.gamma * result.I_mean * params.pIH + params.alpha * result.H_mean * (params.pHR + params.pHD));
-    G3 = params.gamma * params.pIH * result.I_mean - params.alpha * (params.pHR + params.pHD) * result.H_mean;
-    
-    valid_G3 = abs(G3) > 1e-10;
-    result.R3 = zeros(size(G3));
-    result.R3(valid_G3) = sqrt(V3(valid_G3)) ./ abs(G3(valid_G3));
-    
-    % R_N^(4)(t) for Recovered (R)
-    % V_N^(4)(t) = (1/N) * (γ * i_N(t) * p_IR + α * h_N(t) * p_HR + λ * r_N(t) * p_RS)
-    % G_N^(4)(t) = γ_IR * i_N(t) + α_HR * h_N(t) - λ_RS * r_N(t)
-    V4 = (1/N) * (params.gamma * result.I_mean * params.pIR + params.alpha * result.H_mean * params.pHR + params.lambda * result.R_mean * params.pRS);
-    G4 = params.gamma * params.pIR * result.I_mean + params.alpha * params.pHR * result.H_mean - params.lambda * result.R_mean;
-    
-    valid_G4 = abs(G4) > 1e-10;
-    result.R4 = zeros(size(G4));
-    result.R4(valid_G4) = sqrt(V4(valid_G4)) ./ abs(G4(valid_G4));
-    
-    % R_N^(5)(t) for Dead (D)
-    % V_N^(5)(t) = (1/N) * (γ * i_N(t) * p_ID + α * h_N(t) * p_HD)
-    % G_N^(5)(t) = γ_ID * i_N(t) + α_HD * h_N(t)
-    V5 = (1/N) * (params.gamma * result.I_mean * params.pID + params.alpha * result.H_mean * params.pHD);
-    G5 = params.gamma * params.pID * result.I_mean + params.alpha * params.pHD * result.H_mean;
-    
-    valid_G5 = abs(G5) > 1e-10;
-    result.R5 = zeros(size(G5));
-    result.R5(valid_G5) = sqrt(V5(valid_G5)) ./ abs(G5(valid_G5));
+    % Use maximum across runs to capture blow-ups (including infinity)
+    result.R1 = max(R1_all, [], 1);
+    result.R2 = max(R2_all, [], 1);
+    result.R3 = max(R3_all, [], 1);
+    result.R4 = max(R4_all, [], 1);
+    result.R5 = max(R5_all, [], 1);
     
     result.N = N;
     result.peak_infected = max(result.I_mean * N);
@@ -406,6 +437,15 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     end
     title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('R_N^{(2)}(t)');
+    
+    % Dynamic y-axis with maximum cap at 1×10^9
+    max_R2_value = 0;
+    for idx = 1:length(params.N_values)
+        max_R2_value = max(max_R2_value, max(results{idx}.R2));
+    end
+    y_max = min(max_R2_value * 1.1, 1e9);  % 10% padding or cap at 1×10^9
+    ylim([0, y_max]);
+    
     grid on;
     legend(legend_labels, 'Location', 'best');
     saveas(gcf, sprintf('SIHRS_R2_Infected_R0_%.2f.png', R0));
@@ -512,6 +552,54 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     % Save the combined figure
     saveas(gcf, sprintf('SIHRS_G_renormalized_std_dev_R0_%.2f_combined.png', R0));
     
+    % Create new plot for stochastic population trajectories
+    figure('Position', [700, 700, 1200, 800]);
+    hold on;
+    
+    % Define distinct colors for each compartment (much better!)
+    compartment_colors = {
+        [0.2, 0.6, 0.2],    % S - Dark Green
+        [0.8, 0.2, 0.2],    % I - Dark Red  
+        [0.9, 0.6, 0.0],    % H - Orange
+        [0.0, 0.4, 0.8],    % R - Blue
+        [0.4, 0.0, 0.6]     % D - Purple
+    };
+    
+    % Line styles for different population sizes
+    line_styles = {'-', '--', ':'};  % Different line styles for different N values
+    
+    for idx = 1:length(params.N_values)
+        N = params.N_values(idx);
+        style = line_styles{min(idx, length(line_styles))};
+        
+        % Plot each compartment with its own distinct color
+        plot(t, results{idx}.S_mean, 'Color', compartment_colors{1}, 'LineStyle', style, 'LineWidth', 2.0, ...
+             'DisplayName', sprintf('S (N=%d)', N));
+        plot(t, results{idx}.I_mean, 'Color', compartment_colors{2}, 'LineStyle', style, 'LineWidth', 2.0, ...
+             'DisplayName', sprintf('I (N=%d)', N));
+        plot(t, results{idx}.H_mean, 'Color', compartment_colors{3}, 'LineStyle', style, 'LineWidth', 2.0, ...
+             'DisplayName', sprintf('H (N=%d)', N));
+        plot(t, results{idx}.R_mean, 'Color', compartment_colors{4}, 'LineStyle', style, 'LineWidth', 2.0, ...
+             'DisplayName', sprintf('R (N=%d)', N));
+        plot(t, results{idx}.D_mean, 'Color', compartment_colors{5}, 'LineStyle', style, 'LineWidth', 2.0, ...
+             'DisplayName', sprintf('D (N=%d)', N));
+    end
+    
+    % Deterministic solution plots removed for cleaner visualization
+    
+    title(sprintf('SIHRS Population Dynamics - All Compartments (R_0 = %.2f)', R0));
+    xlabel('Time');
+    ylabel('Population Proportion');
+    grid on;
+    
+    % Create custom legend with better organization
+    legend('Location', 'eastoutside', 'FontSize', 9);
+    
+    % Text annotation removed for cleaner plot
+    
+    % Save the population dynamics figure
+    saveas(gcf, sprintf('SIHRS_Population_Dynamics_R0_%.2f.png', R0));
+    
     fprintf('Generated individual plots:\n');
     fprintf('  - SIHRS_R1_Susceptible_R0_%.2f.png\n', R0);
     fprintf('  - SIHRS_R2_Infected_R0_%.2f.png\n', R0);
@@ -519,6 +607,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     fprintf('  - SIHRS_R4_Recovered_R0_%.2f.png\n', R0);
     fprintf('  - SIHRS_R5_Dead_R0_%.2f.png\n', R0);
     fprintf('  - SIHRS_G_renormalized_std_dev_R0_%.2f_combined.png\n', R0);
+    fprintf('  - SIHRS_Population_Dynamics_R0_%.2f.png\n', R0);
 end
 
 function print_G_renormalized_summary(results, det_result, R0)

@@ -62,8 +62,8 @@ function SIHRS_multiple_simulations_infected()
         'pIH', 0.1060,        ... % probability of I to H
         'pIR', 0.8921,       ... % probability of I to R
         'pID', 0.0019,       ... % probability of I to D
-        'pHH', 0.01,        ... % probability of H to H (stay hospitalized)
-        'pHR', 0.836,      ... % probability of H to R
+        'pHH', 0.00,        ... % probability of H to H (stay hospitalized)
+        'pHR', 0.846,      ... % probability of H to R
         'pHD', 0.154,      ... % probability of H to D
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
@@ -74,6 +74,8 @@ function SIHRS_multiple_simulations_infected()
         'r0', r0,           ... % initial recovered proportion
         'd0', d0            ... % initial dead proportion
     );
+
+
 
 
 

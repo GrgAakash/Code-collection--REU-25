@@ -1,20 +1,20 @@
-function SIHRS_hospitalized_carson_aug02()
-% SIHRS model for Carson City, Nevada (Aug 2020-Dec 2021) starting from August 2, 2020 with stochastic simulations
+function SIHRS_hospitalized_oct04()
+% SIHRS model for Washington, Mississippi (Oct 2020-Dec 2021) starting from October 4, 2020 with stochastic simulations
 
     % Initialize variables at function level
-    N = 58639;  % Carson City, Nevada population (2020 Census)
+    N = 44922;  % Washington County, Mississippi population (2020 Census)
     s0 = 0.0;
     i0 = 0.0;
     h0 = 0.0;
     r0 = 0.0;
     d0 = 0.0;
 
-    % Load Carson City, Nevada data for initial conditions
+    % Load Washington County, Mississippi data for initial conditions
     try
 
-        data_table = readtable('carson_city_active_cases_aug02.csv');
+        data_table = readtable('washington_mississippi_active_cases_oct04.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
-        start_date = datetime('2020-08-02');
+        start_date = datetime('2020-10-04');
 
 
         start_idx = find(data_table.date == start_date, 1);
@@ -30,9 +30,7 @@ function SIHRS_hospitalized_carson_aug02()
         real_initial_infected = data_table.active_cases(start_idx);
         real_initial_dead = data_table.cumulative_deaths(start_idx);
         
-        % Get initial hospitalization data for Aug 2, 2020
-        % From ratio analysis: 68 active cases → 7.9 hospitalized → Ratio: 8.61
-        real_initial_hospitalized = 7.9;  % From hospitalization_Carson_filtered_new.csv
+    
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
@@ -40,14 +38,14 @@ function SIHRS_hospitalized_carson_aug02()
         r0 = 0.0;
         s0 = 1.0 - (i0 + h0 + r0 + d0);
 
-        fprintf('August 2 initial conditions: I=%d, D=%d, H=%.1f, R=%d, S=%d\n', ...
+        fprintf('October 4 initial conditions: I=%d, D=%d, H=%.1f, R=%d, S=%d\n', ...
                 real_initial_infected, real_initial_dead, real_initial_hospitalized, 0, round(s0 * N));
 
     catch ME
-        warning('Could not load Carson City real data: %s', ME.message);
-        real_initial_infected = 68;  % From Aug 2, 2020 data 
-        real_initial_dead = 7;  % From Aug 2, 2020 data
-        real_initial_hospitalized = 7.9;  % From Aug 2, 2020 data
+        warning('Could not load Washington County, MS real data: %s', ME.message);
+        real_initial_infected = 138.0;
+        real_initial_dead = 84.0;
+        real_initial_hospitalized = 36.6;  
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
@@ -56,23 +54,23 @@ function SIHRS_hospitalized_carson_aug02()
         s0 = 1.0 - (i0 + h0 + r0 + d0);
     end
 
-    % Model parameters (Carson City specific)
+    % Model parameters
     params = struct(...
-        'beta', 0.1511,      ... % infection rate (β > 0) - Updated for Carson City, NV
-        'gamma', 0.123,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
+        'beta', 0.262,      ... % infection rate (β > 0) - Updated for Washington, MS
+        'gamma', 0.212,     ... % I transition rate (γ > 0) - Updated for Washington, MS
         'alpha', 0.111,       ... % H transition rate (α > 0)
-        'lambda', 0.0083,    ... % R transition rate (Λ > 0)
-        'pSI', 1.0,         ... % probability of S to I (p_{SI} in (0,1])
-        'pII', 0.00,        ... % probability of I to I (stay infected)
-        'pIH', 0.1060,        ... % probability of I to H
-        'pIR', 0.8921,       ... % probability of I to R
-        'pID', 0.0019,       ... % probability of I to D
-        'pHH', 0.01,        ... % probability of H to H (stay hospitalized)
-        'pHR', 0.836,      ... % probability of H to R
-        'pHD', 0.154,      ... % probability of H to D
+        'lambda', 0.0083,   ... % R transition rate (Λ > 0) - Updated for Washington, MS
+        'pSI', 1.00,        ... % probability of S to I (p_{SI} in (0,1])
+        'pII', 0.0,         ... % probability of I to I (stay infected)
+        'pIH', 0.1614,      ... % probability of I to H - Updated from P(IH) calculation
+        'pIR', 0.8367,      ... % probability of I to R - Updated to sum to 1
+        'pID', 0.0019,      ... % probability of I to D - Updated from P(ID) calculation
+        'pHH', 0.00,        ... % probability of H to H (stay hospitalized) - Updated
+        'pHR', 0.846,       ... % probability of H to R - Updated
+        'pHD', 0.154,       ... % probability of H to D - Updated
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 515,        ... % simulation end time (Aug 2, 2020 to Dec 31, 2021)
+        'tmax', 854,        ... % simulation end time (reduced from Oct 4, 2020 to Dec 31, 2021)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
@@ -80,6 +78,9 @@ function SIHRS_hospitalized_carson_aug02()
         'd0', d0            ... % initial dead proportion
     );
 
+    %R0 target is 1.0862 based on the regression analysis of the exponential growth of October 11-26, 2020. 
+    %On a second thought,it is not exactly R_0 , instead it is R_t(time varying) so kind of pointless to do.Overall this whole code seems useless. Idk why I made it.
+    %I will keep it here for now, incase I need to do something similar in the future.
 
     calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
     fprintf('Calculated R0 = %.6f \n', calculated_R0);
@@ -114,7 +115,7 @@ function SIHRS_hospitalized_carson_aug02()
         fprintf('All simulations completed!\n');
 
 
-        plot_multiple_simulations_carson_aug02(all_results, N, params);
+        plot_multiple_simulations_oct04(all_results, N, params);
 
     catch ME
         fprintf('Error occurred: %s\n', ME.message);
@@ -334,7 +335,7 @@ function result = sihrs_agent_model(N, params)
     );
 end
 
-function plot_multiple_simulations_carson_aug02(all_results, N, params)
+function plot_multiple_simulations_oct04(all_results, N, params)
     t_grid = (0:params.tmax)';
     all_interp_H = zeros(length(all_results), length(t_grid));
     all_interp_D = zeros(length(all_results), length(t_grid));
@@ -384,11 +385,11 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     population = N;
     real_interp_H = zeros(length(t_grid), 1);
     real_interp_D_prop = zeros(length(t_grid), 1);
-    simulation_start_date = datetime('2020-08-02');
+    simulation_start_date = datetime('2020-10-04');
 
     try
 
-        hosp_data_table = readtable('hospitalization_Carson_filtered_new.csv');
+        hosp_data_table = readtable('hospitalization_MS_filtered.csv');
 
 
         hosp_data_table.collection_week = datetime(hosp_data_table.collection_week, 'InputFormat', 'M/d/yy');
@@ -419,7 +420,7 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
         real_interp_H(isnan(real_interp_H)) = 0;
 
 
-        data_table = readtable('carson_city_combined.csv');
+        data_table = readtable('washington_mississippi_combined_oct04.csv');
         data_table.date = datetime(data_table.date, 'InputFormat', 'yyyy-MM-dd');
         start_idx = find(data_table.date == simulation_start_date, 1);
         if isempty(start_idx)
@@ -478,7 +479,7 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
 
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Carson City, NV - Aug 2 Start');
+    title('Washington, Mississippi - Oct 4 Start');
     xlim([0, params.tmax]);
 
     if any(valid_real_data)
@@ -498,7 +499,7 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     xlabel('Date (mm/dd/yy)');
 
     legend('90% Prediction Interval', 'Real Hospitalization Data', 'Location', 'best');
-    saveas(gcf, 'SIHRS_Carson_City_Aug02_Hospitalization_bandwidth.png');
+    saveas(gcf, 'SIHRS_Washington_MS_Oct04_Hospitalization_bandwidth.png');
 
 
     figure;
@@ -520,7 +521,7 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
 
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Carson City, NV - Aug 2 Start');
+    title('Washington, Mississippi - Oct 4 Start');
     xlim([0, params.tmax]);
 
     if any(valid_real_data)
@@ -535,11 +536,8 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     xticklabels(date_labels);
     xlabel('Date (mm/dd/yy)');
 
-    % Create legend handles in correct order to fix colors
-    h1 = plot(NaN, NaN, 'Color', [0.2, 0.4, 0.8], 'LineWidth', 2.5);
-    h2 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
-    legend([h1, h2], {'Stochastic Simulations', 'Real Hospitalization Data'}, 'Location', 'best');
-    saveas(gcf, 'SIHRS_Carson_City_Aug02_Hospitalization_trajectories.png');
+    legend('Stochastic Simulations', 'Real Hospitalization Data', 'Location', 'best');
+    saveas(gcf, 'SIHRS_Washington_MS_Oct04_Hospitalization_trajectories.png');
 
     % Third figure: ODE + Real World + Stochastic Simulations Combined
     figure;
@@ -553,7 +551,7 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     end
     
     % Compute and plot ODE solution
-    ode_H = solve_ode_hospitalization(params, N);
+    ode_H = solve_ode_hospitalization_oct04(params, N);
     ode_H_prop = ode_H / N;
     plot(t_grid, ode_H_prop, 'g-', 'LineWidth', 3.0);
     
@@ -566,7 +564,7 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
 
     xlabel('Time (days)');
     ylabel('Hospitalized Proportion');
-    title('Carson City, NV - Aug 2 Start: ODE vs Stochastic vs Real Data');
+    title('Washington, MS - Oct 4 Start: ODE vs Stochastic vs Real Data');
     xlim([0, params.tmax]);
 
     if any(valid_real_data)
@@ -585,10 +583,10 @@ function plot_multiple_simulations_carson_aug02(all_results, N, params)
     h2 = plot(NaN, NaN, 'g-', 'LineWidth', 3.0);
     h3 = plot(NaN, NaN, 'r-', 'LineWidth', 2.5);
     legend([h1, h2, h3], {'Stochastic Simulations', 'ODE Solution', 'Real Hospitalization Data'}, 'Location', 'best');
-    saveas(gcf, 'SIHRS_Carson_City_Aug02_Hospitalization_combined.png');
+    saveas(gcf, 'SIHRS_Washington_MS_Oct04_Hospitalization_combined.png');
 end
 
-function ode_H = solve_ode_hospitalization(params, N)
+function ode_H = solve_ode_hospitalization_oct04(params, N)
     % Solve the deterministic ODE system for hospitalization
     tspan = [0, params.tmax];
     
@@ -602,7 +600,7 @@ function ode_H = solve_ode_hospitalization(params, N)
     y0 = [S0; I0; H0; R0; D0];
     
     % Solve ODE
-    [t, y] = ode45(@(t, y) sihrs_ode(t, y, params, N), tspan, y0);
+    [t, y] = ode45(@(t, y) sihrs_ode_oct04(t, y, params, N), tspan, y0);
     
     % Interpolate H compartment to match time grid
     t_grid = (0:params.tmax)';
@@ -612,7 +610,7 @@ function ode_H = solve_ode_hospitalization(params, N)
     ode_H = max(ode_H, 0);
 end
 
-function dydt = sihrs_ode(t, y, params, N)
+function dydt = sihrs_ode_oct04(t, y, params, N)
     % SIHRS ODE system
     S = y(1);
     I = y(2);

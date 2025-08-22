@@ -57,7 +57,7 @@ function SIHRS_hospitalized_carson_aug02()
     end
 
     % Model parameters (Carson City specific)
-    params = struct(...
+   params = struct(...
         'beta', 0.1511,      ... % infection rate (β > 0) - Updated for Carson City, NV
         'gamma', 0.123,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
         'alpha', 0.111,       ... % H transition rate (α > 0)
@@ -67,12 +67,12 @@ function SIHRS_hospitalized_carson_aug02()
         'pIH', 0.1060,        ... % probability of I to H
         'pIR', 0.8921,       ... % probability of I to R
         'pID', 0.0019,       ... % probability of I to D
-        'pHH', 0.01,        ... % probability of H to H (stay hospitalized)
-        'pHR', 0.836,      ... % probability of H to R
+        'pHH', 0.00,        ... % probability of H to H (stay hospitalized)
+        'pHR', 0.846,      ... % probability of H to R
         'pHD', 0.154,      ... % probability of H to D
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 515,        ... % simulation end time (Aug 2, 2020 to Dec 31, 2021)
+        'tmax', 620,        ... % simulation end time (extended for Carson City, NV data)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion

@@ -30,8 +30,6 @@ function SIHRS_hospitalized_aug30()
         real_initial_infected = data_table.active_cases(start_idx);
         real_initial_dead = data_table.cumulative_deaths(start_idx);
         
-        % Get initial hospitalization data for Aug 30, 2020
-        real_initial_hospitalized = 40.2;  % From hospitalization_MS_filtered.csv
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
@@ -44,9 +42,9 @@ function SIHRS_hospitalized_aug30()
 
     catch ME
         warning('Could not load Washington County, MS real data: %s', ME.message);
-        real_initial_infected = 5;
-        real_initial_dead = 0;
-        real_initial_hospitalized = 40.2;  % Default from hospitalization data
+        real_initial_infected = 166.0;
+        real_initial_dead = 60;
+        real_initial_hospitalized = 40.2;  
 
         i0 = real_initial_infected / N;
         d0 = real_initial_dead / N;
@@ -71,7 +69,7 @@ function SIHRS_hospitalized_aug30()
         'pHD', 0.154,       ... % probability of H to D - Updated
         'pRR', 0.02,        ... % probability of R to R (stay recovered)
         'pRS', 0.98,        ... % probability of R to S
-        'tmax', 480,        ... % simulation end time (Aug 30, 2020 to Dec 31, 2021)
+        'tmax', 620,        ... % simulation end time (extended for Washington, MS data)
         's0', s0,           ... % initial susceptible proportion
         'i0', i0,           ... % initial infected proportion
         'h0', h0,           ... % initial hospitalized proportion
