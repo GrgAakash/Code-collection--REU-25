@@ -508,6 +508,15 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     end
     title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('R_N^{(2)}(t)');
+    
+    % Apply same dynamic y-axis scaling as individual R2 plot
+    max_R2_value = 0;
+    for idx = 1:length(params.N_values)
+        max_R2_value = max(max_R2_value, max(results{idx}.R2));
+    end
+    y_max = min(max_R2_value * 1.1, 1e9);  % 10% padding or cap at 1×10^9
+    ylim([0, y_max]);
+    
     grid on;
     
     % Plot R3 in combined figure
