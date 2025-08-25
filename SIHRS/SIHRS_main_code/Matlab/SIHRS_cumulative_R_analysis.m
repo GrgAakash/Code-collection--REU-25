@@ -33,7 +33,7 @@ function sihrs_cumulative_R_analysis()
     params.lambda = 0.0083;        % Recovered to susceptible rate (Λ > 0)
     params.T = 1000;               % Total simulation time
     params.dt = 0.01;             % Time step for integration
-    params.N_values = [300]; % Multiple population sizes for comparison
+    params.N_values = [300,1600,3000]; % Multiple population sizes for comparison
     params.initial_s = 0.96;       % Initial susceptible fraction
     params.initial_i = 0.04;       % Initial infected fraction
     params.initial_h = 0;          % Initial hospitalized fraction

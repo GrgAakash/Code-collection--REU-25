@@ -44,7 +44,7 @@ function sihrs_G_renormalized_simulation()
     params.lambda = 0.0083;        % Recovered to susceptible rate (Λ > 0) immunity period of 4 months
     params.T = 1000;               % Total simulation time
     params.dt = 0.01;             % Finer time step for better blow-up capture
-    params.N_values = [300]; 
+    params.N_values = [300,1600,3000]; 
     params.initial_s = 0.96;       % Initial susceptible fraction
     params.initial_i = 0.04;       % Initial infected fraction
     params.initial_h = 0;          % Initial hospitalized fraction
