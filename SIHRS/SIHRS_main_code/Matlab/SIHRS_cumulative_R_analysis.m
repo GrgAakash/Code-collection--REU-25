@@ -39,7 +39,7 @@ function sihrs_cumulative_R_analysis()
     params.initial_h = 0;          % Initial hospitalized fraction
     params.initial_r = 0;          % Initial recovered fraction
     params.initial_d = 0;          % Initial dead fraction
-    params.n_runs = 1;           % Multiple runs for better statistics
+    params.n_runs = 1;           % Multiple runs for better statistics (like main simulation)
     params.colors = {'#0072BD','#77AC30', '#A2142F'}; % Colors for different N
     
     % Validate parameters
@@ -149,8 +149,8 @@ function result = run_cumulative_R_analysis(N, beta, params, t)
         R4_run(isnan(R4_run)) = 0;
         R5_run(isnan(R5_run)) = 0;
         
-        % Calculate CUMULATIVE R values using trapezoidal integration
-        % For blow-up handling: first calculate with finite values, then handle infinities
+        % For cumulative calculation: handle both infinities AND large finite values as blow-ups
+        % Once any R2 becomes infinite OR very large, cumulative should be infinite thereafter
         
         % Store original infinity locations
         inf_R1 = isinf(R1_run);
@@ -159,13 +159,28 @@ function result = run_cumulative_R_analysis(N, beta, params, t)
         inf_R4 = isinf(R4_run);
         inf_R5 = isinf(R5_run);
         
-        % Temporarily replace infinities with large finite values for integration
+        % Also detect large finite values as blow-ups (critical threshold blow-ups)
+        blowup_threshold = 1e6;  % Any R2 > 1e6 is considered a blow-up
+        large_R1 = R1_run > blowup_threshold;
+        large_R2 = R2_run > blowup_threshold;
+        large_R3 = R3_run > blowup_threshold;
+        large_R4 = R4_run > blowup_threshold;
+        large_R5 = R5_run > blowup_threshold;
+        
+        % Combine infinity and large value blow-ups
+        blowup_R1 = inf_R1 | large_R1;
+        blowup_R2 = inf_R2 | large_R2;
+        blowup_R3 = inf_R3 | large_R3;
+        blowup_R4 = inf_R4 | large_R4;
+        blowup_R5 = inf_R5 | large_R5;
+        
+        % Temporarily replace blow-ups with large finite values for integration
         temp_max_value = 1e6;
-        R1_temp = R1_run; R1_temp(inf_R1) = temp_max_value;
-        R2_temp = R2_run; R2_temp(inf_R2) = temp_max_value;
-        R3_temp = R3_run; R3_temp(inf_R3) = temp_max_value;
-        R4_temp = R4_run; R4_temp(inf_R4) = temp_max_value;
-        R5_temp = R5_run; R5_temp(inf_R5) = temp_max_value;
+        R1_temp = R1_run; R1_temp(blowup_R1) = temp_max_value;
+        R2_temp = R2_run; R2_temp(blowup_R2) = temp_max_value;
+        R3_temp = R3_run; R3_temp(blowup_R3) = temp_max_value;
+        R4_temp = R4_run; R4_temp(blowup_R4) = temp_max_value;
+        R5_temp = R5_run; R5_temp(blowup_R5) = temp_max_value;
         
         % Calculate cumulative integrals
         CumR1_run = cumtrapz(t, R1_temp);
@@ -174,26 +189,26 @@ function result = run_cumulative_R_analysis(N, beta, params, t)
         CumR4_run = cumtrapz(t, R4_temp);
         CumR5_run = cumtrapz(t, R5_temp);
         
-        % Handle blow-ups: once any R_N hits infinity, cumulative should be infinity thereafter
-        if any(inf_R1)
-            first_inf_idx = find(inf_R1, 1);
-            CumR1_run(first_inf_idx:end) = inf;
+        % Handle blow-ups: once any R_N hits blow-up threshold, cumulative should be infinity thereafter
+        if any(blowup_R1)
+            first_blowup_idx = find(blowup_R1, 1);
+            CumR1_run(first_blowup_idx:end) = inf;
         end
-        if any(inf_R2)
-            first_inf_idx = find(inf_R2, 1);
-            CumR2_run(first_inf_idx:end) = inf;
+        if any(blowup_R2)
+            first_blowup_idx = find(blowup_R2, 1);
+            CumR2_run(first_blowup_idx:end) = inf;
         end
-        if any(inf_R3)
-            first_inf_idx = find(inf_R3, 1);
-            CumR3_run(first_inf_idx:end) = inf;
+        if any(blowup_R3)
+            first_blowup_idx = find(blowup_R3, 1);
+            CumR3_run(first_blowup_idx:end) = inf;
         end
-        if any(inf_R4)
-            first_inf_idx = find(inf_R4, 1);
-            CumR4_run(first_inf_idx:end) = inf;
+        if any(blowup_R4)
+            first_blowup_idx = find(blowup_R4, 1);
+            CumR4_run(first_blowup_idx:end) = inf;
         end
-        if any(inf_R5)
-            first_inf_idx = find(inf_R5, 1);
-            CumR5_run(first_inf_idx:end) = inf;
+        if any(blowup_R5)
+            first_blowup_idx = find(blowup_R5, 1);
+            CumR5_run(first_blowup_idx:end) = inf;
         end
         
         CumR1_all(run, :) = CumR1_run;
@@ -203,12 +218,12 @@ function result = run_cumulative_R_analysis(N, beta, params, t)
         CumR5_all(run, :) = CumR5_run;
     end
     
-    % Average cumulative R values across runs
-    result.CumR1 = mean(CumR1_all, 1);
-    result.CumR2 = mean(CumR2_all, 1);
-    result.CumR3 = mean(CumR3_all, 1);
-    result.CumR4 = mean(CumR4_all, 1);
-    result.CumR5 = mean(CumR5_all, 1);
+    % Use maximum to preserve blow-ups (same logic as main simulation)
+    result.CumR1 = max(CumR1_all, [], 1);
+    result.CumR2 = max(CumR2_all, [], 1);
+    result.CumR3 = max(CumR3_all, [], 1);
+    result.CumR4 = max(CumR4_all, [], 1);
+    result.CumR5 = max(CumR5_all, [], 1);
     
     % Store final cumulative values for summary
     result.final_CumR1 = result.CumR1(end);
@@ -334,17 +349,7 @@ function plot_cumulative_R_results(t, results, params, R0)
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
-        CumR1_plot = results{idx}.CumR1;
-        % Handle infinities for plotting - cap at y-axis max
-        if any(isinf(CumR1_plot))
-            finite_vals = CumR1_plot(~isinf(CumR1_plot));
-            if ~isempty(finite_vals)
-                y_max = max(finite_vals) * 1.1; % 10% above max finite value
-                CumR1_plot(isinf(CumR1_plot)) = y_max;
-                ylim([0, y_max]);
-            end
-        end
-        plot(t, CumR1_plot, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+        plot(t, results{idx}.CumR1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
     title(sprintf('Cumulative R_N^{(1)} - Susceptible (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('∫₀ᵗ R_N^{(1)}(τ) dτ');
@@ -355,11 +360,25 @@ function plot_cumulative_R_results(t, results, params, R0)
     hold on;
     for idx = 1:length(params.N_values)
         CumR2_plot = results{idx}.CumR2;
-        % Handle infinities for plotting - cap at y-axis max
+        % Handle infinities for plotting - cap at y-axis max to create "fake" blow-up effect
         if any(isinf(CumR2_plot))
-            finite_vals = CumR2_plot(~isinf(CumR2_plot));
-            if ~isempty(finite_vals)
-                y_max = max(finite_vals) * 1.1; % 10% above max finite value
+            % Find the first blow-up point
+            first_inf_idx = find(isinf(CumR2_plot), 1);
+            
+            if first_inf_idx > 1
+                % Set y_max to 1×10^7 to create "fake" blow-up ceiling
+                y_max = 1e7;
+                
+                % Replace all infinite values with y_max (visual ceiling)
+                CumR2_plot(isinf(CumR2_plot)) = y_max;
+                ylim([0, y_max]);
+                
+                % Add visual indication of blow-up
+                blow_up_time = t(first_inf_idx);
+                fprintf('Infected blow-up detected at t = %.2f for N = %d\n', blow_up_time, results{idx}.N);
+            else
+                % If blow-up happens immediately, use the same ceiling
+                y_max = 1e7;
                 CumR2_plot(isinf(CumR2_plot)) = y_max;
                 ylim([0, y_max]);
             end
@@ -374,17 +393,7 @@ function plot_cumulative_R_results(t, results, params, R0)
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
-        CumR3_plot = results{idx}.CumR3;
-        % Handle infinities for plotting - cap at y-axis max
-        if any(isinf(CumR3_plot))
-            finite_vals = CumR3_plot(~isinf(CumR3_plot));
-            if ~isempty(finite_vals)
-                y_max = max(finite_vals) * 1.1; % 10% above max finite value
-                CumR3_plot(isinf(CumR3_plot)) = y_max;
-                ylim([0, y_max]);
-            end
-        end
-        plot(t, CumR3_plot, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+        plot(t, results{idx}.CumR3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
     title(sprintf('Cumulative R_N^{(3)} - Hospitalized (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('∫₀ᵗ R_N^{(3)}(τ) dτ');
@@ -394,17 +403,7 @@ function plot_cumulative_R_results(t, results, params, R0)
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
-        CumR4_plot = results{idx}.CumR4;
-        % Handle infinities for plotting - cap at y-axis max
-        if any(isinf(CumR4_plot))
-            finite_vals = CumR4_plot(~isinf(CumR4_plot));
-            if ~isempty(finite_vals)
-                y_max = max(finite_vals) * 1.1; % 10% above max finite value
-                CumR4_plot(isinf(CumR4_plot)) = y_max;
-                ylim([0, y_max]);
-            end
-        end
-        plot(t, CumR4_plot, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+        plot(t, results{idx}.CumR4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
     title(sprintf('Cumulative R_N^{(4)} - Recovered (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('∫₀ᵗ R_N^{(4)}(τ) dτ');
@@ -414,17 +413,7 @@ function plot_cumulative_R_results(t, results, params, R0)
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
-        CumR5_plot = results{idx}.CumR5;
-        % Handle infinities for plotting - cap at y-axis max
-        if any(isinf(CumR5_plot))
-            finite_vals = CumR5_plot(~isinf(CumR5_plot));
-            if ~isempty(finite_vals)
-                y_max = max(finite_vals) * 1.1; % 10% above max finite value
-                CumR5_plot(isinf(CumR5_plot)) = y_max;
-                ylim([0, y_max]);
-            end
-        end
-        plot(t, CumR5_plot, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+        plot(t, results{idx}.CumR5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
     title(sprintf('Cumulative R_N^{(5)} - Dead (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('∫₀ᵗ R_N^{(5)}(τ) dτ');
