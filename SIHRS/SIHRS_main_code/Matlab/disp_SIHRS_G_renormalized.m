@@ -42,7 +42,7 @@ function sihrs_G_renormalized_simulation()
     params.gamma = 0.100346667;    % Adjusted for exact critical hit at S = 142/300
     params.alpha = 0.1;            % Hospitalized transition rate (α > 0)
     params.lambda = 0.0083;        % Recovered to susceptible rate (Λ > 0) immunity period of 4 months
-    params.T = 300;               % Total simulation time
+    params.T = 1000;               % Total simulation time
     params.dt = 0.01;             % Finer time step for better blow-up capture
     params.N_values = [300]; 
     params.initial_s = 0.96;       % Initial susceptible fraction
