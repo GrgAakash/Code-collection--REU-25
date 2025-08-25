@@ -429,13 +429,13 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     legend(legend_labels, 'Location', 'best');
     saveas(gcf, sprintf('SIHRS_R1_Susceptible_R0_%.2f.png', R0));
     
-    % Plot R2 (G-renormalized standard deviation for infected)
+    % Plot R2 (G-renormalized standard deviation for infected) - Linear Scale
     figure('Position', [200, 200, 800, 500]);
     hold on;
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f)', R0));
+    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(2)}(t)');
     
     % Set y-axis range to 1×10^6 for consistency with cumulative analysis
@@ -443,19 +443,53 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     
     grid on;
     legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R2_Infected_R0_%.2f.png', R0));
+    saveas(gcf, sprintf('SIHRS_R2_Infected_Linear_R0_%.2f.png', R0));
     
-    % Plot R3 (G-renormalized standard deviation for hospitalized)
+    % Plot R2 (G-renormalized standard deviation for infected) - Log Scale
+    figure('Position', [250, 250, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.R2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('R_N^{(2)}(t)');
+    
+    % Set log scale for dramatic blow-up visualization
+    set(gca, 'YScale', 'log');
+    ylim([1, 1e6]);  % Log scale can't start at 0
+    
+    grid on;
+    legend(legend_labels, 'Location', 'best');
+    saveas(gcf, sprintf('SIHRS_R2_Infected_Log_R0_%.2f.png', R0));
+    
+    % Plot R3 (G-renormalized standard deviation for hospitalized) - Linear Scale
     figure('Position', [300, 300, 800, 500]);
     hold on;
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f)', R0));
+    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(3)}(t)');
     grid on;
     legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R3_Hospitalized_R0_%.2f.png', R0));
+    saveas(gcf, sprintf('SIHRS_R3_Hospitalized_Linear_R0_%.2f.png', R0));
+    
+    % Plot R3 (G-renormalized standard deviation for hospitalized) - Log Scale
+    figure('Position', [350, 350, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.R3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('R_N^{(3)}(t)');
+    
+    % Set log scale for better visualization of variations
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 100]);  % Adjust range for log scale
+    
+    grid on;
+    legend(legend_labels, 'Location', 'best');
+    saveas(gcf, sprintf('SIHRS_R3_Hospitalized_Log_R0_%.2f.png', R0));
 
     % Plot R4 (G-renormalized standard deviation for recovered)
     figure('Position', [400, 400, 800, 500]);
@@ -550,6 +584,85 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     
     % Save the combined figure
     saveas(gcf, sprintf('SIHRS_G_renormalized_std_dev_R0_%.2f_combined.png', R0));
+    
+    % Create combined plot with LOG SCALE for dramatic blow-up visualization
+    figure('Position', [700, 700, 1500, 800]);
+    tlayout = tiledlayout(2, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+    
+    % Plot R1 in combined log figure
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.R1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('R_N^{(1)}(t)');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 100]);
+    grid on;
+    
+    % Plot R2 in combined log figure
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.R2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('R_N^{(2)}(t)');
+    
+    % Set log scale for dramatic blow-up visualization
+    set(gca, 'YScale', 'log');
+    ylim([1, 1e6]);  % Log scale can't start at 0
+    
+    grid on;
+    
+    % Plot R3 in combined log figure
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.R3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('R_N^{(3)}(t)');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 100]);
+    grid on;
+
+    % Plot R4 in combined log figure
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.R4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('R_N^{(4)}(t)');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 100]);
+    grid on;
+    
+    % Plot R5 in combined log figure
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.R5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('R_N^{(5)}(t)');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 100]);
+    grid on;
+    
+    % Add legend to combined log figure
+    lgd = legend(legend_labels, 'Orientation', 'horizontal', 'Location', 'southoutside');
+    lgd.Layout.Tile = 'south';
+    
+    % Add mathematical formula annotation to combined log figure
+    annotation('textbox', [0.05, 0.02, 0.9, 0.05], ...
+        'String', sprintf('R_N^{(l)}(t) = sqrt(V_N^{(l)}(t)) / |G_N^{(l)}(t)|, R_0 = %.2f (Log Scale)', R0), ...
+        'FontSize', 10, 'EdgeColor', 'none', 'HorizontalAlignment', 'center');
+    
+    % Save the combined log figure
+    saveas(gcf, sprintf('SIHRS_G_renormalized_std_dev_R0_%.2f_combined_LOG.png', R0));
     
     % Create new plot for stochastic population trajectories
     figure('Position', [700, 700, 1200, 800]);

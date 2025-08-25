@@ -355,7 +355,7 @@ function plot_cumulative_R_results(t, results, params, R0)
     xlabel('Time'); ylabel('∫₀ᵗ R_N^{(1)}(τ) dτ');
     grid on;
     
-    % Plot Cumulative R2 (Infected)
+    % Plot Cumulative R2 (Infected) - Linear Scale
     nexttile;
     hold on;
     for idx = 1:length(params.N_values)
@@ -385,7 +385,7 @@ function plot_cumulative_R_results(t, results, params, R0)
         end
         plot(t, CumR2_plot, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('Cumulative R_N^{(2)} - Infected (R_0 = %.2f)', R0));
+    title(sprintf('Cumulative R_N^{(2)} - Infected (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('∫₀ᵗ R_N^{(2)}(τ) dτ');
     grid on;
     
@@ -432,8 +432,136 @@ function plot_cumulative_R_results(t, results, params, R0)
     % Save the combined figure
     saveas(gcf, sprintf('SIHRS_Cumulative_R_R0_%.2f_combined.png', R0));
     
-    fprintf('Generated cumulative R analysis plot:\n');
-    fprintf('  - SIHRS_Cumulative_R_R0_%.2f_combined.png\n', R0);
+    % Create LOG SCALE version of cumulative R analysis for dramatic blow-up visualization
+    figure('Position', [200, 200, 1500, 800]);
+    tlayout = tiledlayout(2, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+    
+    % Plot Cumulative R1 (Susceptible) - Log Scale
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.CumR1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Cumulative R_N^{(1)} - Susceptible (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('∫₀ᵗ R_N^{(1)}(τ) dτ');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 1000]);  % Adjust range for log scale
+    grid on;
+    
+    % Plot Cumulative R2 (Infected) - Log Scale
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        CumR2_plot = results{idx}.CumR2;
+        % Handle infinities for plotting - cap at y-axis max for log scale
+        if any(isinf(CumR2_plot))
+            % Find the first blow-up point
+            first_inf_idx = find(isinf(CumR2_plot), 1);
+            
+            if first_inf_idx > 1
+                % Set y_max to 1×10^7 for log scale visualization
+                y_max = 1e7;
+                
+                % Replace all infinite values with y_max (visual ceiling)
+                CumR2_plot(isinf(CumR2_plot)) = y_max;
+                
+                % Add visual indication of blow-up
+                blow_up_time = t(first_inf_idx);
+                fprintf('Infected cumulative blow-up detected at t = %.2f for N = %d (Log Scale)\n', blow_up_time, results{idx}.N);
+            else
+                % If blow-up happens immediately, use the same ceiling
+                y_max = 1e7;
+                CumR2_plot(isinf(CumR2_plot)) = y_max;
+            end
+        end
+        plot(t, CumR2_plot, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Cumulative R_N^{(2)} - Infected (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('∫₀ᵗ R_N^{(2)}(τ) dτ');
+    
+    % Set log scale for dramatic blow-up visualization
+    set(gca, 'YScale', 'log');
+    ylim([1, 1e7]);  % Log scale can't start at 0
+    
+    grid on;
+    
+    % Plot Cumulative R3 (Hospitalized) - Log Scale
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.CumR3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Cumulative R_N^{(3)} - Hospitalized (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('∫₀ᵗ R_N^{(3)}(τ) dτ');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 1000]);  % Adjust range for log scale
+    grid on;
+    
+    % Plot Cumulative R4 (Recovered) - Log Scale
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.CumR4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Cumulative R_N^{(4)} - Recovered (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('∫₀ᵗ R_N^{(4)}(τ) dτ');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 1000]);  % Adjust range for log scale
+    grid on;
+    
+    % Plot Cumulative R5 (Dead) - Log Scale
+    nexttile;
+    hold on;
+    for idx = 1:length(params.N_values)
+        plot(t, results{idx}.CumR5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Cumulative R_N^{(5)} - Dead (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('∫₀ᵗ R_N^{(5)}(τ) dτ');
+    set(gca, 'YScale', 'log');
+    ylim([0.1, 1000]);  % Adjust range for log scale
+    grid on;
+    
+    % Add legend
+    legend_labels = arrayfun(@(n) sprintf('N = %d', n), params.N_values, 'UniformOutput', false);
+    lgd = legend(legend_labels, 'Orientation', 'horizontal', 'Location', 'southoutside');
+    lgd.Layout.Tile = 'south';
+    
+    % Add mathematical formula annotation for log scale
+    annotation('textbox', [0.05, 0.02, 0.9, 0.05], ...
+        'String', sprintf('Cumulative R_N^{(l)}(t) = ∫₀ᵗ R_N^{(l)}(τ) dτ, R_0 = %.2f (Log Scale)', R0), ...
+        'FontSize', 10, 'EdgeColor', 'none', 'HorizontalAlignment', 'center');
+    
+    % Save the combined log scale figure
+    saveas(gcf, sprintf('SIHRS_Cumulative_R_R0_%.2f_combined_LOG.png', R0));
+    
+    % Create individual log-scale plots for key compartments
+    % Individual Cumulative R2 (Infected) - Log Scale for dramatic blow-up visualization
+    figure('Position', [300, 300, 800, 500]);
+    hold on;
+    for idx = 1:length(params.N_values)
+        CumR2_plot = results{idx}.CumR2;
+        % Handle infinities for plotting
+        if any(isinf(CumR2_plot))
+            CumR2_plot(isinf(CumR2_plot)) = 1e7;  % Cap at y_max for visualization
+        end
+        plot(t, CumR2_plot, 'Color', params.colors{idx}, 'LineWidth', 1.5);
+    end
+    title(sprintf('Cumulative R_N^{(2)} - Infected (R_0 = %.2f) - Log Scale', R0));
+    xlabel('Time'); ylabel('∫₀ᵗ R_N^{(2)}(τ) dτ');
+    
+    % Set log scale for dramatic blow-up visualization
+    set(gca, 'YScale', 'log');
+    ylim([1, 1e7]);  % Log scale can't start at 0
+    
+    grid on;
+    legend_labels = arrayfun(@(n) sprintf('N = %d', n), params.N_values, 'UniformOutput', false);
+    legend(legend_labels, 'Location', 'best');
+    saveas(gcf, sprintf('SIHRS_Cumulative_R2_Infected_Log_R0_%.2f.png', R0));
+    
+    fprintf('Generated cumulative R analysis plots:\n');
+    fprintf('  - SIHRS_Cumulative_R_R0_%.2f_combined.png (Linear Scale)\n', R0);
+    fprintf('  - SIHRS_Cumulative_R_R0_%.2f_combined_LOG.png (Log Scale)\n', R0);
+    fprintf('  - SIHRS_Cumulative_R2_Infected_Log_R0_%.2f.png (Individual Log Scale)\n', R0);
 end
 
 function print_cumulative_R_summary(results, R0)
