@@ -416,35 +416,18 @@ end
 function plot_G_renormalized_results(t, results, det_result, params, R0)
     % Create 5 separate figures for each compartment showing G-renormalized standard deviations
     
-    % Plot R1 (G-renormalized standard deviation for susceptible) - Linear Scale
+    % Plot R1 (G-renormalized standard deviation for susceptible)
     figure('Position', [100, 100, 800, 500]);
     hold on;
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('R_N^{(1)}(t)');
     grid on;
     legend_labels = arrayfun(@(n) sprintf('N = %d', n), params.N_values, 'UniformOutput', false);
     legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R1_Susceptible_Linear_R0_%.2f.png', R0));
-    
-    % Plot R1 (G-renormalized standard deviation for susceptible) - Log Scale
-    figure('Position', [150, 150, 800, 500]);
-    hold on;
-    for idx = 1:length(params.N_values)
-        plot(t, results{idx}.R1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
-    end
-    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f) - Log Scale', R0));
-    xlabel('Time'); ylabel('R_N^{(1)}(t)');
-    
-    % Set log scale for better visualization of variations
-    set(gca, 'YScale', 'log');
-    ylim([0.1, 100]);  % Adjust range for log scale
-    
-    grid on;
-    legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R1_Susceptible_Log_R0_%.2f.png', R0));
+    saveas(gcf, sprintf('SIHRS_R1_Susceptible_R0_%.2f.png', R0));
     
     % Plot R2 (G-renormalized standard deviation for infected) - Linear Scale
     figure('Position', [200, 200, 800, 500]);
@@ -508,63 +491,29 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     legend(legend_labels, 'Location', 'best');
     saveas(gcf, sprintf('SIHRS_R3_Hospitalized_Log_R0_%.2f.png', R0));
 
-    % Plot R4 (G-renormalized standard deviation for recovered) - Linear Scale
+    % Plot R4 (G-renormalized standard deviation for recovered)
     figure('Position', [400, 400, 800, 500]);
     hold on;
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('R_N^{(4)}(t)');
     grid on;
     legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R4_Recovered_Linear_R0_%.2f.png', R0));
+    saveas(gcf, sprintf('SIHRS_R4_Recovered_R0_%.2f.png', R0));
     
-    % Plot R4 (G-renormalized standard deviation for recovered) - Log Scale
-    figure('Position', [450, 450, 800, 500]);
-    hold on;
-    for idx = 1:length(params.N_values)
-        plot(t, results{idx}.R4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
-    end
-    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f) - Log Scale', R0));
-    xlabel('Time'); ylabel('R_N^{(4)}(t)');
-    
-    % Set log scale for better visualization of variations
-    set(gca, 'YScale', 'log');
-    ylim([0.1, 100]);  % Adjust range for log scale
-    
-    grid on;
-    legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R4_Recovered_Log_R0_%.2f.png', R0));
-    
-    % Plot R5 (G-renormalized standard deviation for dead) - Linear Scale
+    % Plot R5 (G-renormalized standard deviation for dead)
     figure('Position', [500, 500, 800, 500]);
     hold on;
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f)', R0));
     xlabel('Time'); ylabel('R_N^{(5)}(t)');
     grid on;
     legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R5_Dead_Linear_R0_%.2f.png', R0));
-    
-    % Plot R5 (G-renormalized standard deviation for dead) - Log Scale
-    figure('Position', [550, 550, 800, 500]);
-    hold on;
-    for idx = 1:length(params.N_values)
-        plot(t, results{idx}.R5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
-    end
-    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f) - Log Scale', R0));
-    xlabel('Time'); ylabel('R_N^{(5)}(t)');
-    
-    % Set log scale for better visualization of variations
-    set(gca, 'YScale', 'log');
-    ylim([0.1, 100]);  % Adjust range for log scale
-    
-    grid on;
-    legend(legend_labels, 'Location', 'best');
-    saveas(gcf, sprintf('SIHRS_R5_Dead_Log_R0_%.2f.png', R0));
+    saveas(gcf, sprintf('SIHRS_R5_Dead_R0_%.2f.png', R0));
     
     % Create combined plot
     figure('Position', [600, 600, 1500, 800]);
@@ -764,18 +713,12 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     saveas(gcf, sprintf('SIHRS_Population_Dynamics_R0_%.2f.png', R0));
     
     fprintf('Generated individual plots:\n');
-    fprintf('  - SIHRS_R1_Susceptible_Linear_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R1_Susceptible_Log_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R2_Infected_Linear_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R2_Infected_Log_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R3_Hospitalized_Linear_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R3_Hospitalized_Log_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R4_Recovered_Linear_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R4_Recovered_Log_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R5_Dead_Linear_R0_%.2f.png\n', R0);
-    fprintf('  - SIHRS_R5_Dead_Log_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_R1_Susceptible_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_R2_Infected_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_R3_Hospitalized_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_R4_Recovered_R0_%.2f.png\n', R0);
+    fprintf('  - SIHRS_R5_Dead_R0_%.2f.png\n', R0);
     fprintf('  - SIHRS_G_renormalized_std_dev_R0_%.2f_combined.png\n', R0);
-    fprintf('  - SIHRS_G_renormalized_std_dev_R0_%.2f_combined_LOG.png\n', R0);
     fprintf('  - SIHRS_Population_Dynamics_R0_%.2f.png\n', R0);
 end
 

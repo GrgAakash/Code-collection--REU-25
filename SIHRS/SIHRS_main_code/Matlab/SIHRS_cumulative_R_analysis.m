@@ -33,7 +33,7 @@ function sihrs_cumulative_R_analysis()
     params.lambda = 0.0083;        % Recovered to susceptible rate (Λ > 0)
     params.T = 1000;               % Total simulation time
     params.dt = 0.01;             % Time step for integration
-    params.N_values = [300,1600,3000]; % Multiple population sizes for comparison
+    params.N_values = [1600,3000]; % Multiple population sizes for comparison
     params.initial_s = 0.96;       % Initial susceptible fraction
     params.initial_i = 0.04;       % Initial infected fraction
     params.initial_h = 0;          % Initial hospitalized fraction
@@ -337,7 +337,6 @@ function [S_interp, I_interp, H_interp, R_interp, D_interp] = interpolate_result
     R_interp(t > max(time_pts)) = R_hist(end) / N;
     D_interp(t > max(time_pts)) = D_hist(end) / N;
 end
-
 function plot_cumulative_R_results(t, results, params, R0)
     % Create plots for cumulative G-renormalized standard deviations
     
@@ -598,6 +597,7 @@ function print_cumulative_R_summary(results, R0)
         end
     end
 end
-
 % Run the cumulative analysis
 sihrs_cumulative_R_analysis();
+
+
