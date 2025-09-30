@@ -422,7 +422,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('R_N - Susceptible (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(1)}(t)');
     grid on;
     legend_labels = arrayfun(@(n) sprintf('N = %d', n), params.N_values, 'UniformOutput', false);
@@ -435,7 +435,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Susceptible (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(1)}(t)');
     
     % Set log scale for better visualization of variations
@@ -452,7 +452,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('R_N - Infected (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(2)}(t)');
     
     % Set y-axis range to 1×10^6 for consistency with cumulative analysis
@@ -468,7 +468,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Infected (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(2)}(t)');
     
     % Set log scale for dramatic blow-up visualization
@@ -485,7 +485,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('R_N - Hospitalized (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(3)}(t)');
     grid on;
     legend(legend_labels, 'Location', 'best');
@@ -497,7 +497,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Hospitalized (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(3)}(t)');
     
     % Set log scale for better visualization of variations
@@ -514,7 +514,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('R_N - Recovered (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(4)}(t)');
     grid on;
     legend(legend_labels, 'Location', 'best');
@@ -526,7 +526,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Recovered (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(4)}(t)');
     
     % Set log scale for better visualization of variations
@@ -543,7 +543,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f) - Linear Scale', R0));
+    title(sprintf('R_N - Dead (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(5)}(t)');
     grid on;
     legend(legend_labels, 'Location', 'best');
@@ -555,7 +555,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Dead (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(5)}(t)');
     
     % Set log scale for better visualization of variations
@@ -576,7 +576,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f)', R0));
+    title(sprintf('R_N - Susceptible (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(1)}(t)');
     grid on;
     
@@ -586,7 +586,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f)', R0));
+    title(sprintf('R_N - Infected (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(2)}(t)');
     
     % Set y-axis range to 1×10^6 for consistency with cumulative analysis
@@ -600,7 +600,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f)', R0));
+    title(sprintf('R_N - Hospitalized (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(3)}(t)');
     grid on;
 
@@ -610,7 +610,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f)', R0));
+    title(sprintf('R_N - Recovered (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(4)}(t)');
     grid on;
     
@@ -620,7 +620,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f)', R0));
+    title(sprintf('R_N - Dead (R_0 = %.2f) - Linear Scale', R0));
     xlabel('Time'); ylabel('R_N^{(5)}(t)');
     grid on;
     
@@ -646,7 +646,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R1, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Susceptible (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Susceptible (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(1)}(t)');
     set(gca, 'YScale', 'log');
     ylim([0.1, 100]);
@@ -658,7 +658,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R2, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Infected (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Infected (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(2)}(t)');
     
     % Set log scale for dramatic blow-up visualization
@@ -673,7 +673,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R3, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Hospitalized (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Hospitalized (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(3)}(t)');
     set(gca, 'YScale', 'log');
     ylim([0.1, 100]);
@@ -685,7 +685,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R4, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Recovered (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Recovered (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(4)}(t)');
     set(gca, 'YScale', 'log');
     ylim([0.1, 100]);
@@ -697,7 +697,7 @@ function plot_G_renormalized_results(t, results, det_result, params, R0)
     for idx = 1:length(params.N_values)
         plot(t, results{idx}.R5, 'Color', params.colors{idx}, 'LineWidth', 1.5);
     end
-    title(sprintf('G-Renormalized Std Dev - Dead (R_0 = %.2f) - Log Scale', R0));
+    title(sprintf('R_N - Dead (R_0 = %.2f) - Log Scale', R0));
     xlabel('Time'); ylabel('R_N^{(5)}(t)');
     set(gca, 'YScale', 'log');
     ylim([0.1, 100]);
