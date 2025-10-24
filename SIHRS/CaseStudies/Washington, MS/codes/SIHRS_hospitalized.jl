@@ -81,7 +81,7 @@ function sihrs_multiple_simulations()
         "d0" => d0            # initial dead proportion
     )
     
-    calculated_R0 = (params["beta"] * params["pSI"]) / params["gamma"] * (1-params["pII"])
+    calculated_R0 = (params["beta"] * params["pSI"]) / (params["gamma"] * (1-params["pII"]))
     @printf("Calculated R0 = %.6f \n", calculated_R0)
 
     validate_parameters(params)

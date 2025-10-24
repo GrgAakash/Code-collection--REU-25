@@ -6,9 +6,9 @@ clear all; close all;
 rng(1);
 params.beta = 0.212;
 params.gamma = 0.1;
-params.pIH = 0.04;
-params.pIR = 0.959;
-params.pID = 0.001;
+params.pIH = 0.1060;
+params.pIR = 0.8921;
+params.pID = 0.0019;
 params.pSI = 1.0;
 params.T = 300;  % Using T = 300 as per your change
 params.dt = 0.01;

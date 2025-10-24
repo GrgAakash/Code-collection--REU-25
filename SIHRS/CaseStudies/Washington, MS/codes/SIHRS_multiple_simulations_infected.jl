@@ -143,7 +143,7 @@ function sihrs_multiple_simulations_infected()
         d0
     )
     
-    calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII)
+    calculated_R0 = (params.beta * params.pSI) / (params.gamma * (1 - params.pII))
     @printf("Calculated R0 = %.6f \n", calculated_R0)
 
     validate_parameters(params)

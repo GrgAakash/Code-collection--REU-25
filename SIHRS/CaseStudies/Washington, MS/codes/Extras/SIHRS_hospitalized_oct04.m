@@ -82,7 +82,7 @@ function SIHRS_hospitalized_oct04()
     %On a second thought,it is not exactly R_0 , instead it is R_t(time varying) so kind of pointless to do.Overall this whole code seems useless. Idk why I made it.
     %I will keep it here for now, incase I need to do something similar in the future.
 
-    calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
+    calculated_R0 = (params.beta * params.pSI) / (params.gamma * (1 - params.pII));
     fprintf('Calculated R0 = %.6f \n', calculated_R0);
 
 

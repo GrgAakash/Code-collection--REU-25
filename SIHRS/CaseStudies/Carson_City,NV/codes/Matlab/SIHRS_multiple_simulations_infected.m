@@ -80,7 +80,7 @@ function SIHRS_multiple_simulations_infected()
 
 
     %R0 target is 1.22
-    calculated_R0 = (params.beta * params.pSI) / params.gamma * (1 - params.pII);
+    calculated_R0 = (params.beta * params.pSI) / (params.gamma * (1 - params.pII));
     fprintf('Calculated R0 = %.6f \n', calculated_R0);
 
 

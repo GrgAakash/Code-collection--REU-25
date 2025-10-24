@@ -20,12 +20,12 @@ function sihrs_cumulative_DN_analysis()
     params.beta = 0.212;           % Infection rate (β > 0)
     params.pSI = 1.0;              % Infection probability (S to I)
     params.pII = 0.0;              % probability of I to I (stay infected)
-    params.pIH = 0.04;             % probability of I to H
-    params.pIR = 0.959;            % probability of I to R
-    params.pID = 0.001;            % probability of I to D
-    params.pHH = 0.01;             % probability of H to H (stay hospitalized)
-    params.pHR = 0.9882;           % probability of H to R
-    params.pHD = 0.0018;           % probability of H to D
+    params.pIH = 0.1060;           % probability of I to H
+    params.pIR = 0.8921;           % probability of I to R
+    params.pID = 0.0019;           % probability of I to D
+    params.pHH = 0.00;             % probability of H to H (stay hospitalized)
+    params.pHR = 0.846;            % probability of H to R
+    params.pHD = 0.154;            % probability of H to D
     params.pRR = 0.02;             % probability of R to R (stay recovered)
     params.pRS = 0.98;             % probability of R to S
     params.gamma = 0.100346667;    % Adjusted for exact critical hit at S = 142/300

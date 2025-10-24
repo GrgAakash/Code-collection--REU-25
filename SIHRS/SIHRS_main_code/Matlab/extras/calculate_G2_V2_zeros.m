@@ -7,9 +7,9 @@ rng(1);  % Same seed for reproducibility
 params.beta = 0.212;
 params.pSI = 1.0;
 params.pII = 0.0;
-params.pIH = 0.04;
-params.pIR = 0.959;
-params.pID = 0.001;
+params.pIH = 0.1060;
+params.pIR = 0.8921;
+params.pID = 0.0019;
 params.gamma = 0.1;
 params.alpha = 0.1;
 params.lambda = 0.0083;
