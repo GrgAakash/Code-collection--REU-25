@@ -53,10 +53,6 @@ SIHRS/
 │       ├── codes/              # Julia/MATLAB scripts & data
 │       └── Results/            # Simulation results & plots
 │
-├── 05_Documentation/        # Papers, reports, and documentation
-│   ├── methodology_summary.tex/pdf          # Complete methodology
-│   └── ALL_COUNTIES_EXTRACTION_REPORT.md   # Extraction report
-│
 ├── 06_ModelCode/            # SIHRS model implementations
 │   ├── Cwang/                  # Prof. Wang's dispersion analysis code
 │   ├── Julia/                  # Julia implementations
@@ -71,7 +67,7 @@ SIHRS/
 
 ### 1. Download Raw Data
 
-The raw data files are not included in this repository due to size (779 MB total). Download them from the original sources:
+The raw data files are not included in this repository due to size. Download them from the original sources:
 
 **Option A: Direct Downloads**
 ```bash
