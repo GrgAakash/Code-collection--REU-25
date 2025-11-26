@@ -1,256 +1,166 @@
-# SIHRS Epidemic Model with Death Project
+# SIHRS Model: COVID-19 Epidemiological Parameter Analysis
 
-## Overview
+## Project Overview
 
-This repository contains implementations of the **SIHRS (Susceptible-Infected-Hospitalized-Recovered-Susceptible)** epidemic model with death compartments. The project provides both deterministic (ODE) and stochastic simulation approaches, implemented in multiple programming languages and applied to real-world case studies.
+This repository contains the complete analysis of COVID-19 epidemiological parameters for U.S. counties (March 2020 - December 31, 2021), including:
+- **p_IH**: Probability of hospitalization given infection
+- **p_ID**: Probability of death given infection
+- **CFR**: Case Fatality Rate
 
-## Project Structure
+The analysis covers **2,400+ counties** with comprehensive data extraction, processing, and statistical analysis.
+
+---
+
+## 📁 Directory Structure
 
 ```
 SIHRS/
-├── CaseStudies/
-│   ├── Carson_City,NV/
-│   │   ├── codes/
-│   │   │   ├── Matlab/
-│   │   │   │   ├── SIHRS_hospitalized.m
-│   │   │   │   ├── SIHRS_hospitalized_carson_aug02.m
-│   │   │   │   ├── SIHRS_hospitalized_carsonparamsBUT_smallN.m
-│   │   │   │   ├── SIHRS_multiple_simulations_infected.m
-│   │   │   │   ├── SIHRS_multiple_simulations_infected_aug02.m
-│   │   │   │   ├── carson_city_daily_deaths.csv
-│   │   │   │   ├── carson_city_daily_deaths_aug02.csv
-│   │   │   │   ├── carson_city_combined.csv
-│   │   │   │   ├── carson_city_combined_aug02.csv
-│   │   │   │   ├── carson_city_active_cases.csv
-│   │   │   │   ├── carson_city_active_cases_aug02.csv
-│   │   │   │   └── hospitalization_Carson_filtered_new.csv
-│   │   │   ├── Extras/
-│   │   │   │   ├── carson_city_pih_lagged_14days.csv
-│   │   │   │   ├── PIH_Calculation_Methodology_Carson.md
-│   │   │   │   ├── carson_city_hospitalization_active_cases_combined.csv
-│   │   │   │   ├── calculate_carson_pih.jl
-│   │   │   │   ├── calculate_pid_average.jl
-│   │   │   │   ├── calculate_pid_lagged.jl
-│   │   │   │   ├── calculate_pid_simple.jl
-│   │   │   │   ├── combine_active_cases_hospitalization.jl
-│   │   │   │   ├── carson_city_pid_lagged_20days.csv
-│   │   │   │   ├── carson_city_pid_simple.csv
-│   │   │   │   └── SIHRS_hospitalization_cheating.jl
-│   │   │   ├── SIHRS_hospitalized.jl
-│   │   │   ├── SIHRS_multiple_simulations_infected.jl
-│   │   │   ├── extract_active_cases.jl
-│   │   │   ├── extract_active_deaths.jl
-│   │   │   ├── extract_daily_deaths.jl
-│   │   │   ├── ratio_analysis_carson.jl
-│   │   │   ├── carson_ratio_analysis_results.csv
-│   │   │   ├── carson_target_ratio_dates.csv
-│   │   │   ├── carson_city_daily_deaths.csv
-│   │   │   ├── carson_city_combined.csv
-│   │   │   ├── carson_city_active_cases.csv
-│   │   │   └── hospitalization_Carson_filtered_new.csv
-│   │   └── Results/
-│   ├── Washington, MS/
-│   │   ├── codes/
-│   │   │   ├── Matlab/
-│   │   │   │   ├── SIHRS_hospitalized.m
-│   │   │   │   ├── SIHRS_hospitalized_aug30.m
-│   │   │   │   ├── SIHRS_hospitalized_washingtonparamsBUT_smallN.m
-│   │   │   │   ├── SIHRS_multiple_simulations_infected.m
-│   │   │   │   ├── SIHRS_multiple_simulations_infected_aug30.m
-│   │   │   │   ├── washington_mississippi_daily_deaths.csv
-│   │   │   │   ├── washington_mississippi_daily_deaths_aug30.csv
-│   │   │   │   ├── washington_mississippi_combined.csv
-│   │   │   │   ├── washington_mississippi_combined_aug30.csv
-│   │   │   │   ├── washington_mississippi_active_cases.csv
-│   │   │   │   ├── washington_mississippi_active_cases_aug30.csv
-│   │   │   │   └── hospitalization_MS_filtered.csv
-│   │   │   ├── Extras/
-│   │   │   │   ├── washington_ms_pih_lagged_14days.csv
-│   │   │   │   ├── PIH_Calculation_Methodology.md
-│   │   │   │   ├── washington_ms_hospitalization_active_cases_combined.csv
-│   │   │   │   ├── calculate_pih.jl
-│   │   │   │   ├── calculate_pid_average_washington_ms.jl
-│   │   │   │   ├── calculate_pid_lagged_washington_ms.jl
-│   │   │   │   ├── calculate_pid_simple_washington_ms.jl
-│   │   │   │   ├── washington_ms_pid_lagged_20days.csv
-│   │   │   │   └── washington_ms_pid_simple.csv
-│   │   │   ├── SIHRS_hospitalized.jl
-│   │   │   ├── SIHRS_multiple_simulations_infected.jl
-│   │   │   ├── extract_washington_ms_active_cases.jl
-│   │   │   ├── extract_washington_ms_daily_deaths.jl
-│   │   │   ├── ratio_analysis.jl
-│   │   │   ├── ratio_analysis_results.csv
-│   │   │   ├── target_ratio_dates.csv
-│   │   │   ├── hospitalization_MS_filtered.csv
-│   │   │   ├── washington_mississippi_active_cases.csv
-│   │   │   ├── washington_mississippi_daily_deaths.csv
-│   │   │   └── washington_mississippi_combined.csv
-│   │   └── Results/
-│   ├── R_0/
-│   │   ├── county_R0_data.csv
-│   │   ├── filtered_R0_population_fips.csv
-│   │   └── readme.md
-│   ├── case_study.ipynb
-│   ├── readme.md
-│   └── hospitalization_readme.md
-├── SIHRS_main_code/               
-│   ├── Julia/                     
-│   │   ├── Project.toml           
-│   │   ├── Manifest.toml         
-│   │   ├── SIHRS_jl/             
-│   │   │   ├── SIHRS.jl          
-│   │   │   └── Images/           
-│   │   ├── SIHRS_I_H_jl/         
-│   │   │   ├── SIHRS_I_H_only.jl 
-│   │   │   └── Images/           
-│   │   └── SIHRS_variance_analysis/ 
-│   │       └── SIHRS_variance_analysis.jl 
-│   ├── Matlab/                    
-│   │   ├── SIHRS.m
-│   │   ├── SIHRS_I_H_only.m
-│   │   ├── SIHRS_variance_analysis.m
-│   │   ├── SIHRS_variance_sqrtroot_analysis.m
-│   │   ├── disp_SIHRS_DN_renormalized.m
-│   │   ├── disp_SIHRS_G_renormalized.m
-│   │   ├── SIHRS_cumulative_R_analysis.m
-│   │   ├── SIHRS_cumulative_DN_analysis.m
-│   │   ├── generate_population_csv.m
-│   │   ├── generate_population_csv.py
-│   │   ├── intersection_plot_for_hospitalized.m
-│   │   ├── intersection_plot_for_infected.m
-│   │   ├── intersection_plot_for_recovered.m
-│   │   ├── intersection_plot_for_susceptible.m
-│   │   ├── parms_justification.md
-│   │   ├── explanation of R_N.pdf
-│   │   ├── SIHRS_population_and_DN_data_N1600_R0_1.20.csv
-│   │   └── extras/
-│   │       ├── calculate_G2_V2_zeros.m
-│   │       ├── export_R_values_csv.m
-│   │       ├── export_sqrt_variance_csv.m
-│   │       ├── recreate_csv_export.m
-│   │       ├── SIHRS_G_values_N300_T300.csv
-│   │       ├── SIHRS_R_values_N300_T300.csv
-│   │       └── SIHRS_sqrt_Variance_N300_T300.csv
-│   └── README.md
-├── disp_SIHRS_dispersion_CWang.m
-├── disp_SIHRS_raw_vairance_CWang.m
-├── disp_SIHRS_renormalized_Cwang1_test.m
-└── README.md
+├── 01_RawData/              # Original data sources (779 MB - not in repo)
+│   ├── covid_hospital_report.csv    # HealthData.gov (679 MB) - download required
+│   └── nyt_covid_data.csv           # NYT COVID-19 data (100 MB) - download required
+│
+├── 02_Scripts/              # Analysis scripts (Python)
+│   ├── extract_hospitalization_data.py    # Extract county-level hospitalization data
+│   ├── calculate_pih_all_counties.py      # Calculate p_IH for all counties
+│   ├── calculate_pid_all_counties.py      # Calculate p_ID for all counties
+│   ├── calculate_cfr_all_counties.py      # Calculate CFR for all counties
+│   ├── Script_Methodology.tex/pdf         # Implementation documentation
+│   └── requirements.txt                   # Python dependencies
+│
+├── 03_ProcessedData/        # All analysis results
+│   ├── hospitalization_data/   # 2,446 county hospitalization CSVs
+│   │   └── by_state/           # Organized by state (50 states + DC)
+│   ├── p_IH_analysis/          # Hospitalization probability results
+│   │   ├── pih_all_counties.csv           # Individual county results
+│   │   ├── pih_by_state.csv               # State-level aggregates
+│   │   └── pih_summary_statistics.csv     # National statistics
+│   ├── p_ID_analysis/          # Death probability results
+│   │   ├── pid_all_counties.csv           # Individual county results
+│   │   ├── pid_by_state.csv               # State-level aggregates
+│   │   └── pid_summary_statistics.csv     # National statistics
+│   ├── CFR_analysis/           # Case fatality rate results
+│   │   ├── cfr_all_counties.csv           # Individual county results
+│   │   ├── cfr_by_state.csv               # State-level aggregates
+│   │   └── cfr_summary_statistics.csv     # National statistics
+│   └── R_0/                    # Basic reproduction number data
+│
+├── 04_CaseStudies/          # Detailed county analyses
+│   ├── Carson_City_NV/         # Primary case study (FIPS 32510)
+│   │   ├── Parameter_Justification.tex/pdf  # Parameter derivation & justification
+│   │   ├── codes/              # Julia/MATLAB scripts & data
+│   │   └── Results/            # Simulation results & plots
+│   └── Washington_MS/          # Secondary case study
+│       ├── codes/              # Julia/MATLAB scripts & data
+│       └── Results/            # Simulation results & plots
+│
+├── 05_Documentation/        # Papers, reports, and documentation
+│   ├── methodology_summary.tex/pdf          # Complete methodology
+│   └── ALL_COUNTIES_EXTRACTION_REPORT.md   # Extraction report
+│
+├── 06_ModelCode/            # SIHRS model implementations
+│   ├── Cwang/                  # Prof. Wang's dispersion analysis code
+│   ├── Julia/                  # Julia implementations
+│   └── Matlab/                 # MATLAB implementations
+│
+└── logs/                    # Execution logs
 ```
 
-## Mathematical Model
-For a brief overview of the SIHRS epidemic model with death compartment, its parameter definitions and constraints, see `SIHRS_main_code/README.md`.
+---
 
-## Implementation Languages
+## 🚀 Quick Start
 
-### Julia
-- **Full SIHRS Model**: `SIHRS_main_code/Julia/SIHRS_jl/SIHRS.jl`
-  - Deterministic ODE solutions
-  - Stochastic simulations with configurable population sizes
-  - Comprehensive plotting and analysis (10 generated plots)
-- **I-H Only Model**: `SIHRS_main_code/Julia/SIHRS_I_H_jl/SIHRS_I_H_only.jl`
-  - Simplified two-compartment model focused on infection-hospitalization dynamics
-  - Generated visualization plots (4 plots)
-- **Variance Analysis**: `SIHRS_main_code/Julia/SIHRS_variance_analysis/SIHRS_variance_analysis.jl`
-  - Stochastic variance analysis for model validation
+### 1. Download Raw Data
 
-### MATLAB
-- **Full SIHRS Model**: `SIHRS_main_code/Matlab/SIHRS.m`
-  - Complete SIHRS implementation with all compartments
-- **I-H Only Model**: `SIHRS_main_code/Matlab/SIHRS_I_H_only.m`
-  - Simplified infection-hospitalization model
-- **Variance Analysis Suite**:
-  - `SIHRS_variance_analysis.m` - Standard variance analysis
-  - `SIHRS_variance_sqrtroot_analysis.m` - Square root variance analysis
-  - `disp_SIHRS_renormalized.m` - D_N renormalized display functions
-  - `disp_SIHRS_G_renormalized.m` - G-renormalized display functions
-  - `SIHRS_cumulative_R_analysis.m` - Cumulative G-renormalized analysis
-  - `SIHRS_cumulative_DN_analysis.m` - Cumulative D_N renormalized analysis
+The raw data files are not included in this repository due to size (779 MB total). Download them from the original sources:
 
-### Additional Analysis Tools
-- **Root-level MATLAB scripts** (Prof. Wang's contributions):
-  - `disp_SIHRS_dispersion_CWang.m` - Dispersion analysis
-  - `disp_SIHRS_raw_vairance_CWang.m` - Raw variance analysis
-  - `disp_SIHRS_renormalized_Cwang1_test.m` - Renormalization testing
+**Option A: Direct Downloads**
+```bash
+# Create data directory
+mkdir -p 01_RawData
 
-## Case Studies
+# Download HealthData.gov hospitalization data (679 MB)
+# Visit: https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u
+# Export as CSV and save to: 01_RawData/covid_hospital_report.csv
 
-### Carson City, Nevada
-- **Location**: `CaseStudies/Carson_City,NV/`
-- **Data Sources**: 
-  - Active cases, daily deaths, and hospitalization records
-  - Multiple date snapshots (including August 2nd data)
-  - Ratio analysis results and target ratio dates
-- **Key Scripts**: 
-  - Data extraction (Julia): `extract_active_cases.jl`, `extract_daily_deaths.jl`
-  - Simulation runs: `SIHRS_hospitalized.jl`, `SIHRS_multiple_simulations_infected.jl`
-  - Ratio analysis: `ratio_analysis_carson.jl`
-  - Parameter calculations (P(IH), PID): Located in `Extras/` folder
-- **MATLAB Implementations**: Multiple variants including August 2nd and small-N parameter versions
-- **Results**: 15 visualization plots including full pandemic trajectories, bandwidth analysis, cumulative deaths, and hospitalization trends
+# Download NYT COVID-19 data (100 MB)
+curl -o 01_RawData/nyt_covid_data.csv https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv
+```
 
-### Washington, Mississippi
-- **Location**: `CaseStudies/Washington, MS/`
-- **Data Sources**: 
-  - Active cases, daily deaths, and hospitalization records
-  - Multiple date snapshots (including August 30th data)
-  - Ratio analysis results and target ratio dates
-- **Key Scripts**: 
-  - Data extraction (Julia): `extract_washington_ms_active_cases.jl`, `extract_washington_ms_daily_deaths.jl`
-  - Simulation runs: `SIHRS_hospitalized.jl`, `SIHRS_multiple_simulations_infected.jl`
-  - Ratio analysis: `ratio_analysis.jl`
-  - Parameter calculations (P(IH), PID): Located in `Extras/` folder
-- **MATLAB Implementations**: Multiple variants including August 30th and small-N parameter versions
-- **Results**: 15 visualization plots including full pandemic trajectories, bandwidth analysis, cumulative deaths, and hospitalization trends
+**Option B: Use Processed Data**
+All processed results are already included in `03_ProcessedData/`. You can skip the data download if you only want to view results.
 
-### R₀ Analysis
-- **Location**: `CaseStudies/R_0/`
-- **Data**: County-level R₀ statistics with population and FIPS code data
-- **Purpose**: Basic reproduction number analysis for different geographical regions
+### 2. Install Dependencies
+```bash
+cd 02_Scripts
+pip install -r requirements.txt
+```
 
-## Key Features
+### 2. Run Analysis Scripts
 
-### Parameter Estimation
-- **P(IH) Calculations**: Probability of infection leading to hospitalization
-  - Lagged analysis (14-day lag)
-  - Simple and average calculation methods
-  - Methodology documentation included
-- **PID Analysis**: Parameter estimation using different approaches
-  - Simple, average, and lagged (20-day) calculations
-  - Results stored as CSV files for both case studies
+**Navigate to scripts directory:**
+```bash
+cd 02_Scripts
+```
 
-### Variance and Dispersion Analysis
-- **Stochastic Model Validation**: Comprehensive variance analysis tools
-- **Dispersion Studies**: Analysis of model behavior under different population sizes
-- **Renormalization Techniques**: Advanced mathematical transformations for model analysis
-  - **D_N Renormalization**: Relative fluctuations compared to population size
-  - **G-Renormalization**: Relative fluctuations compared to rate of change
-- **Cumulative Analysis**: Long-term accumulation of stochastic effects
-  - **Cumulative D_N**: `∫₀ᵗ D_N^(l)(τ) dτ` - Accumulated D_N renormalized noise
-  - **Cumulative R_N**: `∫₀ᵗ R_N^(l)(τ) dτ` - Accumulated G-renormalized noise
+**Extract hospitalization data (if needed):**
+```bash
+python extract_hospitalization_data.py \
+  --source ../01_RawData/covid_hospital_report.csv \
+  --counties county_list.csv
+```
 
-### Data Processing Pipeline
-- **Automated Data Extraction**: Julia scripts for processing raw epidemiological data
-- **Data Combination**: Scripts to merge active cases with hospitalization data
-- **Ratio Analysis**: Tools for analyzing key epidemiological ratios over time
+**Calculate epidemiological parameters:**
+```bash
+python calculate_pih_all_counties.py  # p_IH
+python calculate_pid_all_counties.py  # p_ID
+python calculate_cfr_all_counties.py  # CFR
+```
 
-### Visualization and Results
-- **Comprehensive Plotting**: Both deterministic and stochastic simulation results
-- **Multiple Population Scales**: Analysis across different population sizes (N=1600, N=3000)
-- **Comparative Analysis**: Bandwidth analysis and trajectory comparisons
-- **Renormalization Visualizations**: 
-  - Individual compartment plots (linear and log scale)
-  - Combined multi-compartment plots
-  - Blow-up behavior detection and visualization
-- **Cumulative Analysis Plots**:
-  - Linear and logarithmic scale visualizations
-  - Individual and combined compartment analysis
-  - Long-term noise accumulation patterns
-- **Publication-Ready Figures**: High-quality PNG outputs for research presentations
+### 3. View Results
 
-## Documentation
-- **Mathematical Model**: Detailed ODE system documentation in `SIHRS_main_code/README.md`
-- **Parameter Justification**: Rationale for parameter choices in `SIHRS_main_code/Matlab/parms_justification.md`
-- **Variance Analysis Guide**: Comprehensive documentation in `README_SIHRS_Variance_Analysis.md`
-- **Case Study Analysis**: Jupyter notebook for interactive analysis (`case_study.ipynb`)
-- **Methodology Documentation**: P(IH) calculation methodologies for both case studies
+Results are saved in `03_ProcessedData/`:
+- `p_IH_analysis/pih_summary_statistics.csv`
+- `p_ID_analysis/pid_summary_statistics.csv`
+- `CFR_analysis/cfr_summary_statistics.csv`
+
+**Note**: All scripts must be run from the `02_Scripts/` directory as they use relative paths to access data.
+
+---
+
+## 📊 Key Results
+
+### U.S. County Statistics (March 2020 - December 2021)
+
+| Statistic | p_IH | p_ID | CFR |
+|-----------|------|------|-----|
+| **Mean** | 3.99% | 0.32% | 1.77% |
+| **Median** | 1.81% | 0.21% | 1.68% |
+| **25th Percentile** | 0.26% | 0.13% | 1.25% |
+| **75th Percentile** | 5.67% | 0.36% | 2.17% |
+| **95th Percentile** | 13.24% | 0.85% | 3.16% |
+
+### Carson City, NV (Primary Case Study)
+
+| Parameter | Value | National Percentile |
+|-----------|-------|---------------------|
+| **p_IH** | 10.60% | 91.7th |
+| **p_ID** | 0.17% | 39.7th |
+| **CFR** | 1.84% | 60.7th |
+
+---
+
+## 📦 Data Sources
+
+1. **HealthData.gov**: COVID-19 Reported Patient Impact and Hospital Capacity
+   - Weekly hospitalization data by facility
+   - URL: https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u
+   - Date range: August 2020 - December 2021
+   - File size: 679 MB (2.4 million records)
+
+2. **The New York Times**: COVID-19 Data Repository
+   - Daily cases and deaths by county
+   - URL: https://github.com/nytimes/covid-19-data
+   - Date range: March 2020 - December 2021
+   - File size: 100 MB (2.2 million records)
+
+---

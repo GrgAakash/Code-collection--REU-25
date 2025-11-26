@@ -1,0 +1,263 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    language=Python,
+    showstringspaces=false,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+}
+
+\title{Python Scripts Implementation}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+This document explains how the mathematical formulas used in the Carson City case study were implemented as automated Python scripts to calculate epidemiological parameters for all U.S. counties. The scripts in this directory apply the exact same methodology validated in Carson City to 3,220+ counties nationwide.
+
+\section{Mathematical Formulas and Their Implementation}
+
+\subsection{$p_{IH}$: Probability of Hospitalization}
+
+\subsubsection{Mathematical Formula}
+The probability that an infected individual requires hospitalization with a 14-day lag:
+
+\[
+p_{IH} = \frac{1}{n} \sum_{k=1}^{n} \frac{H(t_k)}{I_{\text{active}}(t_k - 14)}
+\]
+
+where:
+\begin{itemize}
+    \item $H(t_k)$ = number of hospitalized individuals on day $t_k$
+    \item $I_{\text{active}}(t_k - 14)$ = number of active cases 14 days prior
+    \item $n$ = number of valid data points
+\end{itemize}
+
+\subsubsection{Python Implementation}
+\textbf{Script:} \texttt{calculate\_pih\_all\_counties.py}
+
+\begin{lstlisting}
+# Calculate p_IH with 14-day lag
+for i in range(2, len(hosp_df)):
+    date_t = hosp_df.iloc[i]['date']
+    hospitalized_t = hosp_df.iloc[i]['hospitalized']
+    date_t_minus_14 = hosp_df.iloc[i-2]['date']
+    date_diff = (date_t - date_t_minus_14).days
+    
+    if 10 <= date_diff <= 15:
+        matching_dates = active_cases_df[
+            (active_cases_df['date'] >= date_t_minus_14 - timedelta(days=1)) &
+            (active_cases_df['date'] <= date_t_minus_14 + timedelta(days=1))
+        ]
+        if len(matching_dates) > 0:
+            active_cases_t_minus_14 = matching_dates.iloc[0]['active_cases']
+            if active_cases_t_minus_14 > 0:
+                pih = hospitalized_t / active_cases_t_minus_14
+                pih_values.append(pih)
+
+# Calculate mean p_IH
+mean_pih = np.mean(pih_values)
+\end{lstlisting}
+
+\subsection{$p_{ID}$: Probability of Death}
+
+\subsubsection{Mathematical Formula}
+The probability that an infected individual dies from the disease with a 20-day lag:
+
+\[
+p_{ID} = \frac{1}{n} \sum_{k=1}^{n} \frac{D_{\text{new}}(t_k)}{I_{\text{active}}(t_k - 20)}
+\]
+
+where:
+\begin{itemize}
+    \item $D_{\text{new}}(t_k)$ = number of new deaths on day $t_k$
+    \item $I_{\text{active}}(t_k - 20)$ = number of active cases 20 days prior
+    \item $n$ = number of valid data points
+\end{itemize}
+
+\subsubsection{Python Implementation}
+\textbf{Script:} \texttt{calculate\_pid\_all\_counties.py}
+
+\begin{lstlisting}
+# Calculate P(ID) = daily_deaths[T] / active_cases[T-20]
+lag_days = 20
+pid_values = []
+
+for i in range(lag_days, len(county_nyt)):
+    date_t = county_nyt.iloc[i]['date']
+    daily_deaths_t = county_nyt.iloc[i]['daily_deaths']
+    active_cases_t_minus_lag = county_nyt.iloc[i - lag_days]['active_cases']
+    
+    if active_cases_t_minus_lag > 0:
+        pid = daily_deaths_t / active_cases_t_minus_lag
+        pid_values.append(pid)
+
+# Calculate mean p_ID
+mean_pid = np.mean(pid_values)
+\end{lstlisting}
+
+\subsection{CFR: Case Fatality Rate}
+
+\subsubsection{Mathematical Formula}
+The cumulative case fatality rate for the entire study period:
+
+\[
+\text{CFR} = \frac{\text{Total Deaths}}{\text{Total Cases}}
+\]
+
+where both totals are measured as of December 31, 2021.
+
+\subsubsection{Python Implementation}
+\textbf{Script:} \texttt{calculate\_cfr\_all\_counties.py}
+
+\begin{lstlisting}
+# Filter data to study period
+period_data = county_nyt[
+    (county_nyt['date'] >= '2020-03-01') & 
+    (county_nyt['date'] <= '2021-12-31')
+]
+
+# Get cumulative totals as of end date
+total_cases = period_data['cases'].iloc[-1]
+total_deaths = period_data['deaths'].iloc[-1]
+
+# Calculate CFR
+if total_cases > 0:
+    cfr = total_deaths / total_cases
+else:
+    cfr = 0.0
+\end{lstlisting}
+
+\subsection{Active Cases Calculation}
+
+\subsubsection{Mathematical Formula}
+Active cases are calculated using a 14-day window:
+
+\[
+I_{\text{active}}(t) = \max(C(t) - C(t-14), 0)
+\]
+
+where $C(t)$ is the cumulative number of cases on day $t$.
+
+\subsubsection{Python Implementation}
+\textbf{Used in both \texttt{calculate\_pih\_all\_counties.py} and \texttt{calculate\_pid\_all\_counties.py}}
+
+\begin{lstlisting}
+# Calculate active cases with 14-day window
+nyt_data['active_cases'] = nyt_data.groupby('fips')['cases'].diff(14).fillna(0)
+nyt_data['active_cases'] = nyt_data['active_cases'].clip(lower=0)
+\end{lstlisting}
+
+\section{Data Extraction}
+
+\subsection{Hospitalization Data Extraction}
+
+\textbf{Script:} \texttt{extract\_hospitalization\_data.py}
+
+This script extracts county-level hospitalization data from the HealthData.gov COVID-19 Hospital Report (2.4 million records, 679 MB). For each county:
+
+\begin{itemize}
+    \item Filters by FIPS code
+    \item Applies date range filter (August 2020 - December 2021)
+    \item Removes invalid data (null/-999999 values)
+    \item Aggregates weekly hospitalization counts
+    \item Saves county-specific CSV files
+\end{itemize}
+
+\textbf{Output:} 2,446 county-level hospitalization CSV files organized by state.
+
+\section{Validation: Carson City Case Study}
+
+The methodology was first validated on Carson City, NV (FIPS 32510):
+
+\begin{center}
+\begin{tabular}{lcc}
+\hline
+\textbf{Parameter} & \textbf{Carson City Value} & \textbf{National Percentile} \\
+\hline
+$p_{IH}$ & 0.1060 (10.60\%) & 91.7th \\
+$p_{ID}$ & 0.0017 (0.17\%) & 39.7th \\
+CFR & 0.0184 (1.84\%) & 60.7th \\
+\hline
+\end{tabular}
+\end{center}
+
+The Carson City results match the manual calculations performed in the case study, validating the automated implementation.
+
+\section{National-Scale Analysis}
+
+After validation, the scripts were applied to all U.S. counties:
+
+\begin{center}
+\begin{tabular}{lccc}
+\hline
+\textbf{Analysis} & \textbf{Script} & \textbf{Counties} & \textbf{Output} \\
+\hline
+$p_{IH}$ & \texttt{calculate\_pih\_all\_counties.py} & 2,438 & 170,487 calculations \\
+$p_{ID}$ & \texttt{calculate\_pid\_all\_counties.py} & 3,218 & 1,899,366 calculations \\
+CFR & \texttt{calculate\_cfr\_all\_counties.py} & 3,140 & 3,140 values \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Statistical Summary}
+
+For each parameter, the scripts calculate:
+
+\begin{itemize}
+    \item Mean, Median, Standard Deviation
+    \item Percentiles: 5th, 25th, 50th, 75th, 95th
+    \item Minimum, Maximum
+    \item State-level aggregates
+    \item Individual county values
+\end{itemize}
+
+\textbf{Results location:} \texttt{../03\_ProcessedData/}
+
+\section{Key Results (March 2020 - December 2021)}
+
+\begin{center}
+\begin{tabular}{lccc}
+\hline
+\textbf{Statistic} & \textbf{$p_{IH}$} & \textbf{$p_{ID}$} & \textbf{CFR} \\
+\hline
+Mean & 3.99\% & 0.32\% & 1.77\% \\
+Median & 1.81\% & 0.21\% & 1.68\% \\
+25th Percentile & 0.26\% & 0.13\% & 1.25\% \\
+75th Percentile & 5.67\% & 0.36\% & 2.17\% \\
+95th Percentile & 13.24\% & 0.85\% & 3.16\% \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Reproducibility}
+
+All scripts can be run from the \texttt{02\_Scripts/} directory:
+
+\begin{lstlisting}[language=bash]
+# Install dependencies
+pip install -r requirements.txt
+
+# Extract hospitalization data (if needed)
+python extract_hospitalization_data.py
+
+# Calculate parameters
+python calculate_pih_all_counties.py
+python calculate_pid_all_counties.py
+python calculate_cfr_all_counties.py
+\end{lstlisting}
+
+
+\end{document}
+
