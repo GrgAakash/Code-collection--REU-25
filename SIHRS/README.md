@@ -129,19 +129,19 @@ Results are saved in `03_ProcessedData/`:
 
 | Statistic | p_IH | p_ID | CFR |
 |-----------|------|------|-----|
-| **Mean** | 3.99% | 0.32% | 1.77% |
-| **Median** | 1.81% | 0.21% | 1.68% |
-| **25th Percentile** | 0.26% | 0.13% | 1.25% |
-| **75th Percentile** | 5.67% | 0.36% | 2.17% |
-| **95th Percentile** | 13.24% | 0.85% | 3.16% |
+| **Mean** | 0.0399 | 0.0032 | 0.0177 |
+| **Median** | 0.0181 | 0.0021 | 0.0168 |
+| **25th Percentile** | 0.0026 | 0.0013 | 0.0125 |
+| **75th Percentile** | 0.0567 | 0.0036 | 0.0217 |
+| **95th Percentile** | 0.1324 | 0.0085 | 0.0316 |
 
 ### Carson City, NV (Primary Case Study)
 
 | Parameter | Value | National Percentile |
 |-----------|-------|---------------------|
-| **p_IH** | 10.60% | 91.7th |
-| **p_ID** | 0.17% | 39.7th |
-| **CFR** | 1.84% | 60.7th |
+| **p_IH** | 0.1060 | 91.7th |
+| **p_ID** | 0.0017 | 39.7th |
+| **CFR** | 0.0184 | 60.7th |
 
 ---
 
