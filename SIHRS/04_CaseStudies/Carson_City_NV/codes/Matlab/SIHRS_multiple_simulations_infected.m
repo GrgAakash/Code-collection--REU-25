@@ -53,15 +53,15 @@ function SIHRS_multiple_simulations_infected()
 
     % Model parameters
    params = struct(...
-        'beta', 0.1511,      ... % infection rate (β > 0) - Updated for Carson City, NV
-        'gamma', 0.123,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
+        'beta', 0.1742857,      ... % infection rate (β > 0) - Updated for Carson City, NV
+        'gamma', 0.142857,     ... % I transition rate (γ > 0) - Updated for Carson City, NV
         'alpha', 0.111,       ... % H transition rate (α > 0)
         'lambda', 0.0083,    ... % R transition rate (Λ > 0)
         'pSI', 1.0,         ... % probability of S to I (p_{SI} in (0,1])
-        'pII', 0.00,        ... % probability of I to I (stay infected)
-        'pIH', 0.1060,        ... % probability of I to H
-        'pIR', 0.8921,       ... % probability of I to R
-        'pID', 0.0019,       ... % probability of I to D
+        'pII', 0.10,        ... % probability of I to I (stay infected)
+        'pIH', 0.0920,        ... % probability of I to H
+        'pIR', 0.8080,       ... % probability of I to R
+        'pID', 0.0000,       ... % probability of I to D
         'pHH', 0.00,        ... % probability of H to H (stay hospitalized)
         'pHR', 0.846,      ... % probability of H to R
         'pHD', 0.154,      ... % probability of H to D
@@ -74,6 +74,7 @@ function SIHRS_multiple_simulations_infected()
         'r0', r0,           ... % initial recovered proportion
         'd0', d0            ... % initial dead proportion
     );
+
 
 
 

@@ -24,51 +24,53 @@
 
 \section{Overview}
 
-This document explains how the mathematical formulas used in the Carson City case study were implemented as automated Python scripts to calculate epidemiological parameters for all U.S. counties. The scripts in this directory apply the exact same methodology validated in Carson City to 3,220+ counties nationwide.
+This document explains how parameter estimation was done for both the generic SIHRS model and the Carson City case study.
 
 \section{Mathematical Formulas and Their Implementation}
 
 \subsection{$p_{IH}$: Probability of Hospitalization}
 
 \subsubsection{Mathematical Formula}
-The probability that an infected individual requires hospitalization with a 14-day lag:
+The probability that an infected individual requires hospitalization with a $\tau$-day lag:
 
 \[
-p_{IH} = \frac{1}{n} \sum_{k=1}^{n} \frac{H(t_k)}{I_{\text{active}}(t_k - 14)}
+p_{IH}^{(\tau)} = \frac{1}{n} \sum_{k=1}^{n} \frac{H(t_k)}{I_{\text{active}}(t_k - \tau)}
 \]
 
 where:
 \begin{itemize}
     \item $H(t_k)$ = number of hospitalized individuals on day $t_k$
-    \item $I_{\text{active}}(t_k - 14)$ = number of active cases 14 days prior
+    \item $I_{\text{active}}(t_k - \tau)$ = number of active cases $\tau$ days prior
     \item $n$ = number of valid data points
+    \item $\tau$ = lag period (7 days)
 \end{itemize}
 
-\subsubsection{Python Implementation}
-\textbf{Script:} \texttt{calculate\_pih\_all\_counties.py}
+\subsubsection{Python Implementation (7-day lag)}
+\textbf{Script:} \texttt{calculate\_pih\_all\_counties\_7day.py}
 
 \begin{lstlisting}
-# Calculate p_IH with 14-day lag
-for i in range(2, len(hosp_df)):
+# Calculate p_IH with 7-day lag (1-row lookback in weekly data)
+for i in range(1, len(hosp_df)):
     date_t = hosp_df.iloc[i]['date']
     hospitalized_t = hosp_df.iloc[i]['hospitalized']
-    date_t_minus_14 = hosp_df.iloc[i-2]['date']
-    date_diff = (date_t - date_t_minus_14).days
+    date_t_minus_7 = hosp_df.iloc[i-1]['date']
+    date_diff = (date_t - date_t_minus_7).days
     
-    if 10 <= date_diff <= 15:
+    if 5 <= date_diff <= 10:
         matching_dates = active_cases_df[
-            (active_cases_df['date'] >= date_t_minus_14 - timedelta(days=1)) &
-            (active_cases_df['date'] <= date_t_minus_14 + timedelta(days=1))
+            (active_cases_df['date'] >= date_t_minus_7 - timedelta(days=1)) &
+            (active_cases_df['date'] <= date_t_minus_7 + timedelta(days=1))
         ]
         if len(matching_dates) > 0:
-            active_cases_t_minus_14 = matching_dates.iloc[0]['active_cases']
-            if active_cases_t_minus_14 > 0:
-                pih = hospitalized_t / active_cases_t_minus_14
+            active_cases_t_minus_7 = matching_dates.iloc[0]['active_cases']
+            if active_cases_t_minus_7 > 0:
+                pih = hospitalized_t / active_cases_t_minus_7
                 pih_values.append(pih)
 
 # Calculate mean p_IH
 mean_pih = np.mean(pih_values)
 \end{lstlisting}
+
 
 \subsection{$p_{ID}$: Probability of Death}
 
@@ -106,6 +108,8 @@ for i in range(lag_days, len(county_nyt)):
 # Calculate mean p_ID
 mean_pid = np.mean(pid_values)
 \end{lstlisting}
+
+\textbf{Remark:} For $p_{ID}$, we note that out-of-hospital deaths represent only a small fraction of total deaths (see, e.g., \cite{O'Driscoll2021, Pathak2021}); therefore, we set $p_{ID} = 0$ in the SIHRS model implementation. These references correspond to [52] and [54] in the main paper.
 
 \subsection{CFR: Case Fatality Rate}
 
@@ -151,7 +155,7 @@ I_{\text{active}}(t) = \max(C(t) - C(t-14), 0)
 where $C(t)$ is the cumulative number of cases on day $t$.
 
 \subsubsection{Python Implementation}
-\textbf{Used in both \texttt{calculate\_pih\_all\_counties.py} and \texttt{calculate\_pid\_all\_counties.py}}
+\textbf{Used in both \texttt{calculate\_pih\_all\_counties\_7day.py} and \texttt{calculate\_pid\_all\_counties.py}}
 
 \begin{lstlisting}
 # Calculate active cases with 14-day window
@@ -182,13 +186,13 @@ This script extracts county-level hospitalization data from the HealthData.gov C
 The methodology was first validated on Carson City, NV (FIPS 32510):
 
 \begin{center}
-\begin{tabular}{lcc}
+\begin{tabular}{lccc}
 \hline
-\textbf{Parameter} & \textbf{Carson City Value} & \textbf{National Percentile} \\
+\textbf{Parameter} & \textbf{Carson City Value} & \textbf{National Percentile} & \textbf{Lag Period} \\
 \hline
-$p_{IH}$ & 0.1060 (10.60\%) & 91.7th \\
-$p_{ID}$ & 0.0017 (0.17\%) & 39.7th \\
-CFR & 0.0184 (1.84\%) & 60.7th \\
+$p_{IH}$ (7-day) & 0.0920 (9.20\%) & 90.8th & 7 days \\
+$p_{ID}$ & 0.0017 (0.17\%) & 39.7th & 20 days \\
+CFR & 0.0184 (1.84\%) & 60.7th & --- \\
 \hline
 \end{tabular}
 \end{center}
@@ -204,7 +208,7 @@ After validation, the scripts were applied to all U.S. counties:
 \hline
 \textbf{Analysis} & \textbf{Script} & \textbf{Counties} & \textbf{Output} \\
 \hline
-$p_{IH}$ & \texttt{calculate\_pih\_all\_counties.py} & 2,438 & 170,487 calculations \\
+$p_{IH}$ (7-day) & \texttt{calculate\_pih\_all\_counties\_7day.py} & 2,440 & 173,112 calculations \\
 $p_{ID}$ & \texttt{calculate\_pid\_all\_counties.py} & 3,218 & 1,899,366 calculations \\
 CFR & \texttt{calculate\_cfr\_all\_counties.py} & 3,140 & 3,140 values \\
 \hline
@@ -219,7 +223,6 @@ For each parameter, the scripts calculate:
     \item Mean, Median, Standard Deviation
     \item Percentiles: 5th, 25th, 50th, 75th, 95th
     \item Minimum, Maximum
-    \item State-level aggregates
     \item Individual county values
 \end{itemize}
 
@@ -230,16 +233,29 @@ For each parameter, the scripts calculate:
 \begin{center}
 \begin{tabular}{lccc}
 \hline
-\textbf{Statistic} & \textbf{$p_{IH}$} & \textbf{$p_{ID}$} & \textbf{CFR} \\
+\textbf{Statistic} & \textbf{$p_{IH}$ (7-day)} & \textbf{$p_{ID}$} & \textbf{CFR} \\
 \hline
-Mean & 3.99\% & 0.32\% & 1.77\% \\
-Median & 1.81\% & 0.21\% & 1.68\% \\
-25th Percentile & 0.26\% & 0.13\% & 1.25\% \\
-75th Percentile & 5.67\% & 0.36\% & 2.17\% \\
-95th Percentile & 13.24\% & 0.85\% & 3.16\% \\
+Mean & 0.0355 & 0.0032 & 0.0177 \\
+Median & 0.0145 & 0.0021 & 0.0168 \\
+25th Percentile & 0.0020 & 0.0013 & 0.0125 \\
+75th Percentile & 0.0496 & 0.0036 & 0.0217 \\
+95th Percentile & 0.1202 & 0.0085 & 0.0316 \\
 \hline
 \end{tabular}
 \end{center}
+
+\textbf{Remark:} We suspect that the calculated values of $p_{IH}$ and $p_{ID}$ are slightly higher than the true values, partly because of a low ascertainment rate of COVID-19 infections in the United States (see, e.g., \cite{Clarke2022, Deng2025, Reese2021}). These references correspond to [24], [25], and [57] in the main paper. It also reinforces our assumption of $p_{ID} = 0$ in the SIHRS model implementation.
+
+\textbf{Additional Remark on $p_{IH}$:}
+\begin{itemize}
+    \item Based on age-stratified seroprevalence estimates~\cite{Deng2025}, the infection hospitalization rate ranges from approximately $0.035$ (1 in 28.5) for adults 18--49 to $0.082$ (1 in 12.2) for adults 50--69. This corresponds to the stated range of $0.04$ to $0.08$ for $p_{IH}$ in our paper.
+
+    \item Our chosen value of $p_{IH} = 0.07143$ (1/14) falls within this range. This value is further justified by calculating the infection-weighted average for the entire adult population (ages 18--69) during the Delta variant period using surveillance data~\cite{Deng2025}:
+    \[
+    p_{IH} = \frac{249,\!118 + 321,\!375}{5,\!384,\!265 + 2,\!991,\!746} \approx 0.0681 \quad \text{(approximately 1 in 14.6842)}.
+    \]
+    For modeling simplicity and to provide a slightly conservative estimate, we use the nearest simple integer denominator, 1/14, which yields $p_{IH} = 0.07143$.
+\end{itemize}
 
 \section{Reproducibility}
 
@@ -253,11 +269,52 @@ pip install -r requirements.txt
 python extract_hospitalization_data.py
 
 # Calculate parameters
-python calculate_pih_all_counties.py
+python calculate_pih_all_counties_7day.py
 python calculate_pid_all_counties.py
 python calculate_cfr_all_counties.py
+
+# Calculate p_IH using cumulative ratio method (alternative methodology)
+python calculate_pih_all_counties_cumulative.py
 \end{lstlisting}
 
+\textbf{Output files:}
+\begin{itemize}
+    \item \texttt{pih\_all\_counties\_7day.csv} -- $p_{IH}$ with 7-day lag (county-level)
+    \item \texttt{pih\_summary\_statistics\_7day.csv} -- Summary statistics for 7-day lag
+    \item \texttt{pih\_all\_counties\_cumulative\_14day.csv} -- $p_{IH}$ using cumulative method (14-day lag)
+    \item \texttt{pih\_summary\_cumulative\_14day.csv} -- Summary for cumulative method (14-day lag)
+    \item \texttt{pih\_all\_counties\_cumulative\_7day.csv} -- $p_{IH}$ using cumulative method (7-day lag)
+    \item \texttt{pih\_summary\_cumulative\_7day.csv} -- Summary for cumulative method (7-day lag)
+    \item \texttt{pid\_all\_counties.csv} -- $p_{ID}$ with 20-day lag
+    \item \texttt{cfr\_all\_counties.csv} -- Case Fatality Rate
+\end{itemize}
+
+\begin{thebibliography}{99}
+\bibitem{Clarke2022}
+Kristie EN Clarke.
+\newblock Seroprevalence of infection-induced sars-cov-2 antibodies---united states, september 2021--february 2022.
+\newblock \textit{MMWR. Morbidity and Mortality Weekly Report}, 71, 2022.
+
+\bibitem{Deng2025}
+Yangyang Deng, Yun Kim, Anna Bratcher, Jefferson M Jones, Muloongo Simuzingili, Adi V Gundlapalli, Melissa Briggs Hagen, Ronaldo Iachan, and Kristie EN Clarke.
+\newblock Ratio of infections to covid-19 cases and hospitalizations in the united states based on sars-cov-2 seroprevalence data, september 2021--february 2022.
+\newblock \textit{Open Forum Infectious Diseases}, 12, Oxford University Press US, 2025, p.~ofae719.
+
+\bibitem{O'Driscoll2021}
+Megan O'Driscoll, Gabriel Ribeiro Dos Santos, Lin Wang, Derek AT Cummings, Andrew S Azman, Juliette Paireau, Arnaud Fontanet, Simon Cauchemez, and Henrik Salje.
+\newblock Age-specific mortality and immunity patterns of sars-cov-2.
+\newblock \textit{Nature}, 590(7844):140--145, 2021.
+
+\bibitem{Pathak2021}
+Elizabeth B Pathak, Rebecca B Garcia, Janelle M Menard, and Jason L Salemi.
+\newblock Out-of-hospital covid-19 deaths: consequences for quality of medical care and accuracy of cause of death coding.
+\newblock 2021, pp.~S101--S106.
+
+\bibitem{Reese2021}
+Heather Reese, A Danielle Iuliano, Neha N Patel, Shikha Garg, Lindsay Kim, Benjamin J Silk, Aron J Hall, Alicia Fry, and Carrie Reed.
+\newblock Estimated incidence of coronavirus disease 2019 (covid-19) illness and hospitalization---united states, february--september 2020.
+\newblock \textit{Clinical Infectious Diseases}, 72(12):e1010--e1017, 2021.
+\end{thebibliography}
 
 \end{document}
 

@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""
-Complete Case Fatality Rate (CFR) Calculation for All U.S. Counties
-
-CFR = Total Deaths / Total Cases (cumulative)
-
-Date Range: March 2020 to December 31, 2021
-
-This is a simpler calculation than p_ID - it's the overall proportion
-of confirmed cases that resulted in death.
-"""
 
 import pandas as pd
 import numpy as np
@@ -16,7 +6,6 @@ from pathlib import Path
 from tqdm import tqdm
 import logging
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -29,22 +18,16 @@ logger = logging.getLogger(__name__)
 
 
 class CFRCalculator:
-    """Calculate Case Fatality Rate for all U.S. counties."""
-
     def __init__(self):
         self.nyt_data = None
         self.results = []
 
     def load_nyt_data(self, filename='../01_RawData/nyt_covid_data.csv'):
-        """Load NYT COVID-19 data."""
         logger.info(f"Loading NYT data from {filename}...")
         self.nyt_data = pd.read_csv(filename, parse_dates=['date'])
-        
-        # Clean FIPS codes
         self.nyt_data['fips'] = self.nyt_data['fips'].fillna(0).astype(int).astype(str).str.zfill(5)
         self.nyt_data = self.nyt_data.sort_values(['fips', 'date'])
         
-        # Filter to March 2020 - December 31, 2021
         start_date = pd.to_datetime('2020-03-01')
         end_date = pd.to_datetime('2021-12-31')
         self.nyt_data = self.nyt_data[
@@ -57,20 +40,12 @@ class CFRCalculator:
         logger.info(f"  Unique counties: {self.nyt_data['fips'].nunique()}")
 
     def calculate_cfr_for_county(self, fips, county_name, state):
-        """
-        Calculate CFR for a single county.
-        
-        CFR = Total Deaths / Total Cases (at end of period)
-        """
         try:
             county_data = self.nyt_data[self.nyt_data['fips'] == fips].copy()
-            
             if len(county_data) == 0:
                 return None
             
             county_data = county_data.sort_values('date')
-            
-            # Get final cumulative values (as of Dec 31, 2021)
             final_row = county_data.iloc[-1]
             total_cases = final_row['cases']
             total_deaths = final_row['deaths']
@@ -78,10 +53,8 @@ class CFRCalculator:
             if total_cases <= 0:
                 return None
             
-            # Calculate CFR
             cfr = total_deaths / total_cases
             
-            # Also calculate daily CFR over time for statistics
             county_data['daily_cfr'] = county_data['deaths'] / county_data['cases'].replace(0, np.nan)
             valid_cfr = county_data['daily_cfr'].dropna()
             
@@ -108,12 +81,10 @@ class CFRCalculator:
             return None
 
     def process_all_counties(self):
-        """Process all counties."""
         logger.info("="*70)
         logger.info("Processing all counties for CFR...")
         logger.info("="*70)
         
-        # Get unique county-state-fips combinations
         counties = self.nyt_data.groupby(['fips', 'county', 'state']).size().reset_index()
         counties = counties[counties['fips'] != '00000']
         
@@ -131,18 +102,15 @@ class CFRCalculator:
         logger.info(f"\nSuccessfully calculated CFR for {len(self.results)} counties")
 
     def save_results(self):
-        """Save all results."""
         output_dir = Path('../03_ProcessedData/CFR_analysis')
         output_dir.mkdir(parents=True, exist_ok=True)
 
         df = pd.DataFrame(self.results)
         df = df.sort_values('cfr', ascending=False)
 
-        # Save county-level results
         df.to_csv(output_dir / 'cfr_all_counties.csv', index=False)
         logger.info(f"Saved: {output_dir / 'cfr_all_counties.csv'}")
 
-        # Save state-level summary
         state_summary = df.groupby('state').agg({
             'cfr': ['mean', 'median', 'std', 'count'],
             'total_cases': 'sum',
@@ -155,7 +123,6 @@ class CFRCalculator:
         state_summary.to_csv(output_dir / 'cfr_by_state.csv', index=False)
         logger.info(f"Saved: {output_dir / 'cfr_by_state.csv'}")
 
-        # Save overall summary
         total_cases = df['total_cases'].sum()
         total_deaths = df['total_deaths'].sum()
         overall_cfr = total_deaths / total_cases
@@ -216,7 +183,6 @@ class CFRCalculator:
         return df
 
     def print_statistics(self, df):
-        """Print summary statistics."""
         total_cases = df['total_cases'].sum()
         total_deaths = df['total_deaths'].sum()
         overall_cfr = total_deaths / total_cases
@@ -239,7 +205,6 @@ class CFRCalculator:
         logger.info(f"  25th %ile:      {df['cfr'].quantile(0.25):.6f} ({df['cfr'].quantile(0.25)*100:.4f}%)")
         logger.info(f"  75th %ile:      {df['cfr'].quantile(0.75):.6f} ({df['cfr'].quantile(0.75)*100:.4f}%)")
 
-        # Carson City validation
         logger.info(f"\nCARSON CITY VALIDATION:")
         carson = df[df['fips'] == '32510']
         if len(carson) > 0:
@@ -276,4 +241,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -2,15 +2,15 @@ function sihrs_multiple_populations()
     % Model parameters - tweak beta, gamma,pSI,pII to get reasonable R₀ values (within 4-5% of the targeted R₀)
     % Justification for the parameters (except for s0,i0,h0,r0,d0) are in the justification.txt file.
 params = struct(...
-        'beta',0.212, ...    % infection rate (β > 0)
-        'gamma', 0.10, ...   % I transition rate (γ > 0)
+        'beta',0.2046, ...    % infection rate (β > 0)
+        'gamma', 0.123, ...   % I transition rate (γ > 0)
         'alpha', 0.111,       ... % H transition rate (α > 0)
         'lambda', 0.0083,    ... % R transition rate (Λ > 0)
         'pSI', 1.0,         ... % probability of S to I (p_{SI} in (0,1])
         'pII', 0.00,        ... % probability of I to I (stay infected)
-        'pIH', 0.10,        ... % probability of I to H
-        'pIR', 0.880,       ... % probability of I to R
-        'pID', 0.020,       ... % probability of I to D
+        'pIH', 0.07143,        ... % probability of I to H
+        'pIR', 0.92857,       ... % probability of I to R
+        'pID', 0.00,       ... % probability of I to D
         'pHH', 0.00,        ... % probability of H to H (stay hospitalized)
         'pHR', 0.846,      ... % probability of H to R
         'pHD', 0.154,      ... % probability of H to D
@@ -18,8 +18,8 @@ params = struct(...
         'pRS', 0.98,        ... % probability of R to S
         'tmax', 620,        ... % simulation end time (extended for Carson City, NV data)
         's0', 0.96, ...      % initial susceptible proportion   %For most real world data, s0 is near 0.999 or something close, but for now we will use 0.96 as it makes the plots look better
-        'i0', 0.04, ...      % initial infected proportion      %For most real world data, i0 is near 0.001 or something close, but for now we will use 0.04 as it makes the plots look better
-        'h0', 0.0, ...      % initial hospitalized proportion
+        'i0', 0.035, ...      % initial infected proportion      %For most real world data, i0 is near 0.001 or something close, but for now we will use 0.04 as it makes the plots look better
+        'h0', 0.005, ...      % initial hospitalized proportion
         'r0', 0.0, ...      % initial recovered proportion
         'd0', 0.0 ...       % initial dead proportion
     ); 
