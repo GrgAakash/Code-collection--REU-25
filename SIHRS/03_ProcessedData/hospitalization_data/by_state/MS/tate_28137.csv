@@ -1,0 +1,9 @@
+collection_week,state,fips_code,total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg,total_adult_patients_hospitalized_confirmed_covid_7_day_avg,staffed_adult_icu_bed_occupancy_7_day_avg,total_pediatric_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg,inpatient_beds_used_covid_7_day_avg,total_adult_and_pediatric_covid_patients
+2021-11-07,MS,28137,0.0,0.0,0.0,0.0,0.0,0.0
+2021-11-14,MS,28137,0,0,0.0,0.0,0,0.0
+2021-11-21,MS,28137,0,0,0.0,0.0,0,0.0
+2021-11-28,MS,28137,0,0,0.0,0.0,0,0.0
+2021-12-05,MS,28137,0,0,0.0,0.0,0,0.0
+2021-12-12,MS,28137,0,0,0.0,0.0,0,0.0
+2021-12-19,MS,28137,0,0,0.0,0.0,0,0.0
+2021-12-26,MS,28137,0,0,0.0,0.0,0,0.0

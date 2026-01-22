@@ -1,0 +1,4 @@
+collection_week,state,fips_code,total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg,total_adult_patients_hospitalized_confirmed_covid_7_day_avg,staffed_adult_icu_bed_occupancy_7_day_avg,total_pediatric_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg,inpatient_beds_used_covid_7_day_avg,total_adult_and_pediatric_covid_patients
+2020-08-02,OK,40133,0,0,0.0,0.0,0,0.0
+2020-08-09,OK,40133,0,0,0.0,0.0,0,0.0
+2020-08-16,OK,40133,0.0,0.0,0.0,0.0,0.0,0.0

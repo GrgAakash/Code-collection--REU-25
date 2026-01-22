@@ -1,0 +1,17 @@
+collection_week,state,fips_code,total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg,total_adult_patients_hospitalized_confirmed_covid_7_day_avg,staffed_adult_icu_bed_occupancy_7_day_avg,total_pediatric_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg,inpatient_beds_used_covid_7_day_avg,total_adult_and_pediatric_covid_patients
+2020-08-02,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-08-09,TN,47135,0,0,0.0,0.0,0,0.0
+2020-08-16,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-08-23,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-08-30,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-09-06,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-09-13,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-09-20,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-09-27,TN,47135,0,0.0,0.0,0.0,0,0.0
+2020-10-04,TN,47135,0,0,0.0,0.0,0,0.0
+2020-10-11,TN,47135,4.1,0,0.0,0,4.3,4.1
+2020-10-18,TN,47135,5.0,5.0,0.0,0.0,5.0,5.0
+2020-10-25,TN,47135,0,0,0.0,0.0,0,0.0
+2020-11-01,TN,47135,0.0,0.0,0.0,0.0,0.0,0.0
+2020-11-08,TN,47135,0.0,0.0,0.0,0.0,0.0,0.0
+2020-11-15,TN,47135,0.0,0.0,0.0,0.0,0.0,0.0

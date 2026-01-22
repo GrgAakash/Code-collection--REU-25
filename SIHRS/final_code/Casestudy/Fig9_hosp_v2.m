@@ -1,0 +1,224 @@
+%% Figure 9: Hospitalization Case Study (Carson City, NV)
+
+clear all; close all;
+
+N = 58639;  % Carson City population
+
+% Load initial conditions from data
+try
+    data = readtable('carson_city_combined.csv');
+    data.date = datetime(data.date, 'InputFormat', 'yyyy-MM-dd');
+    start_date = datetime('2020-03-25');
+    
+    idx = find(data.date == start_date, 1);
+    if isempty(idx)
+        [~, idx] = min(abs(datenum(data.date) - datenum(start_date)));
+    end
+    
+    i0 = data.cases(idx) / N;
+    d0 = data.deaths(idx) / N;
+    h0 = 0; r0 = 0;
+    s0 = 1 - (i0 + h0 + r0 + d0);
+    
+    fprintf('Initial: I=%d, D=%d, S=%d\n', data.cases(idx), data.deaths(idx), round(s0*N));
+catch
+    i0 = 3/N; d0 = 0; h0 = 0; r0 = 0;
+    s0 = 1 - (i0 + h0 + r0 + d0);
+end
+
+p.beta = 0.15711428571; p.gamma = 0.1429; p.alpha = 0.111; p.lambda = 0.0083;
+p.pSI = 1.0; p.pII = 0.1;
+p.pIH = 0.092; p.pIR = 0.8080; p.pID = 0;
+p.pHH = 0.0; p.pHR = 0.846; p.pHD = 0.154;
+p.pRR = 0.02; p.pRS = 0.98;
+p.tmax = 620;
+p.s0 = s0; p.i0 = i0; p.h0 = h0; p.r0 = r0; p.d0 = d0;
+
+R0 = p.beta * p.pSI / p.gamma * (1 - p.pII);
+fprintf('R0 = %.4f\n', R0);
+
+nsims = 30;
+res = cell(nsims, 1);
+for k = 1:nsims
+    fprintf('Sim %d/%d\n', k, nsims);
+    res{k} = run_stoch(N, p);
+end
+
+plot_results(res, N, p);
+
+%% Gillespie
+function r = run_stoch(N, p)
+    S = round(p.s0*N); I = round(p.i0*N); H = round(p.h0*N);
+    R = round(p.r0*N); D = round(p.d0*N);
+    
+    tot = S+I+H+R+D;
+    if tot ~= N, S = S + (N-tot); end
+    
+    maxev = N * 30;
+    Th = zeros(maxev,1); Ih = zeros(maxev,1); Hh = zeros(maxev,1); Dh = zeros(maxev,1);
+    
+    Th(1)=0; Ih(1)=I; Hh(1)=H; Dh(1)=D;
+    ev = 1; tc = 0;
+    
+    while I > 0 && tc < p.tmax
+        r_si = p.pSI * p.beta * S * I / N;
+        r_rs = p.pRS * p.lambda * R;
+        r_ih = p.gamma * I * p.pIH;
+        r_ir = p.gamma * I * p.pIR;
+        r_id = p.gamma * I * p.pID;
+        r_hr = p.alpha * H * p.pHR;
+        r_hd = p.alpha * H * p.pHD;
+        
+        tot = r_si + r_rs + r_ih + r_ir + r_id + r_hr + r_hd;
+        if tot == 0, break; end
+        
+        tau = -log(rand)/tot;
+        tc = tc + tau;
+        if tc > p.tmax
+            tc = p.tmax;
+            ev = ev+1;
+            Th(ev)=tc; Ih(ev)=I; Hh(ev)=H; Dh(ev)=D;
+            break;
+        end
+        
+        ev = ev+1;
+        Th(ev) = tc;
+        
+        ch = rand * tot;
+        if ch < r_si
+            S=S-1; I=I+1;
+        elseif ch < r_si+r_rs
+            R=R-1; S=S+1;
+        elseif ch < r_si+r_rs+r_ih
+            I=I-1; H=H+1;
+        elseif ch < r_si+r_rs+r_ih+r_ir
+            I=I-1; R=R+1;
+        elseif ch < r_si+r_rs+r_ih+r_ir+r_id
+            I=I-1; D=D+1;
+        elseif ch < r_si+r_rs+r_ih+r_ir+r_id+r_hr
+            H=H-1; R=R+1;
+        else
+            H=H-1; D=D+1;
+        end
+        
+        Ih(ev)=I; Hh(ev)=H; Dh(ev)=D;
+    end
+    
+    r.T = Th(1:ev); r.I = Ih(1:ev); r.H = Hh(1:ev); r.D = Dh(1:ev);
+end
+
+%% Plotting
+function plot_results(res, N, p)
+    t_grid = (0:p.tmax)';
+    nsims = length(res);
+    all_H = zeros(nsims, length(t_grid));
+    
+    for k = 1:nsims
+        if length(res{k}.T) > 1
+            itp = griddedInterpolant(res{k}.T, res{k}.H, 'linear', 'none');
+            for j = 1:length(t_grid)
+                if t_grid(j) >= min(res{k}.T) && t_grid(j) <= max(res{k}.T)
+                    all_H(k,j) = itp(t_grid(j));
+                end
+            end
+        end
+    end
+    
+    mean_H = mean(all_H, 1)';
+    lower_H = quantile(all_H, 0.05, 1)';
+    upper_H = quantile(all_H, 0.95, 1)';
+    
+    % Load real hospitalization data
+    start_date = datetime('2020-03-25');
+    real_H = zeros(length(t_grid), 1);
+    
+    try
+        hosp = readtable('hospitalization_Carson_filtered_new.csv');
+        hosp.collection_week = datetime(hosp.collection_week, 'InputFormat', 'M/d/yy');
+        for i = 1:height(hosp)
+            if year(hosp.collection_week(i)) < 2000
+                hosp.collection_week(i) = hosp.collection_week(i) + years(2000);
+            end
+        end
+        [dates, ~, idx] = unique(hosp.collection_week);
+        vals = accumarray(idx, hosp.total_adult_and_pediatric_covid_patients, [], @sum);
+        [dates, si] = sort(dates);
+        vals = vals(si);
+        days_from_start = days(dates - start_date);
+        real_H = interp1(days_from_start, vals, t_grid, 'linear', NaN);
+    catch ME
+        fprintf('Could not load hosp data: %s\n', ME.message);
+    end
+    
+    % ODE solution
+    ode_H = solve_ode(p, N);
+    
+    % Convert to proportions
+    mean_H_prop = mean_H / N;
+    lower_H_prop = lower_H / N;
+    upper_H_prop = upper_H / N;
+    real_H_prop = real_H / N;
+    ode_H_prop = ode_H / N;
+    all_H_prop = all_H / N;
+    
+    % Date labels
+    tick_pos = 0:90:p.tmax;
+    tick_dates = start_date + days(tick_pos);
+    date_labels = cellstr(datestr(tick_dates, 'mm/dd/yy'));
+    
+    %% Figure 1: 90% envelope + ODE + real
+    figure;
+    fill([t_grid; flipud(t_grid)], [upper_H_prop; flipud(lower_H_prop)], ...
+         [0.4660, 0.6740, 0.1880], 'FaceAlpha', 0.5, 'EdgeColor', 'none');
+    hold on;
+    plot(t_grid, ode_H_prop, '--', 'Color', '#A2142F', 'LineWidth', 3);
+    valid = ~isnan(real_H_prop);
+    if any(valid)
+        plot(t_grid(valid), real_H_prop(valid), 'm-', 'LineWidth', 3);
+    end
+    xlabel('Date (mm/dd/yy)'); ylabel('hospitalized compartment fraction');
+    xlim([0 p.tmax]);
+    xticks(tick_pos); xticklabels(date_labels);
+    set(gca, 'LooseInset', get(gca,'TightInset'), 'FontSize', 15);
+    legend('$90\%$ envelope', '$h(t)$', 'real data', 'Location', 'northeast', 'Interpreter', 'latex', 'FontSize', 20);
+    saveas(gcf, 'Fig9_hosp_envelope.png');
+    
+    %% Figure 2: Individual trajectories + real
+    figure;
+    for k = 1:nsims
+        if max(all_H_prop(k,:)) > min(all_H_prop(k,:)) * 1.1
+            plot(t_grid, all_H_prop(k,:), 'Color', '#77AC30', 'LineWidth', 1);
+            hold on;
+        end
+    end
+    if any(valid)
+        plot(t_grid(valid), real_H_prop(valid), 'm-', 'LineWidth', 3);
+    end
+    xlabel('Date (mm/dd/yy)'); ylabel('hospitalized compartment fraction');
+    xlim([0 p.tmax]);
+    xticks(tick_pos); xticklabels(date_labels);
+    set(gca, 'LooseInset', get(gca,'TightInset'), 'FontSize', 15);
+    h1 = plot(NaN, NaN, 'Color', '#77AC30', 'LineWidth', 1.5);
+    h2 = plot(NaN, NaN, 'm-', 'LineWidth', 3);
+    legend([h1, h2], {'$\textbf{h}_N(t)$', 'real data'}, 'Interpreter', 'latex', 'FontSize', 20);
+    saveas(gcf, 'Fig9_hosp_trajectories.png');
+end
+
+%% ODE solver
+function H = solve_ode(p, N)
+    y0 = [p.s0*N; p.i0*N; p.h0*N; p.r0*N; p.d0*N];
+    [t, y] = ode45(@(t,y) sihrs_ode(t,y,p,N), [0 p.tmax], y0);
+    t_grid = (0:p.tmax)';
+    H = max(interp1(t, y(:,3), t_grid, 'linear', 'extrap'), 0);
+end
+
+function dy = sihrs_ode(~, y, p, N)
+    S=y(1); I=y(2); H=y(3); R=y(4);
+    dy = zeros(5,1);
+    dy(1) = -p.beta*p.pSI*S*I/N + p.lambda*p.pRS*R;
+    dy(2) = p.beta*p.pSI*S*I/N - p.gamma*(p.pIH+p.pIR+p.pID)*I;
+    dy(3) = p.gamma*p.pIH*I - p.alpha*(p.pHR+p.pHD)*H;
+    dy(4) = p.gamma*p.pIR*I + p.alpha*p.pHR*H - p.lambda*p.pRS*R;
+    dy(5) = p.gamma*p.pID*I + p.alpha*p.pHD*H;
+end
+

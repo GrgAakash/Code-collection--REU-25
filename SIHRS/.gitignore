@@ -1,0 +1,41 @@
+# Large raw data files (download from original sources)
+01_RawData/covid_hospital_report.csv
+01_RawData/nyt_covid_data.csv
+01_RawData/COVID-19_Reported_Patient_Impact_and_Hospital_Capacity_by_State_Timeseries_(RAW)_*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+logs/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Case studies and model code (archive/old versions)
+04_CaseStudies/Carson_City_NV/
+06_ModelCode/
+SubmittedDec30.pdf
+
